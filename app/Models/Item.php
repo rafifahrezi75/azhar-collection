@@ -16,6 +16,9 @@ class Item extends Model
         'category_id',
         'unit_id',
         'stock',
+        'real_stock',
+        'estimated_stock',
+        'is_estimated_stock',
         'min_stock',
         'image',
         'description',
@@ -24,13 +27,37 @@ class Item extends Model
 
     protected $casts = [
         'stock' => 'integer',
+        'real_stock' => 'integer',
+        'estimated_stock' => 'integer',
+        'is_estimated_stock' => 'boolean',
         'min_stock' => 'integer',
         'is_active' => 'boolean',
     ];
 
+    protected static function booted()
+    {
+        static::saving(function ($item) {
+            $item->real_stock = max(0, (int) ($item->real_stock ?? 0));
+            $item->estimated_stock = max(0, (int) ($item->estimated_stock ?? 0));
+
+            // If item has no conversions relation yet, default stock to base unit stock
+            if (! $item->exists || ! $item->conversions()->exists()) {
+                $item->stock = $item->real_stock + $item->estimated_stock;
+                $item->is_estimated_stock = $item->estimated_stock > 0;
+            }
+        });
+    }
+
     protected $appends = [
         'image_url',
+        'stock_breakdown',
         'stock_breakdown_text',
+        'real_stock_breakdown',
+        'real_stock_breakdown_text',
+        'estimated_stock_breakdown',
+        'estimated_stock_breakdown_text',
+        'dual_stock_breakdown_text',
+        'unit_cards',
         'all_units',
         'unit_stock_summary',
     ];
@@ -64,58 +91,24 @@ class Item extends Model
     }
 
     /**
-     * Compute multi-unit hierarchical breakdown of current stock
+     * Compute multi-unit breakdown based directly on independent physical unit records
      */
-    public function getStockBreakdownAttribute(): array
+    public function getBreakdownForQuantity(int $quantity): array
     {
-        $conversions = $this->relationLoaded('conversions')
-            ? $this->conversions
-            : $this->conversions()->with('unit')->get();
-
-        $sortedConversions = $conversions->sortByDesc('multiplier');
-        $remaining = max(0, (int) $this->stock);
-        $breakdown = [];
-
-        foreach ($sortedConversions as $conv) {
-            if ($conv->multiplier > 1) {
-                $count = intdiv($remaining, $conv->multiplier);
-                $remaining = $remaining % $conv->multiplier;
-                $breakdown[] = [
-                    'unit_id' => $conv->unit_id,
-                    'unit_name' => $conv->unit ? $conv->unit->name : 'Unit',
-                    'unit_symbol' => $conv->unit ? ($conv->unit->symbol ?: $conv->unit->name) : 'Unit',
-                    'multiplier' => $conv->multiplier,
-                    'count' => $count,
-                ];
-            }
-        }
-
-        $baseUnitName = $this->unit ? $this->unit->name : 'Pcs';
-        $baseUnitSymbol = $this->unit ? ($this->unit->symbol ?: $this->unit->name) : 'pcs';
-
-        $breakdown[] = [
-            'unit_id' => $this->unit_id,
-            'unit_name' => $baseUnitName,
-            'unit_symbol' => $baseUnitSymbol,
-            'multiplier' => 1,
-            'count' => $remaining,
-            'is_base' => true,
-        ];
-
-        return $breakdown;
+        return $this->unit_cards;
     }
 
     /**
-     * Human-friendly text representation of multi-unit stock (e.g. "1 Pack, 5 Pcs")
+     * Format a breakdown array into human-readable string
      */
-    public function getStockBreakdownTextAttribute(): string
+    public function formatBreakdownText(array $breakdowns): string
     {
-        $breakdowns = $this->getStockBreakdownAttribute();
         $parts = [];
-
         foreach ($breakdowns as $b) {
-            if ($b['count'] > 0 || (empty($parts) && !empty($b['is_base']))) {
-                $parts[] = "{$b['count']} {$b['unit_symbol']}";
+            $count = $b['total_count'] ?? $b['count'] ?? 0;
+            $sym = $b['unit_symbol'] ?? '';
+            if ($count > 0) {
+                $parts[] = "{$count} {$sym}";
             }
         }
 
@@ -124,7 +117,218 @@ class Item extends Model
             return "0 {$baseSymbol}";
         }
 
-        return implode(', ', $parts);
+        return implode(' + ', $parts);
+    }
+
+    /**
+     * Compute multi-unit breakdown of current total stock
+     */
+    public function getStockBreakdownAttribute(): array
+    {
+        return $this->unit_cards;
+    }
+
+    /**
+     * Compute multi-unit breakdown of real stock
+     */
+    public function getRealStockBreakdownAttribute(): array
+    {
+        return array_values(array_filter($this->unit_cards, function ($c) {
+            return ($c['real_count'] ?? 0) > 0;
+        }));
+    }
+
+    /**
+     * Human-friendly text representation of real stock (e.g. "2 Roll + 50 m")
+     */
+    public function getRealStockBreakdownTextAttribute(): string
+    {
+        $parts = [];
+        foreach ($this->unit_cards as $c) {
+            $real = $c['real_count'] ?? 0;
+            if ($real > 0) {
+                $parts[] = "{$real} {$c['unit_symbol']}";
+            }
+        }
+
+        if (empty($parts)) {
+            $baseSymbol = $this->unit ? ($this->unit->symbol ?: $this->unit->name) : 'pcs';
+            return "0 {$baseSymbol}";
+        }
+
+        return implode(' + ', $parts);
+    }
+
+    /**
+     * Compute multi-unit breakdown of estimated stock
+     */
+    public function getEstimatedStockBreakdownAttribute(): array
+    {
+        return array_values(array_filter($this->unit_cards, function ($c) {
+            return ($c['est_count'] ?? 0) > 0;
+        }));
+    }
+
+    /**
+     * Human-friendly text representation of estimated stock (e.g. "1 Roll + 15 m")
+     */
+    public function getEstimatedStockBreakdownTextAttribute(): string
+    {
+        $parts = [];
+        foreach ($this->unit_cards as $c) {
+            $est = $c['est_count'] ?? 0;
+            if ($est > 0) {
+                $parts[] = "{$est} {$c['unit_symbol']}";
+            }
+        }
+
+        if (empty($parts)) {
+            $baseSymbol = $this->unit ? ($this->unit->symbol ?: $this->unit->name) : 'pcs';
+            return "0 {$baseSymbol}";
+        }
+
+        return implode(' + ', $parts);
+    }
+
+    /**
+     * Dedicated unit breakdown cards for frontend UI (e.g. Card for Roll, Card for Meter)
+     * Tracks each unit independently without automatic force-conversion.
+     */
+    public function getUnitCardsAttribute(): array
+    {
+        $cards = [];
+        $baseSymbol = $this->unit ? ($this->unit->symbol ?: $this->unit->name) : 'pcs';
+        $baseName = $this->unit ? $this->unit->name : 'Satuan Dasar';
+
+        $conversions = $this->relationLoaded('conversions')
+            ? $this->conversions
+            : $this->conversions()->with('unit')->get();
+
+        $sortedConversions = $conversions->sortByDesc('multiplier');
+
+        foreach ($sortedConversions as $conv) {
+            if ($conv->unit) {
+                $mult = (int) $conv->multiplier;
+                $realCount = (int) ($conv->real_stock ?? 0);
+                $estCount = (int) ($conv->estimated_stock ?? 0);
+                $totalCount = $realCount + $estCount;
+                $sym = $conv->unit->symbol ?: $conv->unit->name;
+
+                $cards[] = [
+                    'unit_id' => $conv->unit_id,
+                    'unit_name' => $conv->unit->name,
+                    'unit_symbol' => $sym,
+                    'multiplier' => $mult,
+                    'is_base' => false,
+                    'real_count' => $realCount,
+                    'est_count' => $estCount,
+                    'total_count' => $totalCount,
+                    'real_text' => "{$realCount} {$sym}",
+                    'est_text' => "{$estCount} {$sym}",
+                    'total_text' => "{$totalCount} {$sym}",
+                    'equivalent_text' => ($totalCount * $mult) . " {$baseSymbol}",
+                    'multiplier_label' => "1 {$sym} = {$mult} {$baseSymbol}",
+                ];
+            }
+        }
+
+        // Base Unit Card directly from item's own real_stock and estimated_stock
+        $baseReal = (int) ($this->real_stock ?? 0);
+        $baseEst = (int) ($this->estimated_stock ?? 0);
+        $baseTotal = $baseReal + $baseEst;
+
+        $cards[] = [
+            'unit_id' => $this->unit_id,
+            'unit_name' => $baseName,
+            'unit_symbol' => $baseSymbol,
+            'multiplier' => 1,
+            'is_base' => true,
+            'real_count' => $baseReal,
+            'est_count' => $baseEst,
+            'total_count' => $baseTotal,
+            'real_text' => "{$baseReal} {$baseSymbol}",
+            'est_text' => "{$baseEst} {$baseSymbol}",
+            'total_text' => "{$baseTotal} {$baseSymbol}",
+            'equivalent_text' => "{$baseTotal} {$baseSymbol}",
+            'multiplier_label' => "Satuan Dasar (@1)",
+        ];
+
+        return $cards;
+    }
+
+    /**
+     * Combined Dual-Stock Text (e.g. "2 Roll (Nyata) + 1 Roll (Estimasi) + 60 m (Nyata)")
+     */
+    public function getDualStockBreakdownTextAttribute(): string
+    {
+        $cards = $this->unit_cards;
+        $parts = [];
+
+        foreach ($cards as $c) {
+            $real = $c['real_count'];
+            $est = $c['est_count'];
+            $sym = $c['unit_symbol'];
+
+            if ($real > 0 && $est > 0) {
+                $parts[] = "{$real} {$sym} (Nyata) + {$est} {$sym} (Estimasi)";
+            } elseif ($real > 0) {
+                $parts[] = "{$real} {$sym} (Nyata)";
+            } elseif ($est > 0) {
+                $parts[] = "{$est} {$sym} (Estimasi)";
+            }
+        }
+
+        if (empty($parts)) {
+            $baseSymbol = $this->unit ? ($this->unit->symbol ?: $this->unit->name) : 'pcs';
+            return "0 {$baseSymbol}";
+        }
+
+        return implode(' + ', $parts);
+    }
+
+    /**
+     * Combined Stock Breakdown Text (e.g. "2 Roll + 60 m")
+     */
+    public function getStockBreakdownTextAttribute(): string
+    {
+        $cards = $this->unit_cards;
+        $parts = [];
+
+        foreach ($cards as $c) {
+            $total = $c['total_count'];
+            $sym = $c['unit_symbol'];
+            if ($total > 0) {
+                $parts[] = "{$total} {$sym}";
+            }
+        }
+
+        if (empty($parts)) {
+            $baseSymbol = $this->unit ? ($this->unit->symbol ?: $this->unit->name) : 'pcs';
+            return "0 {$baseSymbol}";
+        }
+
+        return implode(' + ', $parts);
+    }
+
+    public function recalculateTotalStock(): void
+    {
+        $conversions = $this->conversions()->get();
+        $totalConvBase = 0;
+        $totalConvEst = 0;
+
+        foreach ($conversions as $conv) {
+            $mult = (int) $conv->multiplier;
+            $real = (int) ($conv->real_stock ?? 0);
+            $est = (int) ($conv->estimated_stock ?? 0);
+            $totalConvEst += $est * $mult;
+            $totalConvBase += ($real + $est) * $mult;
+        }
+
+        $baseReal = (int) ($this->real_stock ?? 0);
+        $baseEst = (int) ($this->estimated_stock ?? 0);
+
+        $this->stock = $totalConvBase + $baseReal + $baseEst;
+        $this->is_estimated_stock = ($totalConvEst + $baseEst) > 0;
     }
 
     /**

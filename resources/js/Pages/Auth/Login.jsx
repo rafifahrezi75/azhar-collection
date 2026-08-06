@@ -60,7 +60,7 @@ export default function Login({ status, canResetPassword }) {
                             onClick={fillAdminCredentials}
                             className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors whitespace-nowrap shadow-sm text-xs"
                         >
-                            ⚡ Auto Fill
+                            Auto Fill
                         </button>
                     </div>
 

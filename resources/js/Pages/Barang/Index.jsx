@@ -24,6 +24,7 @@ export default function Index() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
     const [stockFilter, setStockFilter] = useState("all"); // "all" | "low" | "out" | "safe"
+    const [stockTypeFilter, setStockTypeFilter] = useState("all"); // "all" | "real" | "estimated"
     const [statusFilter, setStatusFilter] = useState("all"); // "all" | "active" | "inactive"
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -53,6 +54,9 @@ export default function Index() {
         category_id: "",
         unit_id: "",
         stock: 0,
+        real_stock: 0,
+        estimated_stock: 0,
+        is_estimated_stock: false,
         min_stock: 5,
         description: "",
         is_active: true,
@@ -92,12 +96,18 @@ export default function Index() {
 
     // Check if any filter is active
     const isFilterActive = useMemo(() => {
-        return selectedCategory !== "" || stockFilter !== "all" || statusFilter !== "all";
-    }, [selectedCategory, stockFilter, statusFilter]);
+        return (
+            selectedCategory !== "" ||
+            stockFilter !== "all" ||
+            stockTypeFilter !== "all" ||
+            statusFilter !== "all"
+        );
+    }, [selectedCategory, stockFilter, stockTypeFilter, statusFilter]);
 
     const handleResetFilters = useCallback(() => {
         setSelectedCategory("");
         setStockFilter("all");
+        setStockTypeFilter("all");
         setStatusFilter("all");
         setCurrentPage(1);
     }, []);
@@ -123,6 +133,13 @@ export default function Index() {
                 matchesStock = item.stock > (item.min_stock || 0);
             }
 
+            let matchesStockType = true;
+            if (stockTypeFilter === "real") {
+                matchesStockType = Number(item.real_stock) > 0 || (!Boolean(item.is_estimated_stock) && Number(item.stock) > 0);
+            } else if (stockTypeFilter === "estimated") {
+                matchesStockType = Number(item.estimated_stock) > 0 || Boolean(item.is_estimated_stock);
+            }
+
             let matchesStatus = true;
             if (statusFilter === "active") {
                 matchesStatus = Boolean(item.is_active);
@@ -130,9 +147,15 @@ export default function Index() {
                 matchesStatus = !Boolean(item.is_active);
             }
 
-            return matchesSearch && matchesCategory && matchesStock && matchesStatus;
+            return (
+                matchesSearch &&
+                matchesCategory &&
+                matchesStock &&
+                matchesStockType &&
+                matchesStatus
+            );
         });
-    }, [items, searchTerm, selectedCategory, stockFilter, statusFilter]);
+    }, [items, searchTerm, selectedCategory, stockFilter, stockTypeFilter, statusFilter]);
 
     // Paginated items
     const paginatedItems = useMemo(() => {
@@ -216,14 +239,23 @@ export default function Index() {
         const mappedConversions = (item.conversions || []).map((c) => ({
             unit_id: String(c.unit_id),
             multiplier: c.multiplier,
+            real_stock: c.real_stock ?? 0,
+            estimated_stock: c.estimated_stock ?? 0,
+            stock: c.stock ?? ((c.real_stock ?? 0) + (c.estimated_stock ?? 0)),
         }));
+
+        const realStockVal = item.real_stock ?? 0;
+        const estStockVal = item.estimated_stock ?? 0;
 
         setForm({
             code: item.code || "",
             name: item.name || "",
             category_id: String(item.category_id || ""),
             unit_id: String(item.unit_id || ""),
-            stock: item.stock ?? 0,
+            stock: item.stock ?? (realStockVal + estStockVal),
+            real_stock: realStockVal,
+            estimated_stock: estStockVal,
+            is_estimated_stock: estStockVal > 0 || Boolean(item.is_estimated_stock),
             min_stock: item.min_stock ?? 0,
             description: item.description || "",
             is_active: Boolean(item.is_active),
@@ -300,12 +332,19 @@ export default function Index() {
             event.preventDefault();
             setSubmitting(true);
 
+            const realStockNum = Number(form.real_stock) || 0;
+            const estStockNum = Number(form.estimated_stock) || 0;
+            const totalStockNum = realStockNum + estStockNum > 0 ? (realStockNum + estStockNum) : (Number(form.stock) || 0);
+
             const formData = new FormData();
             formData.append("code", form.code);
             formData.append("name", form.name);
             formData.append("category_id", form.category_id);
             formData.append("unit_id", form.unit_id);
-            formData.append("stock", form.stock);
+            formData.append("real_stock", realStockNum);
+            formData.append("estimated_stock", estStockNum);
+            formData.append("stock", totalStockNum);
+            formData.append("is_estimated_stock", (estStockNum > 0 || form.is_estimated_stock) ? "1" : "0");
             formData.append("min_stock", form.min_stock);
             formData.append("description", form.description || "");
             formData.append("is_active", form.is_active ? "1" : "0");
@@ -422,6 +461,11 @@ export default function Index() {
                     stockFilter={stockFilter}
                     onStockFilterChange={(val) => {
                         setStockFilter(val);
+                        setCurrentPage(1);
+                    }}
+                    stockTypeFilter={stockTypeFilter}
+                    onStockTypeFilterChange={(val) => {
+                        setStockTypeFilter(val);
                         setCurrentPage(1);
                     }}
                     statusFilter={statusFilter}

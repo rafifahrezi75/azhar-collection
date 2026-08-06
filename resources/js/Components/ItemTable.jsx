@@ -5,13 +5,11 @@ import {
     Package,
     ImageIcon,
     X,
-    AlertTriangle,
     Eye,
     ArrowUpRight,
     Plus
 } from "lucide-react";
 import Pagination from "@/Components/Pagination";
-import Tooltip from "@/Components/Tooltip";
 
 const ItemTable = memo(function ItemTable({
     items = [],
@@ -39,9 +37,10 @@ const ItemTable = memo(function ItemTable({
                         <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
                             <th className="px-3.5 py-2.5">#</th>
                             <th className="px-3.5 py-2.5">Foto</th>
-                            <th className="px-3.5 py-2.5">Bahan / Barang</th>
+                            <th className="px-3.5 py-2.5">Kode & Nama Bahan</th>
                             <th className="px-3.5 py-2.5">Kategori</th>
-                            <th className="px-3.5 py-2.5">Stok Gudang</th>
+                            <th className="px-3.5 py-2.5">Satuan</th>
+                            <th className="px-3.5 py-2.5">Kondisi Stok</th>
                             <th className="px-3.5 py-2.5">Status</th>
                             <th className="px-3.5 py-2.5 text-right">Aksi</th>
                         </tr>
@@ -49,7 +48,7 @@ const ItemTable = memo(function ItemTable({
                     <tbody className="divide-y divide-slate-100">
                         {loading ? (
                             <tr>
-                                <td colSpan="7" className="px-3.5 py-8 text-center text-slate-400">
+                                <td colSpan="8" className="px-3.5 py-8 text-center text-slate-400">
                                     <div className="inline-flex items-center gap-2">
                                         <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
                                         <span>Memuat data bahan baku...</span>
@@ -58,7 +57,7 @@ const ItemTable = memo(function ItemTable({
                             </tr>
                         ) : items.length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="px-3.5 py-10 text-center text-slate-400">
+                                <td colSpan="8" className="px-3.5 py-10 text-center text-slate-400">
                                     <Package className="w-9 h-9 mx-auto text-slate-300 mb-1.5" />
                                     <p className="font-semibold text-slate-600">Belum ada data barang / bahan baku</p>
                                     <p className="text-xs text-slate-400 mt-0.5">
@@ -69,9 +68,10 @@ const ItemTable = memo(function ItemTable({
                         ) : (
                             items.map((item, idx) => {
                                 const baseUnitSymbol = item.unit?.symbol || item.unit?.name || "pcs";
-                                const isLowStock = item.stock <= (item.min_stock || 0) && item.stock > 0;
-                                const isOutOfStock = item.stock <= 0;
+                                const isOutOfStock = Number(item.stock) <= 0;
+                                const isLowStock = !isOutOfStock && Number(item.stock) <= Number(item.min_stock || 0);
                                 const rowNumber = (currentPage - 1) * itemsPerPage + idx + 1;
+                                const conversions = item.conversions || [];
 
                                 return (
                                     <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
@@ -82,21 +82,20 @@ const ItemTable = memo(function ItemTable({
                                         {/* Photo */}
                                         <td className="px-3.5 py-2.5">
                                             {item.image_url ? (
-                                                <Tooltip content="Foto" position="bottom">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setPreviewImage({ url: item.image_url, name: item.name })}
-                                                        className="w-9 h-9 rounded-md overflow-hidden border border-slate-200 hover:border-teal-400 transition-all shadow-2xs relative cursor-pointer"
-                                                    >
-                                                        <img
-                                                            src={item.image_url}
-                                                            alt={item.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    </button>
-                                                </Tooltip>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPreviewImage({ url: item.image_url, name: item.name })}
+                                                    title="Lihat Foto"
+                                                    className="w-9 h-9 rounded-md overflow-hidden border border-slate-200 hover:border-teal-500 transition-all shadow-2xs relative cursor-pointer block"
+                                                >
+                                                    <img
+                                                        src={item.image_url}
+                                                        alt={item.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </button>
                                             ) : (
-                                                <div className="w-9 h-9 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                                                <div className="w-9 h-9 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400" title="Tidak ada foto">
                                                     <ImageIcon className="w-4 h-4 text-slate-400" />
                                                 </div>
                                             )}
@@ -130,104 +129,112 @@ const ItemTable = memo(function ItemTable({
                                             )}
                                         </td>
 
-                                        {/* Minimalist Stock Pill */}
+                                        {/* Unit Info (Clean & Informative) */}
                                         <td className="px-3.5 py-2.5 whitespace-nowrap">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-bold border ${
-                                                    isOutOfStock
-                                                        ? "bg-rose-50 text-rose-800 border-rose-200"
-                                                        : isLowStock
-                                                        ? "bg-amber-50 text-amber-800 border-amber-200"
-                                                        : "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                                }`}>
-                                                    {isLowStock && <AlertTriangle className="w-3 h-3 text-amber-600" />}
-                                                    <span>{item.stock_breakdown_text || `${item.stock} ${baseUnitSymbol}`}</span>
+                                            <div className="flex flex-col text-xs">
+                                                <span className="font-semibold text-slate-800">
+                                                    {item.unit?.name || baseUnitSymbol} <span className="text-slate-400 font-mono">({baseUnitSymbol})</span>
                                                 </span>
-                                                <span className="text-[11px] font-mono text-slate-500 font-medium">
-                                                    ({item.stock} {baseUnitSymbol})
-                                                </span>
+                                                {conversions.length > 0 && (
+                                                    <span className="text-[10px] text-slate-500 font-medium">
+                                                        +{conversions.length} Satuan Kemasan
+                                                    </span>
+                                                )}
                                             </div>
                                         </td>
 
-                                        {/* Status */}
+                                        {/* Stock Condition Status (Clean Badge) */}
+                                        <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                            {isOutOfStock ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                    Stok Habis
+                                                </span>
+                                            ) : isLowStock ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                                    Menipis
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    Tersedia
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        {/* Catalog Status */}
                                         <td className="px-3.5 py-2.5 whitespace-nowrap">
                                             {item.is_active ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                                                     Aktif
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-400 border border-slate-200">
                                                     Nonaktif
                                                 </span>
                                             )}
                                         </td>
 
-                                        {/* Action Buttons with Soft Pastel Styling & Tooltips */}
+                                        {/* Action Buttons */}
                                         <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
-                                            <div className="flex justify-end items-center gap-1.5">
-                                                {/* View Detail - Soft Sky */}
-                                                <Tooltip content="Detail" position="bottom">
+                                            <div className="inline-flex items-center gap-1">
+                                                {/* View Detail */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onViewDetail(item)}
+                                                    title="Lihat Detail Rincian Stok"
+                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
+                                                >
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                </button>
+
+                                                {/* Take Stock (Ambil Stok) */}
+                                                {canUpdate && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => onViewDetail(item)}
-                                                        className="p-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
+                                                        onClick={() => onTakeStock(item)}
+                                                        title="Ambil Stok (Keluar)"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md transition-colors border border-amber-200/80 cursor-pointer shadow-2xs"
                                                     >
-                                                        <Eye className="w-3.5 h-3.5" />
+                                                        <ArrowUpRight className="w-3.5 h-3.5" />
                                                     </button>
-                                                </Tooltip>
-
-                                                {/* Take Stock (Ambil Stok) - Soft Amber */}
-                                                {canUpdate && (
-                                                    <Tooltip content="Ambil" position="bottom">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onTakeStock(item)}
-                                                            className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md transition-colors border border-amber-200/80 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <ArrowUpRight className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
                                                 )}
 
-                                                {/* Add Stock - Soft Emerald */}
+                                                {/* Add Stock */}
                                                 {canUpdate && (
-                                                    <Tooltip content="Tambah" position="bottom">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onAddStock(item)}
-                                                            className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors border border-emerald-200/80 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <Plus className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onAddStock(item)}
+                                                        title="Tambah Stok (Masuk)"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors border border-emerald-200/80 cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" />
+                                                    </button>
                                                 )}
 
-                                                {/* Edit - Soft Indigo */}
+                                                {/* Edit */}
                                                 {canUpdate && (
-                                                    <Tooltip content="Edit" position="bottom">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onEdit(item)}
-                                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onEdit(item)}
+                                                        title="Edit Data Barang"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                 )}
 
-                                                {/* Delete - Soft Rose */}
+                                                {/* Delete */}
                                                 {canDelete && (
-                                                    <Tooltip content="Hapus" position="bottom">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onDelete(item.id)}
-                                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onDelete(item.id)}
+                                                        title="Hapus Data Barang"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>

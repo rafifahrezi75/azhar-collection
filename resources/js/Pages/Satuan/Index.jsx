@@ -215,6 +215,7 @@ export default function Index() {
 
                 {/* Unit Table */}
                 <UnitTable
+                    units={paginatedItems}
                     items={paginatedItems}
                     loading={loading}
                     canUpdate={canUpdate}

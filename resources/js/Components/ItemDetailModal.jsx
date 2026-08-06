@@ -230,91 +230,78 @@ const ItemDetailModal = memo(function ItemDetailModal({
                                 </div>
                             </div>
 
-                            {/* Right Column: Stock Breakdown & Unit Summaries */}
+                            {/* Right Column: Unit Cards (Top Highlight) & Stock Details */}
                             <div className="md:col-span-8 space-y-3.5">
-                                {/* Primary Stock Card with Soft Pastel Gradient & Crisp Content */}
-                                <div className="p-4 rounded-md bg-gradient-to-br from-teal-50/90 via-emerald-50/40 to-slate-50 border border-teal-200/90 shadow-2xs space-y-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] uppercase tracking-wider font-bold text-teal-800 flex items-center gap-1.5">
-                                            <Layers className="w-3.5 h-3.5 text-teal-600" />
-                                            Ketersediaan Stok Gudang
-                                        </span>
-                                        <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-white text-teal-800 border border-teal-200 font-mono font-bold shadow-2xs">
-                                            Total Satuan Dasar: {item.stock} {baseUnitSymbol}
-                                        </span>
-                                    </div>
-
-                                    {/* Big Breakdown Text */}
-                                    <div>
-                                        <h4 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-                                            {item.stock_breakdown_text || `${item.stock} ${baseUnitSymbol}`}
-                                        </h4>
-                                        <p className="text-xs text-slate-600 mt-0.5">
-                                            Kombinasi kemasan bertingkat yang siap dipakai pada proses produksi.
-                                        </p>
-                                    </div>
-
-                                    {/* Breakdown Pill Cards */}
-                                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-teal-200/60">
-                                        {item.stock_breakdown?.map((b, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="px-2.5 py-1 rounded-md bg-white border border-teal-200/80 flex items-center gap-1.5 text-xs shadow-2xs"
-                                            >
-                                                <span className="text-teal-700 font-bold font-mono">{b.count}</span>
-                                                <span className="text-slate-800 font-medium">{b.unit_name} ({b.unit_symbol})</span>
-                                                {b.multiplier > 1 && (
-                                                    <span className="text-[10px] text-slate-400 font-mono">
-                                                        (@{b.multiplier} {baseUnitSymbol})
-                                                    </span>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* SECTION: Rincian Stok di SEMUA Satuan Terdaftar */}
-                                <div className="p-3.5 rounded-md bg-white border border-slate-200 space-y-2.5 shadow-2xs">
-                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                {/* SECTION 1: STOK FISIK PER SATUAN (AT THE VERY TOP) */}
+                                <div className="p-3.5 sm:p-4 rounded-md bg-white border border-slate-200 space-y-3 shadow-2xs">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                                         <div className="flex items-center gap-2">
-                                            <Calculator className="w-4 h-4 text-teal-600" />
-                                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                                Rincian Stok di Seluruh Satuan Terdaftar
+                                            <div className="w-6 h-6 rounded-md bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                                                <Calculator className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-wide">
+                                                Stok Fisik per Satuan
                                             </h4>
                                         </div>
-                                        <span className="text-xs text-slate-500 font-medium font-mono">
-                                            {unitSummaries.length} Satuan
+                                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                                            {item.unit_cards?.length || 1} Satuan Terdaftar
                                         </span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                        {unitSummaries.map((u, sIdx) => (
+                                    {/* Grid of Unit Cards */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {item.unit_cards?.map((card, cIdx) => (
                                             <div
-                                                key={sIdx}
+                                                key={cIdx}
                                                 className={`p-3 rounded-md border flex flex-col justify-between transition-all ${
-                                                    u.is_base
-                                                        ? "bg-teal-50/50 border-teal-200/90 shadow-2xs"
-                                                        : "bg-slate-50/70 border-slate-200 hover:border-slate-300"
+                                                    card.is_base
+                                                        ? "bg-teal-50/40 border-teal-200/90 shadow-2xs"
+                                                        : "bg-emerald-50/40 border-emerald-200/90 shadow-2xs"
                                                 }`}
                                             >
-                                                <div className="flex items-center justify-between mb-1.5">
-                                                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                                        <span className={`w-2 h-2 rounded-full ${u.is_base ? "bg-teal-600" : "bg-slate-400"}`} />
-                                                        <span>{u.unit_name} ({u.unit_symbol})</span>
+                                                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2 mb-2.5">
+                                                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                                        <span className={`w-2.5 h-2.5 rounded-full ${card.is_base ? "bg-teal-600" : "bg-emerald-600"}`} />
+                                                        <span>{card.unit_name} ({card.unit_symbol})</span>
                                                     </span>
-                                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                                                        u.is_base ? "bg-teal-100 text-teal-800 border border-teal-200" : "bg-slate-200/80 text-slate-700 border border-slate-300"
-                                                    }`}>
-                                                        {u.is_base ? "Satuan Dasar" : `1 = ${u.multiplier} ${baseUnitSymbol}`}
+                                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 shadow-2xs">
+                                                        {card.multiplier_label}
                                                     </span>
                                                 </div>
 
-                                                <div className="space-y-0.5">
-                                                    <div className="font-mono text-xs font-bold text-slate-900">
-                                                        {u.display_text}
+                                                <div className="space-y-2">
+                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                        <div className="p-2 bg-white rounded border border-emerald-200/80 shadow-2xs">
+                                                            <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wide block">
+                                                                Nyata (Pasti)
+                                                            </span>
+                                                            <span className="font-mono font-extrabold text-emerald-950 text-sm sm:text-base block mt-0.5">
+                                                                {card.real_text}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="p-2 bg-amber-50/80 rounded border border-amber-200/80 shadow-2xs">
+                                                            <span className="text-[10px] text-amber-900 font-bold uppercase tracking-wide block">
+                                                                Estimasi / Sisa
+                                                            </span>
+                                                            <span className="font-mono font-extrabold text-amber-950 text-sm sm:text-base block mt-0.5">
+                                                                {card.est_count > 0 ? card.est_text : "0"}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-[11px] text-slate-500 font-medium">
-                                                        {u.detail_text}
+
+                                                    <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/70 bg-white/70 px-2 py-1 rounded">
+                                                        <span className="text-slate-600 font-semibold">Subtotal Fisik:</span>
+                                                        <div className="text-right">
+                                                            <span className="font-mono font-extrabold text-slate-900">
+                                                                {card.total_text}
+                                                            </span>
+                                                            {!card.is_base && (
+                                                                <span className="text-[10px] text-slate-500 font-mono block">
+                                                                    (= {card.equivalent_text})
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -322,9 +309,47 @@ const ItemDetailModal = memo(function ItemDetailModal({
                                     </div>
                                 </div>
 
-                                {/* Description / Notes */}
+                                {/* SECTION 2: Rincian Keseluruhan & Total Akumulasi Stok */}
+                                {(() => {
+                                    const realStockNum = Number(item.real_stock) || (item.is_estimated_stock ? 0 : Number(item.stock) || 0);
+                                    const estStockNum = Number(item.estimated_stock) || (item.is_estimated_stock ? Number(item.stock) || 0 : 0);
+                                    const heroBreakdown = item.dual_stock_breakdown_text || item.stock_breakdown_text || `${item.stock} ${baseUnitSymbol}`;
+
+                                    return (
+                                        <div className="p-3.5 sm:p-4 rounded-md bg-gradient-to-br from-slate-50 via-teal-50/30 to-emerald-50/30 border border-slate-200 shadow-2xs space-y-3">
+                                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                                                <span className="text-[11px] uppercase tracking-wider font-bold text-slate-700 flex items-center gap-1.5">
+                                                    <Layers className="w-3.5 h-3.5 text-teal-600" />
+                                                    Akumulasi & Rincian Stok Terbaca
+                                                </span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {item.is_estimated_stock && (
+                                                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-bold">
+                                                            Terdapat Estimasi
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Consolidated breakdown */}
+                                            <div className="bg-white p-3 rounded-md border border-slate-200 shadow-2xs space-y-1">
+                                                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+                                                    Rincian Keseluruhan Fisik Barang:
+                                                </span>
+                                                <h4 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight font-mono">
+                                                    {heroBreakdown}
+                                                </h4>
+                                                <p className="text-xs text-slate-500 font-medium pt-0.5">
+                                                    Total akumulasi konversi: <strong className="font-bold text-slate-900 font-mono">{item.stock} {baseUnitSymbol}</strong> ({item.unit?.name || "Satuan Dasar"})
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* SECTION 3: Deskripsi / Catatan Bahan Baku */}
                                 <div className="p-3 rounded-md bg-white border border-slate-200 space-y-1 shadow-2xs">
-                                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-1">
+                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-1">
                                         <FileText className="w-3.5 h-3.5 text-slate-500" />
                                         <span>Deskripsi / Catatan Bahan Baku</span>
                                     </div>

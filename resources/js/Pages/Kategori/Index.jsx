@@ -211,6 +211,7 @@ export default function Index() {
 
                 {/* Category Table */}
                 <CategoryTable
+                    categories={paginatedItems}
                     items={paginatedItems}
                     loading={loading}
                     canUpdate={canUpdate}

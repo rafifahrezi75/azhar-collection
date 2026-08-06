@@ -65,7 +65,10 @@ class ItemController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'unit_id' => ['required', 'integer', 'exists:units,id'],
-            'stock' => ['required', 'integer', 'min:0'],
+            'stock' => ['nullable', 'integer', 'min:0'],
+            'real_stock' => ['nullable', 'integer', 'min:0'],
+            'estimated_stock' => ['nullable', 'integer', 'min:0'],
+            'is_estimated_stock' => ['nullable'],
             'min_stock' => ['nullable', 'integer', 'min:0'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,gif', 'max:3072'],
             'description' => ['nullable', 'string'],
@@ -79,14 +82,36 @@ class ItemController extends Controller
         }
 
         $isActive = filter_var($request->input('is_active', true), FILTER_VALIDATE_BOOLEAN);
+        $isEstimatedStock = filter_var($request->input('is_estimated_stock', false), FILTER_VALIDATE_BOOLEAN);
 
-        return DB::transaction(function () use ($validated, $imagePath, $isActive, $request) {
+        $realStock = 0;
+        $estimatedStock = 0;
+        if ($request->has('real_stock') || $request->has('estimated_stock')) {
+            $realStock = max(0, (int) $request->input('real_stock', 0));
+            $estimatedStock = max(0, (int) $request->input('estimated_stock', 0));
+            $totalStock = $realStock + $estimatedStock;
+        } else {
+            $totalStock = max(0, (int) ($validated['stock'] ?? 0));
+            if ($isEstimatedStock) {
+                $estimatedStock = $totalStock;
+                $realStock = 0;
+            } else {
+                $realStock = $totalStock;
+                $estimatedStock = 0;
+            }
+        }
+        $isEstimatedStock = $estimatedStock > 0;
+
+        return DB::transaction(function () use ($validated, $imagePath, $isActive, $realStock, $estimatedStock, $totalStock, $isEstimatedStock, $request) {
             $item = Item::create([
                 'code' => strtoupper(trim($validated['code'])),
                 'name' => $validated['name'],
                 'category_id' => $validated['category_id'],
                 'unit_id' => $validated['unit_id'],
-                'stock' => $validated['stock'],
+                'stock' => $totalStock,
+                'real_stock' => $realStock,
+                'estimated_stock' => $estimatedStock,
+                'is_estimated_stock' => $isEstimatedStock,
                 'min_stock' => $validated['min_stock'] ?? 0,
                 'image' => $imagePath,
                 'description' => $validated['description'] ?? null,
@@ -94,25 +119,34 @@ class ItemController extends Controller
             ]);
 
             // Save initial stock mutation if stock > 0
-            if ((int) $validated['stock'] > 0) {
+            if ($totalStock > 0) {
+                $note = 'Stok awal barang baru';
+                if ($realStock > 0 && $estimatedStock > 0) {
+                    $note = "Stok awal ({$realStock} nyata + {$estimatedStock} estimasi/sisaan)";
+                } elseif ($estimatedStock > 0) {
+                    $note = 'Stok awal (Estimasi/Sisaan)';
+                }
+
                 StockMutation::create([
                     'item_id' => $item->id,
                     'user_id' => auth()->id(),
                     'type' => 'in',
-                    'quantity' => (int) $validated['stock'],
+                    'quantity' => $totalStock,
                     'unit_id' => $item->unit_id,
                     'multiplier' => 1,
-                    'total_base_quantity' => (int) $validated['stock'],
+                    'total_base_quantity' => $totalStock,
                     'previous_stock' => 0,
-                    'current_stock' => (int) $validated['stock'],
-                    'notes' => 'Stok awal barang baru',
+                    'current_stock' => $totalStock,
+                    'notes' => $note,
                     'reference_no' => 'INIT-' . $item->code,
                     'mutation_date' => now(),
                 ]);
             }
 
-            // Handle conversions
+            // Handle conversions first so recalculateTotalStock knows about them
             $this->syncConversions($item, $request->input('conversions'));
+            $item->recalculateTotalStock();
+            $item->save();
 
             $item->load(['category', 'unit', 'conversions.unit']);
 
@@ -130,7 +164,10 @@ class ItemController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'unit_id' => ['required', 'integer', 'exists:units,id'],
-            'stock' => ['required', 'integer', 'min:0'],
+            'stock' => ['nullable', 'integer', 'min:0'],
+            'real_stock' => ['nullable', 'integer', 'min:0'],
+            'estimated_stock' => ['nullable', 'integer', 'min:0'],
+            'is_estimated_stock' => ['nullable'],
             'min_stock' => ['nullable', 'integer', 'min:0'],
             'image' => ['nullable'],
             'remove_image' => ['nullable'],
@@ -160,10 +197,28 @@ class ItemController extends Controller
         }
 
         $isActive = filter_var($request->input('is_active', true), FILTER_VALIDATE_BOOLEAN);
+        $isEstimatedStock = filter_var($request->input('is_estimated_stock', false), FILTER_VALIDATE_BOOLEAN);
 
-        return DB::transaction(function () use ($validated, $imagePath, $isActive, $request, $item) {
+        $realStock = 0;
+        $estimatedStock = 0;
+        if ($request->has('real_stock') || $request->has('estimated_stock')) {
+            $realStock = max(0, (int) $request->input('real_stock', 0));
+            $estimatedStock = max(0, (int) $request->input('estimated_stock', 0));
+            $newStock = $realStock + $estimatedStock;
+        } else {
+            $newStock = max(0, (int) ($validated['stock'] ?? 0));
+            if ($isEstimatedStock) {
+                $estimatedStock = $newStock;
+                $realStock = 0;
+            } else {
+                $realStock = $newStock;
+                $estimatedStock = 0;
+            }
+        }
+        $isEstimatedStock = $estimatedStock > 0;
+
+        return DB::transaction(function () use ($validated, $imagePath, $isActive, $realStock, $estimatedStock, $newStock, $isEstimatedStock, $request, $item) {
             $previousStock = $item->stock;
-            $newStock = (int) $validated['stock'];
 
             $item->update([
                 'code' => strtoupper(trim($validated['code'])),
@@ -171,15 +226,23 @@ class ItemController extends Controller
                 'category_id' => $validated['category_id'],
                 'unit_id' => $validated['unit_id'],
                 'stock' => $newStock,
+                'real_stock' => $realStock,
+                'estimated_stock' => $estimatedStock,
+                'is_estimated_stock' => $isEstimatedStock,
                 'min_stock' => $validated['min_stock'] ?? 0,
                 'image' => $imagePath,
                 'description' => $validated['description'] ?? null,
                 'is_active' => $isActive,
             ]);
 
-            // If stock directly changed in edit form, log adjustment mutation
-            if ($previousStock !== $newStock) {
-                $diff = $newStock - $previousStock;
+            // Sync conversions with their distinct stock amounts
+            $this->syncConversions($item, $request->input('conversions'));
+            $item->recalculateTotalStock();
+            $item->save();
+
+            // If total stock directly changed in edit form, log adjustment mutation
+            if ($previousStock !== $item->stock) {
+                $diff = $item->stock - $previousStock;
                 StockMutation::create([
                     'item_id' => $item->id,
                     'user_id' => auth()->id(),
@@ -189,15 +252,12 @@ class ItemController extends Controller
                     'multiplier' => 1,
                     'total_base_quantity' => abs($diff),
                     'previous_stock' => $previousStock,
-                    'current_stock' => $newStock,
-                    'notes' => 'Penyesuaian stok manual saat edit barang',
+                    'current_stock' => $item->stock,
+                    'notes' => 'Penyesuaian stok saat edit barang',
                     'reference_no' => 'ADJ-' . time(),
                     'mutation_date' => now(),
                 ]);
             }
-
-            // Sync conversions
-            $this->syncConversions($item, $request->input('conversions'));
 
             $item->load(['category', 'unit', 'conversions.unit']);
 
@@ -214,6 +274,7 @@ class ItemController extends Controller
             'type' => ['required', 'in:in,out,adjustment'],
             'quantity' => ['required', 'integer', 'min:1'],
             'unit_id' => ['required', 'integer', 'exists:units,id'],
+            'stock_target' => ['nullable', 'in:auto,real,estimated'],
             'notes' => ['nullable', 'string'],
             'reference_no' => ['nullable', 'string', 'max:100'],
             'mutation_date' => ['nullable', 'date'],
@@ -222,10 +283,14 @@ class ItemController extends Controller
         $unitId = (int) $validated['unit_id'];
         $quantity = (int) $validated['quantity'];
         $type = $validated['type'];
+        $target = $request->input('stock_target', 'auto');
 
-        // Determine multiplier
+        // Determine multiplier and conversion model
         $multiplier = 1;
-        if ($unitId !== (int) $item->unit_id) {
+        $conv = null;
+        $isBaseUnit = ($unitId === (int) $item->unit_id);
+
+        if (! $isBaseUnit) {
             $conv = ItemConversion::where('item_id', $item->id)
                 ->where('unit_id', $unitId)
                 ->first();
@@ -242,32 +307,61 @@ class ItemController extends Controller
         $previousStock = (int) $item->stock;
         $baseUnitName = $item->unit ? ($item->unit->symbol ?: $item->unit->name) : 'pcs';
 
-        if ($type === 'out') {
-            if ($previousStock < $totalBaseQuantity) {
-                return response()->json([
-                    'message' => "Stok tidak mencukupi untuk diambil. Stok saat ini: {$item->stock_breakdown_text} ({$previousStock} {$baseUnitName}), sedangkan yang ingin diambil: {$totalBaseQuantity} {$baseUnitName}.",
-                ], 422);
-            }
-            $currentStock = $previousStock - $totalBaseQuantity;
-        } elseif ($type === 'in') {
-            $currentStock = $previousStock + $totalBaseQuantity;
-        } else {
-            // adjustment
-            $currentStock = $totalBaseQuantity;
-        }
-
         return DB::transaction(function () use (
             $item,
+            $conv,
+            $isBaseUnit,
             $type,
             $quantity,
             $unitId,
             $multiplier,
             $totalBaseQuantity,
             $previousStock,
-            $currentStock,
-            $validated
+            $target,
+            $validated,
+            $baseUnitName
         ) {
-            $item->update(['stock' => $currentStock]);
+            if ($type === 'out') {
+                if ($previousStock < $totalBaseQuantity) {
+                    return response()->json([
+                        'message' => "Stok tidak mencukupi untuk diambil. Total stok saat ini setara: {$previousStock} {$baseUnitName}, sedangkan yang ingin diambil: {$totalBaseQuantity} {$baseUnitName}.",
+                    ], 422);
+                }
+
+                $this->performStockDeduction($item, $conv, $quantity, $multiplier, $target);
+            } elseif ($type === 'in') {
+                if ($conv) {
+                    if ($target === 'estimated') {
+                        $conv->estimated_stock = ((int) ($conv->estimated_stock ?? 0)) + $quantity;
+                    } else {
+                        $conv->real_stock = ((int) ($conv->real_stock ?? 0)) + $quantity;
+                    }
+                    $conv->stock = $conv->real_stock + $conv->estimated_stock;
+                    $conv->save();
+                } else {
+                    if ($target === 'estimated') {
+                        $item->estimated_stock = ((int) ($item->estimated_stock ?? 0)) + $quantity;
+                    } else {
+                        $item->real_stock = ((int) ($item->real_stock ?? 0)) + $quantity;
+                    }
+                }
+            } else {
+                // Adjustment
+                if ($conv) {
+                    $conv->real_stock = $quantity;
+                    $conv->estimated_stock = 0;
+                    $conv->stock = $quantity;
+                    $conv->save();
+                } else {
+                    $item->real_stock = $quantity;
+                    $item->estimated_stock = 0;
+                }
+            }
+
+            $item->recalculateTotalStock();
+            $item->save();
+
+            $currentStock = (int) $item->stock;
 
             $mutation = StockMutation::create([
                 'item_id' => $item->id,
@@ -293,7 +387,7 @@ class ItemController extends Controller
             };
 
             return response()->json([
-                'message' => "{$actionText}. Sisa stok sekarang: {$item->stock_breakdown_text} ({$item->stock} {$item->unit->symbol}).",
+                'message' => "{$actionText}. Rincian stok fisik: {$item->dual_stock_breakdown_text} (Total setara: {$item->stock} {$baseUnitName}).",
                 'data' => $item,
                 'mutation' => $mutation->load(['unit', 'user']),
             ]);
@@ -328,6 +422,8 @@ class ItemController extends Controller
         foreach ($conversionsInput as $c) {
             $unitId = (int) ($c['unit_id'] ?? 0);
             $multiplier = (int) ($c['multiplier'] ?? 1);
+            $convReal = max(0, (int) ($c['real_stock'] ?? 0));
+            $convEst = max(0, (int) ($c['estimated_stock'] ?? 0));
 
             // Do not allow conversion to base unit or multiplier <= 1
             if ($unitId > 0 && $unitId !== (int) $item->unit_id && $multiplier > 1) {
@@ -338,6 +434,9 @@ class ItemController extends Controller
                     ],
                     [
                         'multiplier' => $multiplier,
+                        'real_stock' => $convReal,
+                        'estimated_stock' => $convEst,
+                        'stock' => $convReal + $convEst,
                     ]
                 );
                 $existingIds[] = $conv->id;
@@ -348,5 +447,122 @@ class ItemController extends Controller
         ItemConversion::where('item_id', $item->id)
             ->whereNotIn('id', $existingIds)
             ->delete();
+    }
+
+    private function performStockDeduction(Item $item, ?ItemConversion $conv, int $quantity, int $multiplier, string $target): void
+    {
+        if ($conv) {
+            $cReal = (int) ($conv->real_stock ?? 0);
+            $cEst = (int) ($conv->estimated_stock ?? 0);
+            $cTotal = $cReal + $cEst;
+
+            if ($cTotal >= $quantity) {
+                if ($target === 'estimated') {
+                    $deductEst = min($cEst, $quantity);
+                    $rem = $quantity - $deductEst;
+                    $conv->estimated_stock = max(0, $cEst - $deductEst);
+                    $conv->real_stock = max(0, $cReal - $rem);
+                } elseif ($target === 'real') {
+                    $deductReal = min($cReal, $quantity);
+                    $rem = $quantity - $deductReal;
+                    $conv->real_stock = max(0, $cReal - $deductReal);
+                    $conv->estimated_stock = max(0, $cEst - $rem);
+                } else {
+                    // Auto: prioritize estimated
+                    $deductEst = min($cEst, $quantity);
+                    $rem = $quantity - $deductEst;
+                    $conv->estimated_stock = max(0, $cEst - $deductEst);
+                    $conv->real_stock = max(0, $cReal - $rem);
+                }
+                $conv->stock = max(0, $conv->real_stock + $conv->estimated_stock);
+                $conv->save();
+            } else {
+                // Not enough full container units, deduct all available in conv
+                $neededFromOther = $quantity - $cTotal;
+                $conv->real_stock = 0;
+                $conv->estimated_stock = 0;
+                $conv->stock = 0;
+                $conv->save();
+
+                // Deduct remaining equivalent base quantity from loose/cascading stock
+                $this->deductBaseQuantityCascading($item, $neededFromOther * $multiplier, $target);
+            }
+        } else {
+            // Requested in base unit
+            $this->deductBaseQuantityCascading($item, $quantity, $target);
+        }
+    }
+
+    private function deductBaseQuantityCascading(Item $item, int $baseQtyNeeded, string $target): void
+    {
+        $itemReal = (int) ($item->real_stock ?? 0);
+        $itemEst = (int) ($item->estimated_stock ?? 0);
+        $itemBaseTotal = $itemReal + $itemEst;
+
+        if ($itemBaseTotal >= $baseQtyNeeded) {
+            if ($target === 'estimated') {
+                $deductEst = min($itemEst, $baseQtyNeeded);
+                $rem = $baseQtyNeeded - $deductEst;
+                $item->estimated_stock = max(0, $itemEst - $deductEst);
+                $item->real_stock = max(0, $itemReal - $rem);
+            } elseif ($target === 'real') {
+                $deductReal = min($itemReal, $baseQtyNeeded);
+                $rem = $baseQtyNeeded - $deductReal;
+                $item->real_stock = max(0, $itemReal - $deductReal);
+                $item->estimated_stock = max(0, $itemEst - $rem);
+            } else {
+                $deductEst = min($itemEst, $baseQtyNeeded);
+                $rem = $baseQtyNeeded - $deductEst;
+                $item->estimated_stock = max(0, $itemEst - $deductEst);
+                $item->real_stock = max(0, $itemReal - $rem);
+            }
+        } else {
+            // Loose base stock is insufficient: consume all loose base stock first
+            $remNeeded = $baseQtyNeeded - $itemBaseTotal;
+            $item->real_stock = 0;
+            $item->estimated_stock = 0;
+
+            // Cascade unpack higher units (starting from smallest multiplier > 1 up to largest)
+            $conversions = $item->conversions()->orderBy('multiplier', 'asc')->get();
+
+            foreach ($conversions as $c) {
+                if ($remNeeded <= 0) {
+                    break;
+                }
+
+                $mult = (int) $c->multiplier;
+                $cReal = (int) ($c->real_stock ?? 0);
+                $cEst = (int) ($c->estimated_stock ?? 0);
+                $cTotal = $cReal + $cEst;
+
+                if ($cTotal <= 0 || $mult <= 1) {
+                    continue;
+                }
+
+                $containersNeeded = (int) ceil($remNeeded / $mult);
+                $containersToUnpack = min($cTotal, $containersNeeded);
+
+                $fromEst = min($cEst, $containersToUnpack);
+                $fromReal = $containersToUnpack - $fromEst;
+                $c->estimated_stock = max(0, $cEst - $fromEst);
+                $c->real_stock = max(0, $cReal - $fromReal);
+                $c->stock = max(0, $c->real_stock + $c->estimated_stock);
+                $c->save();
+
+                $yieldBase = $containersToUnpack * $mult;
+
+                if ($yieldBase >= $remNeeded) {
+                    $surplus = $yieldBase - $remNeeded;
+                    if ($fromReal > 0) {
+                        $item->real_stock += $surplus;
+                    } else {
+                        $item->estimated_stock += $surplus;
+                    }
+                    $remNeeded = 0;
+                } else {
+                    $remNeeded -= $yieldBase;
+                }
+            }
+        }
     }
 }

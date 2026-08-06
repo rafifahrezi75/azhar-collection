@@ -15,6 +15,9 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained('categories')->restrictOnDelete();
             $table->foreignId('unit_id')->constrained('units')->restrictOnDelete();
             $table->integer('stock')->default(0);
+            $table->integer('real_stock')->default(0);
+            $table->integer('estimated_stock')->default(0);
+            $table->boolean('is_estimated_stock')->default(false);
             $table->integer('min_stock')->default(0);
             $table->string('image')->nullable();
             $table->text('description')->nullable();

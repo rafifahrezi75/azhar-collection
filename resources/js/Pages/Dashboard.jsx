@@ -100,7 +100,7 @@ export default function Dashboard({ initialSummary = null }) {
                                 <span>Azhar Collection • Inventory & Production Hub</span>
                             </div>
                             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
-                                Selamat Datang kembali, {user?.name || "User"}! 👋
+                                Selamat Datang kembali, {user?.name || "User"}!
                             </h1>
                             <p className="mt-1.5 text-slate-400 text-xs sm:text-sm leading-relaxed">
                                 Ringkasan inventaris bahan baku, mutasi keluar/masuk, dan kesiapan stok produksi konveksi.

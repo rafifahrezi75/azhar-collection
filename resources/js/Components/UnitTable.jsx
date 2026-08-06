@@ -1,10 +1,10 @@
 import React, { memo } from "react";
 import { Edit2, Trash2, Scale, AlertCircle } from "lucide-react";
 import Pagination from "@/Components/Pagination";
-import Tooltip from "@/Components/Tooltip";
 
 const UnitTable = memo(function UnitTable({
-    units = [],
+    units,
+    items,
     loading = false,
     canUpdate = false,
     canDelete = false,
@@ -16,6 +16,8 @@ const UnitTable = memo(function UnitTable({
     onPageChange,
     onItemsPerPageChange,
 }) {
+    const displayUnits = (units && units.length > 0) ? units : (items || []);
+
     return (
         <div className="bg-white border border-slate-200/90 rounded-md overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
@@ -41,7 +43,7 @@ const UnitTable = memo(function UnitTable({
                                     </div>
                                 </td>
                             </tr>
-                        ) : units.length === 0 ? (
+                        ) : displayUnits.length === 0 ? (
                             <tr>
                                 <td colSpan="7" className="px-3.5 py-10 text-center text-slate-400">
                                     <Scale className="w-9 h-9 mx-auto text-slate-300 mb-1.5" />
@@ -52,7 +54,7 @@ const UnitTable = memo(function UnitTable({
                                 </td>
                             </tr>
                         ) : (
-                            units.map((item, idx) => {
+                            displayUnits.map((item, idx) => {
                                 const rowNumber = (currentPage - 1) * itemsPerPage + idx + 1;
                                 return (
                                     <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
@@ -89,29 +91,27 @@ const UnitTable = memo(function UnitTable({
                                             )}
                                         </td>
                                         <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
-                                            <div className="flex justify-end items-center gap-1.5">
+                                            <div className="inline-flex items-center gap-1">
                                                 {canUpdate && (
-                                                    <Tooltip content="Edit" position="bottom">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onEdit(item)}
-                                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onEdit(item)}
+                                                        title="Edit Satuan"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                 )}
 
                                                 {canDelete && (
-                                                    <Tooltip content="Hapus" position="bottom">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onDelete(item.id)}
-                                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </Tooltip>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onDelete(item.id)}
+                                                        title="Hapus Satuan"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                 )}
 
                                                 {!canUpdate && !canDelete && (

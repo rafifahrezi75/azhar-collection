@@ -1,6 +1,5 @@
 import React, { memo } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import Tooltip from "@/Components/Tooltip";
 
 const Pagination = memo(function Pagination({
     currentPage = 1,
@@ -73,36 +72,34 @@ const Pagination = memo(function Pagination({
                 )}
             </div>
 
-            {/* Right: Page Navigation Buttons with Tooltips */}
+            {/* Right: Page Navigation Buttons */}
             <div className="flex items-center gap-1">
                 {/* First Page */}
-                <Tooltip content="Awal" position="bottom">
-                    <button
-                        type="button"
-                        onClick={() => onPageChange(1)}
-                        disabled={currentPage === 1}
-                        className="p-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                    >
-                        <ChevronsLeft className="w-3.5 h-3.5" />
-                    </button>
-                </Tooltip>
+                <button
+                    type="button"
+                    onClick={() => onPageChange(1)}
+                    disabled={currentPage === 1}
+                    title="Halaman Pertama"
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                    <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
 
                 {/* Prev Page */}
-                <Tooltip content="Sebelumnya" position="bottom">
-                    <button
-                        type="button"
-                        onClick={() => onPageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="p-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                    >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                </Tooltip>
+                <button
+                    type="button"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    title="Halaman Sebelumnya"
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
 
                 {/* Page Numbers */}
                 {getPageNumbers().map((page, index) =>
                     page === "..." ? (
-                        <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400 font-bold">
+                        <span key={`ellipsis-${index}`} className="px-1.5 text-slate-400 font-bold">
                             ...
                         </span>
                     ) : (
@@ -122,28 +119,26 @@ const Pagination = memo(function Pagination({
                 )}
 
                 {/* Next Page */}
-                <Tooltip content="Berikutnya" position="bottom">
-                    <button
-                        type="button"
-                        onClick={() => onPageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                    >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                </Tooltip>
+                <button
+                    type="button"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    title="Halaman Berikutnya"
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                </button>
 
                 {/* Last Page */}
-                <Tooltip content="Akhir" position="bottom">
-                    <button
-                        type="button"
-                        onClick={() => onPageChange(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="p-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                    >
-                        <ChevronsRight className="w-3.5 h-3.5" />
-                    </button>
-                </Tooltip>
+                <button
+                    type="button"
+                    onClick={() => onPageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    title="Halaman Terakhir"
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
             </div>
         </div>
     );

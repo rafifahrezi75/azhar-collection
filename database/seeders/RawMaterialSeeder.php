@@ -20,13 +20,41 @@ class RawMaterialSeeder extends Seeder
 
         // 1. Master Categories
         $categoriesData = [
-            ['name' => 'Kain & Tekstil Utama', 'slug' => 'kain-tekstil-utama', 'description' => 'Bahan baku kain gulungan dan potongan untuk produksi pakaian.'],
-            ['name' => 'Benang Jahit & Obras', 'slug' => 'benang-jahit-obras', 'description' => 'Aneka benang jahit spun polyester, obras, dan bordir berbagai warna.'],
-            ['name' => 'Kancing & Snap Button', 'slug' => 'kancing-snap-button', 'description' => 'Aneka kancing kemeja, kancing jas, batok kelapa, dan kancing cetek logam.'],
-            ['name' => 'Ritsleting & Zipper', 'slug' => 'ritsleting-zipper', 'description' => 'Zipper invisible, zipper logam, dan zipper coil untuk baju & celana.'],
-            ['name' => 'Kain Keras & Pelapis (Interfacing)', 'slug' => 'kain-keras-pelapis', 'description' => 'Kain keras kerah, vislin, tricot, dan padding pelapis busana.'],
-            ['name' => 'Karet Elastis & Webbing', 'slug' => 'karet-elastis-webbing', 'description' => 'Karet kolor elastis pinggang celana dan ban pinggang.'],
-            ['name' => 'Label, Renda & Aksesoris', 'slug' => 'label-renda-aksesoris', 'description' => 'Label woven merk, pita renda bordir, hangtag, dan aksesoris garment.'],
+            [
+                'name' => 'Kain & Tekstil Utama',
+                'slug' => 'kain-tekstil-utama',
+                'description' => 'Bahan baku kain gulungan dan potongan untuk produksi pakaian gamis, koko, kemeja, dan celana.'
+            ],
+            [
+                'name' => 'Benang Jahit, Obras & Bordir',
+                'slug' => 'benang-jahit-obras-bordir',
+                'description' => 'Aneka benang jahit spun polyester, benang obras, dan benang bordir berbagai nomor warna.'
+            ],
+            [
+                'name' => 'Kancing & Fastener',
+                'slug' => 'kancing-fastener',
+                'description' => 'Aneka kancing kemeja 4 lubang, kancing batok kelapa klasik, dan kancing cetek snap button.'
+            ],
+            [
+                'name' => 'Ritsleting & Zipper',
+                'slug' => 'ritsleting-zipper',
+                'description' => 'Zipper invisible YKK busana wanita, zipper coil, dan ritsleting logam celana.'
+            ],
+            [
+                'name' => 'Kain Keras & Pelapis (Interfacing)',
+                'slug' => 'kain-keras-pelapis',
+                'description' => 'Kain keras kerah staplek, vislin berperekat, tricot, dan furing pelapis pakaian.'
+            ],
+            [
+                'name' => 'Karet Elastis & Webbing',
+                'slug' => 'karet-elastis-webbing',
+                'description' => 'Karet ban pinggang elastis celana sarung, sirwal, dan manset pergelangan tangan.'
+            ],
+            [
+                'name' => 'Renda, Pita & Label Brand',
+                'slug' => 'renda-pita-label-brand',
+                'description' => 'Label woven damask merk Azhar Collection, renda gipper, pita satin, dan hangtag.'
+            ],
         ];
 
         $categories = [];
@@ -39,15 +67,15 @@ class RawMaterialSeeder extends Seeder
 
         // 2. Master Units
         $unitsData = [
-            ['name' => 'Meter', 'symbol' => 'm', 'description' => 'Satuan panjang kain dan pita'],
-            ['name' => 'Roll', 'symbol' => 'roll', 'description' => 'Satuan gulungan besar kain atau karet'],
-            ['name' => 'Pieces / Cones', 'symbol' => 'pcs', 'description' => 'Satuan buah / cones satuan dasar'],
-            ['name' => 'Lusin', 'symbol' => 'lsn', 'description' => 'Satuan isi 12 buah'],
-            ['name' => 'Gross', 'symbol' => 'grs', 'description' => 'Satuan isi 144 buah (12 lusin)'],
+            ['name' => 'Meter', 'symbol' => 'm', 'description' => 'Satuan panjang kain, renda, dan karet'],
+            ['name' => 'Roll', 'symbol' => 'roll', 'description' => 'Satuan gulungan besar kain atau karet elastis'],
+            ['name' => 'Pieces', 'symbol' => 'pcs', 'description' => 'Satuan buah/biji untuk benang, kancing, zipper, dan label'],
+            ['name' => 'Lusin', 'symbol' => 'lsn', 'description' => 'Satuan kemasan 12 buah'],
+            ['name' => 'Gross', 'symbol' => 'grs', 'description' => 'Satuan kemasan 144 buah (12 lusin)'],
             ['name' => 'Pack', 'symbol' => 'pack', 'description' => 'Satuan kemasan pak / bungkus'],
             ['name' => 'Box', 'symbol' => 'box', 'description' => 'Satuan kemasan kardus / kotak besar'],
             ['name' => 'Pasang', 'symbol' => 'psg', 'description' => 'Satuan pasang untuk kancing snap / kancing jepret'],
-            ['name' => 'Gulung', 'symbol' => 'glg', 'description' => 'Satuan gulungan kecil / sedang'],
+            ['name' => 'Gulung', 'symbol' => 'glg', 'description' => 'Satuan gulungan kecil pita / benang bordir'],
         ];
 
         $units = [];
@@ -58,221 +86,297 @@ class RawMaterialSeeder extends Seeder
             );
         }
 
-        // 3. Raw Material Items
+        // 3. Realistic Raw Materials with Discrete Physical Unit Breakdown
         $itemsData = [
-            // Kain
+            // --- KAIN UTAMA ---
             [
                 'code' => 'KAIN-TOY-NVY',
-                'name' => 'Kain Katun Toyobo Fodu Premium (Navy Blue)',
+                'name' => 'Kain Katun Toyobo Fodu Import (Navy Blue)',
                 'category' => 'Kain & Tekstil Utama',
                 'unit' => 'm',
-                'stock' => 235, // 4 Roll (@50m) + 35m
                 'min_stock' => 30,
-                'description' => 'Katun Toyobo import serat padat, adem, tidak menerawang. Warna Navy Blue pekat. Lebar 150cm.',
+                'description' => 'Katun Toyobo Fodu grade A serat rapat halus, adem & jatuh elegan. Warna Navy Blue (Biru Dongker) Lebar 150cm.',
                 'conversions' => [
-                    ['unit' => 'roll', 'multiplier' => 50],
-                    ['unit' => 'glg', 'multiplier' => 10],
+                    ['unit' => 'roll', 'multiplier' => 50, 'real_stock' => 4, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 0,
+                'base_estimated_stock' => 35, // 35 meter sisa potongan meja potong
             ],
             [
                 'code' => 'KAIN-RAY-SGE',
-                'name' => 'Kain Katun Rayon Viscose Twill (Sage Green)',
+                'name' => 'Kain Rayon Viscose Twill 30s (Sage Green)',
                 'category' => 'Kain & Tekstil Utama',
                 'unit' => 'm',
-                'stock' => 178, // 3 Roll (@50m) + 28m
                 'min_stock' => 25,
-                'description' => 'Bahan rayon viscose adem jatuh lembut untuk gamis dan kemeja santai. Warna Sage Green.',
+                'description' => 'Bahan rayon viscose twill sangat dingin dan lembut, cocok untuk gamis printing dan kemeja santai. Warna Sage Green.',
                 'conversions' => [
-                    ['unit' => 'roll', 'multiplier' => 50],
-                    ['unit' => 'glg', 'multiplier' => 10],
+                    ['unit' => 'roll', 'multiplier' => 50, 'real_stock' => 3, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 15,
+                'base_estimated_stock' => 10,
             ],
             [
                 'code' => 'KAIN-LNN-WHT',
-                'name' => 'Kain Linen Pure Rami Organik (Broken White)',
+                'name' => 'Kain Pure Linen Rami Organik 100% (Broken White)',
                 'category' => 'Kain & Tekstil Utama',
                 'unit' => 'm',
-                'stock' => 125, // 3 Roll (@40m) + 5m
                 'min_stock' => 20,
-                'description' => 'Linen rami natural bertekstur serat tegas mewah. Warna Broken White / Putih Tulang.',
+                'description' => 'Linen rami natural tekstur serat tegas mewah, sangat diminati untuk baju koko modern dan kemeja santai. Warna Broken White.',
                 'conversions' => [
-                    ['unit' => 'roll', 'multiplier' => 40],
+                    ['unit' => 'roll', 'multiplier' => 40, 'real_stock' => 2, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 12,
+                'base_estimated_stock' => 8,
             ],
             [
                 'code' => 'KAIN-STN-MRN',
-                'name' => 'Kain Satin Maxmara Velvet Silk (Maroon)',
+                'name' => 'Kain Satin Silk Maxmara Premium (Maroon Red)',
                 'category' => 'Kain & Tekstil Utama',
                 'unit' => 'm',
-                'stock' => 85, // 1 Roll (@50m) + 35m
                 'min_stock' => 15,
-                'description' => 'Satin maxmara glossy doff elegan, licin lembut untuk kombinasi busana muslim pesta.',
+                'description' => 'Satin maxmara kilau doff lembut mewah tidak gerah, untuk gamis pesta, abaya, dan kombinasi aksen busana wanita.',
                 'conversions' => [
-                    ['unit' => 'roll', 'multiplier' => 50],
+                    ['unit' => 'roll', 'multiplier' => 50, 'real_stock' => 1, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 24,
+                'base_estimated_stock' => 0,
             ],
             [
                 'code' => 'KAIN-DNM-BLU',
                 'name' => 'Kain Denim Cotton Chambray 6.5 oz (Indigo Blue)',
                 'category' => 'Kain & Tekstil Utama',
                 'unit' => 'm',
-                'stock' => 180, // 3 Roll (@60m)
                 'min_stock' => 30,
-                'description' => 'Bahan chambray katun ringan untuk kemeja casual koko denim. Warna Indigo Blue.',
+                'description' => 'Chambray denim katun ringan dan breathable untuk kemeja kasual koko denim dan outerwear.',
                 'conversions' => [
-                    ['unit' => 'roll', 'multiplier' => 60],
+                    ['unit' => 'roll', 'multiplier' => 60, 'real_stock' => 2, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 38,
+                'base_estimated_stock' => 0,
+            ],
+            [
+                'code' => 'KAIN-WLF-BLK',
+                'name' => 'Kain Woolpeach / Wolfis Grade A (Jet Black)',
+                'category' => 'Kain & Tekstil Utama',
+                'unit' => 'm',
+                'min_stock' => 40,
+                'description' => 'Kain wolfis hitam pekat tebal tidak tembus pandang, tekstur lembut jatuh untuk abaya, khimar, dan jilbab syari.',
+                'conversions' => [
+                    ['unit' => 'roll', 'multiplier' => 50, 'real_stock' => 5, 'estimated_stock' => 0],
+                ],
+                'base_real_stock' => 0,
+                'base_estimated_stock' => 18,
             ],
 
-            // Benang Jahit
+            // --- BENANG JAHIT, OBRAS & BORDIR ---
             [
                 'code' => 'BNG-AST-BLK',
                 'name' => 'Benang Jahit Spun Polyester 40/2 Astra (Hitam No. 000)',
-                'category' => 'Benang Jahit & Obras',
+                'category' => 'Benang Jahit, Obras & Bordir',
                 'unit' => 'pcs',
-                'stock' => 268, // 2 Box (@120) + 2 Lusin (@12) + 4 Pcs
                 'min_stock' => 24,
-                'description' => 'Benang jahit kualitas tinggi merk Astra 5000 yards. Kuat dan tidak mudah putus pada mesin industri.',
+                'description' => 'Benang jahit Astra 5000 yards kualitas industri garmen, kuat, licin, dan tidak gampang putus di mesin high-speed.',
                 'conversions' => [
-                    ['unit' => 'box', 'multiplier' => 120],
-                    ['unit' => 'lsn', 'multiplier' => 12],
+                    ['unit' => 'box', 'multiplier' => 120, 'real_stock' => 2, 'estimated_stock' => 0],
+                    ['unit' => 'lsn', 'multiplier' => 12, 'real_stock' => 2, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 6,
+                'base_estimated_stock' => 0,
             ],
             [
                 'code' => 'BNG-AST-WHT',
                 'name' => 'Benang Jahit Spun Polyester 40/2 Astra (Putih No. 100)',
-                'category' => 'Benang Jahit & Obras',
+                'category' => 'Benang Jahit, Obras & Bordir',
                 'unit' => 'pcs',
-                'stock' => 310, // 2 Box (@120) + 5 Lusin (@12) + 10 Pcs
                 'min_stock' => 24,
-                'description' => 'Benang jahit Astra 5000 yards putih bersih untuk jahit baju koko dan kemeja.',
+                'description' => 'Benang jahit Astra 5000 yards putih bersih untuk produksi baju koko putih dan kemeja polos.',
                 'conversions' => [
-                    ['unit' => 'box', 'multiplier' => 120],
-                    ['unit' => 'lsn', 'multiplier' => 12],
+                    ['unit' => 'box', 'multiplier' => 120, 'real_stock' => 2, 'estimated_stock' => 0],
+                    ['unit' => 'lsn', 'multiplier' => 12, 'real_stock' => 4, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 8,
+                'base_estimated_stock' => 0,
             ],
             [
                 'code' => 'BNG-OBR-NAT',
-                'name' => 'Benang Obras Polyester 20/2 (Putih Natural)',
-                'category' => 'Benang Jahit & Obras',
+                'name' => 'Benang Obras Tekstur Polyester 20/2 (Natural Off-White)',
+                'category' => 'Benang Jahit, Obras & Bordir',
                 'unit' => 'pcs',
-                'stock' => 38, // 3 Lusin (@12) + 2 Pcs
-                'min_stock' => 8,
-                'description' => 'Benang obras lentur padat untuk mesin obras 4 benang / 5 benang.',
+                'min_stock' => 12,
+                'description' => 'Benang obras elastis padat untuk mesin obras 4 benang dan 5 benang jahitan tepi kain.',
                 'conversions' => [
-                    ['unit' => 'lsn', 'multiplier' => 12],
+                    ['unit' => 'lsn', 'multiplier' => 12, 'real_stock' => 3, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 4,
+                'base_estimated_stock' => 2,
             ],
             [
                 'code' => 'BNG-BRD-GLD',
                 'name' => 'Benang Bordir Rayon Filament Shiny (Gold Emas No. 902)',
-                'category' => 'Benang Jahit & Obras',
+                'category' => 'Benang Jahit, Obras & Bordir',
                 'unit' => 'pcs',
-                'stock' => 42, // 3 Lusin (@12) + 6 Pcs
                 'min_stock' => 10,
-                'description' => 'Benang bordir kilap premium untuk bordir kerah, dada, dan manset busana muslim.',
+                'description' => 'Benang bordir kilap tinggi untuk bordir komputer motif dada baju koko dan manset lengan.',
                 'conversions' => [
-                    ['unit' => 'lsn', 'multiplier' => 12],
+                    ['unit' => 'lsn', 'multiplier' => 12, 'real_stock' => 3, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 6,
+                'base_estimated_stock' => 0,
             ],
 
-            // Kancing
+            // --- KANCING & FASTENER ---
             [
                 'code' => 'KNC-KMJ-WHT',
                 'name' => 'Kancing Kemeja 4 Lubang Polyester 18L (Putih Mutiara)',
-                'category' => 'Kancing & Snap Button',
+                'category' => 'Kancing & Fastener',
                 'unit' => 'pcs',
-                'stock' => 1850, // 2 Pack (@720) + 2 Gross (@144) + 122 Pcs
                 'min_stock' => 288,
-                'description' => 'Kancing kemeja 11mm / 18L finishing pearl gloss elegan tahan cuci dan setrika panas.',
+                'description' => 'Kancing kemeja ukuran 11.5mm (18L) finishing mutiara mengkilap tahan setrika panas.',
                 'conversions' => [
-                    ['unit' => 'pack', 'multiplier' => 720],
-                    ['unit' => 'grs', 'multiplier' => 144],
+                    ['unit' => 'pack', 'multiplier' => 720, 'real_stock' => 2, 'estimated_stock' => 0],
+                    ['unit' => 'grs', 'multiplier' => 144, 'real_stock' => 2, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 80,
+                'base_estimated_stock' => 0,
             ],
             [
                 'code' => 'KNC-BTK-COK',
-                'name' => 'Kancing Batok Kelapa Asli 2 Lubang 24L (Cokelat Natural)',
-                'category' => 'Kancing & Snap Button',
+                'name' => 'Kancing Batok Kelapa 2 Lubang 24L (Natural Coconut Shell)',
+                'category' => 'Kancing & Fastener',
                 'unit' => 'pcs',
-                'stock' => 820, // 1 Pack (@576) + 1 Gross (@144) + 100 Pcs
                 'min_stock' => 144,
-                'description' => 'Kancing batok kelapa estetik klasik ramah lingkungan untuk kemeja koko etnik.',
+                'description' => 'Kancing batok kelapa estetik bernuansa etnik alami untuk kemeja koko rami dan kemeja kasual.',
                 'conversions' => [
-                    ['unit' => 'pack', 'multiplier' => 576],
-                    ['unit' => 'grs', 'multiplier' => 144],
+                    ['unit' => 'pack', 'multiplier' => 576, 'real_stock' => 1, 'estimated_stock' => 0],
+                    ['unit' => 'grs', 'multiplier' => 144, 'real_stock' => 1, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 65,
+                'base_estimated_stock' => 0,
             ],
             [
                 'code' => 'KNC-SNP-SLV',
-                'name' => 'Kancing Cetek Snap Button Logam 15mm (Silver Chrome)',
-                'category' => 'Kancing & Snap Button',
+                'name' => 'Kancing Snap Cetek Logam Stainless 15mm (Silver Chrome)',
+                'category' => 'Kancing & Fastener',
                 'unit' => 'psg',
-                'stock' => 675, // 1 Box (@500) + 3 Pack (@50) + 25 Pasang
                 'min_stock' => 100,
-                'description' => 'Kancing snap jepret logam anti karat untuk jaket, gamis, dan manset tangan.',
+                'description' => 'Kancing jepret logam anti karat kualitas ekspor untuk manset abaya, kemeja, dan jaket.',
                 'conversions' => [
-                    ['unit' => 'box', 'multiplier' => 500],
-                    ['unit' => 'pack', 'multiplier' => 50],
+                    ['unit' => 'box', 'multiplier' => 500, 'real_stock' => 1, 'estimated_stock' => 0],
+                    ['unit' => 'pack', 'multiplier' => 50, 'real_stock' => 3, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 25,
+                'base_estimated_stock' => 0,
             ],
 
-            // Perlengkapan & Aksesoris Lainnya
+            // --- RITSLETING & ZIPPER ---
             [
                 'code' => 'ZIP-YKK-INV',
-                'name' => 'Ritsleting Invisible Zipper YKK 50cm / 20 inch (Hitam)',
+                'name' => 'Ritsleting Invisible Zipper YKK 50cm / 20 inch (Hitam No. 580)',
                 'category' => 'Ritsleting & Zipper',
                 'unit' => 'pcs',
-                'stock' => 155, // 1 Box (@120) + 2 Lusin (@12) + 11 Pcs
                 'min_stock' => 24,
-                'description' => 'Resleting jepang merk YKK original gigi halus tahan lama untuk punggung gamis.',
+                'description' => 'Resleting jepang YKK original gigi halus presisi untuk bukaan punggung / dada gamis muslimah.',
                 'conversions' => [
-                    ['unit' => 'box', 'multiplier' => 120],
-                    ['unit' => 'lsn', 'multiplier' => 12],
+                    ['unit' => 'box', 'multiplier' => 120, 'real_stock' => 1, 'estimated_stock' => 0],
+                    ['unit' => 'lsn', 'multiplier' => 12, 'real_stock' => 2, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 10,
+                'base_estimated_stock' => 0,
             ],
             [
-                'code' => 'KRT-ELS-25M',
-                'name' => 'Karet Kolor Elastis Elastic Band 2.5cm (Putih)',
-                'category' => 'Karet Elastis & Webbing',
-                'unit' => 'm',
-                'stock' => 110, // 3 Roll (@30m) + 20m
-                'min_stock' => 30,
-                'description' => 'Karet pinggang elastis rajut rapat daya regang tinggi untuk celana sarung / sirwal.',
+                'code' => 'ZIP-CLM-SLV',
+                'name' => 'Ritsleting Celana Logam Brass No. 4 YKK 15cm (Antik Gold)',
+                'category' => 'Ritsleting & Zipper',
+                'unit' => 'pcs',
+                'min_stock' => 24,
+                'description' => 'Ritsleting logam kuningan antik kuat tahan lama untuk golbi celana panjang chino dan celana formal.',
                 'conversions' => [
-                    ['unit' => 'roll', 'multiplier' => 30],
+                    ['unit' => 'lsn', 'multiplier' => 12, 'real_stock' => 4, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 7,
+                'base_estimated_stock' => 0,
             ],
+
+            // --- KAIN KERAS & PELAPIS ---
             [
                 'code' => 'KRS-VIS-STP',
-                'name' => 'Kain Keras Interfacing Staplek Kerah M33 (Tebal Kaku)',
+                'name' => 'Kain Keras Interfacing Kerah Staplek M33 (Kaku Berperekat)',
                 'category' => 'Kain Keras & Pelapis (Interfacing)',
                 'unit' => 'm',
-                'stock' => 145, // 1 Roll (@100m) + 45m
                 'min_stock' => 20,
-                'description' => 'Kain keras lem berperekat panas untuk kerah kemeja koko dan manset agar tegak rapi.',
+                'description' => 'Kain keras kerah lem panas tebal untuk kerah kemeja, kerah koko sanghai, dan manset agar tegak kokoh rapi.',
                 'conversions' => [
-                    ['unit' => 'roll', 'multiplier' => 100],
+                    ['unit' => 'roll', 'multiplier' => 100, 'real_stock' => 1, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 28,
+                'base_estimated_stock' => 15,
             ],
             [
-                'code' => 'LBL-WVN-AZH',
-                'name' => 'Label Woven Damask Bordir Merk Azhar Collection',
-                'category' => 'Label, Renda & Aksesoris',
-                'unit' => 'pcs',
-                'stock' => 2450, // 2 Box (@1000) + 4 Pack (@100) + 50 Pcs
-                'min_stock' => 300,
-                'description' => 'Label merk woven damask halus tidak gatal di leher. Desain hitam emas.',
+                'code' => 'KRS-VSL-TIP',
+                'name' => 'Kain Vislin Perekat Tipis 1025HF (Putih Bersih)',
+                'category' => 'Kain Keras & Pelapis (Interfacing)',
+                'unit' => 'm',
+                'min_stock' => 25,
+                'description' => 'Kain vislin lem halus untuk melapisi belahan dada, saku paspol, dan lapisan leher gamis.',
                 'conversions' => [
-                    ['unit' => 'box', 'multiplier' => 1000],
-                    ['unit' => 'pack', 'multiplier' => 100],
+                    ['unit' => 'roll', 'multiplier' => 100, 'real_stock' => 1, 'estimated_stock' => 0],
                 ],
+                'base_real_stock' => 42,
+                'base_estimated_stock' => 0,
+            ],
+
+            // --- KARET ELASTIS ---
+            [
+                'code' => 'KRT-ELS-25M',
+                'name' => 'Karet Kolor Elastis Elastic Band 2.5cm Grade A (Putih)',
+                'category' => 'Karet Elastis & Webbing',
+                'unit' => 'm',
+                'min_stock' => 30,
+                'description' => 'Karet elastis rajut rapat daya regang stabil tidak cepat kendor untuk pinggang celana panjang sirwal.',
+                'conversions' => [
+                    ['unit' => 'roll', 'multiplier' => 30, 'real_stock' => 3, 'estimated_stock' => 0],
+                ],
+                'base_real_stock' => 12,
+                'base_estimated_stock' => 8,
+            ],
+
+            // --- LABEL & AKSESORIS ---
+            [
+                'code' => 'LBL-WVN-AZH',
+                'name' => 'Label Woven Damask Bordir Merk "Azhar Collection" (Gold/Black)',
+                'category' => 'Renda, Pita & Label Brand',
+                'unit' => 'pcs',
+                'min_stock' => 500,
+                'description' => 'Label leher woven damask halus tidak membuat gatal di leher. Desain eksklusif merk Azhar Collection.',
+                'conversions' => [
+                    ['unit' => 'box', 'multiplier' => 1000, 'real_stock' => 2, 'estimated_stock' => 0],
+                    ['unit' => 'pack', 'multiplier' => 100, 'real_stock' => 4, 'estimated_stock' => 0],
+                ],
+                'base_real_stock' => 85,
+                'base_estimated_stock' => 0,
+            ],
+            [
+                'code' => 'RND-GIP-PUT',
+                'name' => 'Renda Bordir Gipper / Guipure Lace 3.5cm (Broken White)',
+                'category' => 'Renda, Pita & Label Brand',
+                'unit' => 'm',
+                'min_stock' => 15,
+                'description' => 'Renda gipper bordir benang timbul mewah untuk aksen ujung lengan dan bawah gamis abaya.',
+                'conversions' => [
+                    ['unit' => 'glg', 'multiplier' => 15, 'real_stock' => 4, 'estimated_stock' => 0],
+                ],
+                'base_real_stock' => 7,
+                'base_estimated_stock' => 4,
             ],
         ];
 
+        // Process item insertion & exact math calculations
         foreach ($itemsData as $data) {
             $catId = $categories[$data['category']]->id;
             $unitId = $units[$data['unit']]->id;
+
+            $baseReal = (float)($data['base_real_stock'] ?? 0);
+            $baseEst = (float)($data['base_estimated_stock'] ?? 0);
 
             $item = Item::updateOrCreate(
                 ['code' => $data['code']],
@@ -280,53 +384,70 @@ class RawMaterialSeeder extends Seeder
                     'name' => $data['name'],
                     'category_id' => $catId,
                     'unit_id' => $unitId,
-                    'stock' => $data['stock'],
+                    'real_stock' => $baseReal,
+                    'estimated_stock' => $baseEst,
+                    'stock' => $baseReal + $baseEst,
+                    'is_estimated_stock' => ($baseEst > 0 && $baseReal == 0),
                     'min_stock' => $data['min_stock'],
                     'description' => $data['description'],
                     'is_active' => true,
                 ]
             );
 
-            // Sync conversions
+            // Sync discrete conversions
             $convIds = [];
-            foreach ($data['conversions'] as $convData) {
-                $convUnitId = $units[$convData['unit']]->id;
-                $conv = ItemConversion::updateOrCreate(
-                    [
-                        'item_id' => $item->id,
-                        'unit_id' => $convUnitId,
-                    ],
-                    [
-                        'multiplier' => $convData['multiplier'],
-                    ]
-                );
-                $convIds[] = $conv->id;
+            if (!empty($data['conversions'])) {
+                foreach ($data['conversions'] as $convData) {
+                    $convUnitId = $units[$convData['unit']]->id;
+                    $cReal = (float)($convData['real_stock'] ?? 0);
+                    $cEst = (float)($convData['estimated_stock'] ?? 0);
+                    $cTotal = $cReal + $cEst;
+
+                    $conv = ItemConversion::updateOrCreate(
+                        [
+                            'item_id' => $item->id,
+                            'unit_id' => $convUnitId,
+                        ],
+                        [
+                            'multiplier' => $convData['multiplier'],
+                            'real_stock' => $cReal,
+                            'estimated_stock' => $cEst,
+                            'stock' => $cTotal,
+                        ]
+                    );
+                    $convIds[] = $conv->id;
+                }
             }
 
             ItemConversion::where('item_id', $item->id)
                 ->whereNotIn('id', $convIds)
                 ->delete();
 
-            // Create initial mutation if none exists
-            if (! StockMutation::where('item_id', $item->id)->exists() && $item->stock > 0) {
+            $item->recalculateTotalStock();
+            $item->save();
+
+            $totalStock = $item->stock;
+
+            // Create initial stock mutation if none exists
+            if (!StockMutation::where('item_id', $item->id)->exists() && $totalStock > 0) {
                 StockMutation::create([
                     'item_id' => $item->id,
                     'user_id' => $adminId,
                     'type' => 'in',
-                    'quantity' => $item->stock,
+                    'quantity' => $totalStock,
                     'unit_id' => $item->unit_id,
                     'multiplier' => 1,
-                    'total_base_quantity' => $item->stock,
+                    'total_base_quantity' => $totalStock,
                     'previous_stock' => 0,
-                    'current_stock' => $item->stock,
-                    'notes' => 'Stok awal bahan baku masuk gudang',
-                    'reference_no' => 'INIT-' . $item->code,
-                    'mutation_date' => now()->subDays(rand(2, 6)),
+                    'current_stock' => $totalStock,
+                    'notes' => 'Penerimaan stok awal gudang bahan baku',
+                    'reference_no' => 'RCV-INIT-' . $item->code,
+                    'mutation_date' => now()->subDays(rand(4, 10)),
                 ]);
             }
         }
 
-        // Add some realistic recent mutations for visual dashboard
+        // 4. Create Realistic Production Outflow Mutations
         $kainToyobo = Item::where('code', 'KAIN-TOY-NVY')->first();
         if ($kainToyobo && StockMutation::where('item_id', $kainToyobo->id)->where('type', 'out')->count() === 0) {
             StockMutation::create([
@@ -339,9 +460,9 @@ class RawMaterialSeeder extends Seeder
                 'total_base_quantity' => 15,
                 'previous_stock' => $kainToyobo->stock + 15,
                 'current_stock' => $kainToyobo->stock,
-                'notes' => 'Pengambilan kain untuk potongan sample gamis batch #1',
-                'reference_no' => 'OUT-991201',
-                'mutation_date' => now()->subDays(1),
+                'notes' => 'Pemotongan kain sampel Koko Navy Lengan Panjang batch #12',
+                'reference_no' => 'SPK-CUT-2026-001',
+                'mutation_date' => now()->subDays(2),
             ]);
         }
 
@@ -357,9 +478,27 @@ class RawMaterialSeeder extends Seeder
                 'total_base_quantity' => 2,
                 'previous_stock' => $benangAstra->stock + 2,
                 'current_stock' => $benangAstra->stock,
-                'notes' => 'Pengambilan 2 pcs benang untuk lini jahit workshop A',
-                'reference_no' => 'OUT-991202',
-                'mutation_date' => now()->subHours(5),
+                'notes' => 'Distribusi 2 cones benang untuk lini jahit workshop 1',
+                'reference_no' => 'OUT-LN-0041',
+                'mutation_date' => now()->subDays(1),
+            ]);
+        }
+
+        $kancingKemeja = Item::where('code', 'KNC-KMJ-WHT')->first();
+        if ($kancingKemeja && StockMutation::where('item_id', $kancingKemeja->id)->where('type', 'out')->count() === 0) {
+            StockMutation::create([
+                'item_id' => $kancingKemeja->id,
+                'user_id' => $adminId,
+                'type' => 'out',
+                'quantity' => 120,
+                'unit_id' => $kancingKemeja->unit_id,
+                'multiplier' => 1,
+                'total_base_quantity' => 120,
+                'previous_stock' => $kancingKemeja->stock + 120,
+                'current_stock' => $kancingKemeja->stock,
+                'notes' => 'Pemasangan kancing pada 15 lusin kemeja koko putih',
+                'reference_no' => 'SPK-BTN-2026-088',
+                'mutation_date' => now()->subHours(8),
             ]);
         }
     }
