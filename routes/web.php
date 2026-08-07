@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\AuthUserController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HakAksesController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ProductCategoryController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
@@ -20,6 +24,20 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:dashboard.view')
         ->name('dashboard');
 
+    // Transaksi & Invoice
+    Route::get('/dashboard/invoice', [InvoiceController::class, 'page'])
+        ->middleware('permission:invoice.view')
+        ->name('invoice.index');
+
+    Route::get('/dashboard/invoice/create', [InvoiceController::class, 'createPage'])
+        ->middleware('permission:invoice.create')
+        ->name('invoice.create');
+
+    Route::get('/dashboard/invoice/input-lama', [InvoiceController::class, 'createHistoricalPage'])
+        ->middleware('permission:invoice.create')
+        ->name('invoice.input-lama');
+
+    // Master Data
     Route::get('/dashboard/kategori', [CategoryController::class, 'page'])
         ->middleware('permission:kategori.view')
         ->name('kategori.index');
@@ -31,6 +49,22 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/barang', [ItemController::class, 'page'])
         ->middleware('permission:barang.view')
         ->name('barang.index');
+
+    Route::get('/dashboard/produk', [ProductController::class, 'page'])
+        ->middleware('permission:produk.view')
+        ->name('produk.index');
+
+    Route::get('/dashboard/kategori-produk', [ProductCategoryController::class, 'indexPage'])
+        ->middleware('permission:kategori-produk.view')
+        ->name('kategori-produk.index');
+
+    Route::get('/dashboard/pelanggan', [CustomerController::class, 'page'])
+        ->middleware('permission:pelanggan.view')
+        ->name('pelanggan.index');
+
+    Route::get('/dashboard/sekolah', function () {
+        return redirect('/dashboard/pelanggan');
+    });
 
     Route::get('/dashboard/hak-akses', [HakAksesController::class, 'page'])
         ->middleware('permission:hak_akses.view')
@@ -97,6 +131,70 @@ Route::middleware('auth')->prefix('api')->group(function () {
 
     Route::delete('/items/{item}', [ItemController::class, 'destroy'])
         ->middleware('permission:barang.delete');
+
+    // Customers (Master Pelanggan / Pemesan)
+    Route::get('/customers', [CustomerController::class, 'index'])
+        ->middleware('permission:pelanggan.view');
+
+    Route::get('/customers/next-code', [CustomerController::class, 'nextCode'])
+        ->middleware('permission:pelanggan.create');
+
+    Route::post('/customers', [CustomerController::class, 'store'])
+        ->middleware('permission:pelanggan.create');
+
+    Route::put('/customers/{customer}', [CustomerController::class, 'update'])
+        ->middleware('permission:pelanggan.update');
+
+    Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])
+        ->middleware('permission:pelanggan.delete');
+
+    // Products (Master Produk Jadi & Resep BOM)
+    Route::get('/products', [ProductController::class, 'index'])
+        ->middleware('permission:produk.view');
+
+    Route::get('/products/next-code', [ProductController::class, 'nextCode'])
+        ->middleware('permission:produk.create');
+
+    Route::get('/products/{product}', [ProductController::class, 'show'])
+        ->middleware('permission:produk.view');
+
+    Route::post('/products', [ProductController::class, 'store'])
+        ->middleware('permission:produk.create');
+
+    Route::put('/products/{product}', [ProductController::class, 'update'])
+        ->middleware('permission:produk.update');
+
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])
+        ->middleware('permission:produk.delete');
+
+    // Product Categories (Master Kategori Produk Jadi)
+    Route::get('/product-categories', [ProductCategoryController::class, 'index'])
+        ->middleware('permission:kategori-produk.view');
+
+    Route::post('/product-categories', [ProductCategoryController::class, 'store'])
+        ->middleware('permission:kategori-produk.create');
+
+    Route::put('/product-categories/{productCategory}', [ProductCategoryController::class, 'update'])
+        ->middleware('permission:kategori-produk.update');
+
+    Route::delete('/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])
+        ->middleware('permission:kategori-produk.delete');
+
+    // Invoices (Transaksi & Input Invoice Lama)
+    Route::get('/invoices', [InvoiceController::class, 'index'])
+        ->middleware('permission:invoice.view');
+
+    Route::get('/invoices/next-number', [InvoiceController::class, 'nextNumber'])
+        ->middleware('permission:invoice.create');
+
+    Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])
+        ->middleware('permission:invoice.view');
+
+    Route::post('/invoices', [InvoiceController::class, 'store'])
+        ->middleware('permission:invoice.create');
+
+    Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])
+        ->middleware('permission:invoice.delete');
 
     // Hak Akses
     Route::get('/hak-akses', [HakAksesController::class, 'index'])

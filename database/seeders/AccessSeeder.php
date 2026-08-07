@@ -31,6 +31,26 @@ class AccessSeeder extends Seeder
             ['name' => 'barang.update', 'label' => 'Edit Barang', 'group_name' => 'Barang & Bahan'],
             ['name' => 'barang.delete', 'label' => 'Hapus Barang', 'group_name' => 'Barang & Bahan'],
 
+            ['name' => 'produk.view', 'label' => 'Lihat Produk & BOM', 'group_name' => 'Produk & BOM'],
+            ['name' => 'produk.create', 'label' => 'Tambah Produk & BOM', 'group_name' => 'Produk & BOM'],
+            ['name' => 'produk.update', 'label' => 'Edit Produk & BOM', 'group_name' => 'Produk & BOM'],
+            ['name' => 'produk.delete', 'label' => 'Hapus Produk & BOM', 'group_name' => 'Produk & BOM'],
+
+            ['name' => 'kategori-produk.view', 'label' => 'Lihat Kategori Produk', 'group_name' => 'Kategori Produk'],
+            ['name' => 'kategori-produk.create', 'label' => 'Tambah Kategori Produk', 'group_name' => 'Kategori Produk'],
+            ['name' => 'kategori-produk.update', 'label' => 'Edit Kategori Produk', 'group_name' => 'Kategori Produk'],
+            ['name' => 'kategori-produk.delete', 'label' => 'Hapus Kategori Produk', 'group_name' => 'Kategori Produk'],
+
+            ['name' => 'pelanggan.view', 'label' => 'Lihat Data Pelanggan', 'group_name' => 'Data Pelanggan'],
+            ['name' => 'pelanggan.create', 'label' => 'Tambah Data Pelanggan', 'group_name' => 'Data Pelanggan'],
+            ['name' => 'pelanggan.update', 'label' => 'Edit Data Pelanggan', 'group_name' => 'Data Pelanggan'],
+            ['name' => 'pelanggan.delete', 'label' => 'Hapus Data Pelanggan', 'group_name' => 'Data Pelanggan'],
+
+            ['name' => 'invoice.view', 'label' => 'Lihat Invoice', 'group_name' => 'Transaksi & Invoice'],
+            ['name' => 'invoice.create', 'label' => 'Buat / Input Invoice', 'group_name' => 'Transaksi & Invoice'],
+            ['name' => 'invoice.update', 'label' => 'Edit Invoice', 'group_name' => 'Transaksi & Invoice'],
+            ['name' => 'invoice.delete', 'label' => 'Hapus Invoice', 'group_name' => 'Transaksi & Invoice'],
+
             ['name' => 'role.view', 'label' => 'Lihat Role', 'group_name' => 'Role'],
             ['name' => 'role.create', 'label' => 'Tambah Role', 'group_name' => 'Role'],
             ['name' => 'role.update', 'label' => 'Edit Role', 'group_name' => 'Role'],
@@ -52,6 +72,9 @@ class AccessSeeder extends Seeder
             ['name' => 'menu.update', 'label' => 'Edit Menu', 'group_name' => 'Menu'],
             ['name' => 'menu.delete', 'label' => 'Hapus Menu', 'group_name' => 'Menu'],
         ];
+
+        // Clean up obsolete 'sekolah' permissions if they exist
+        Permission::where('name', 'like', 'sekolah.%')->delete();
 
         foreach ($permissions as $permission) {
             Permission::updateOrCreate(
@@ -89,6 +112,18 @@ class AccessSeeder extends Seeder
                 'barang.view',
                 'barang.create',
                 'barang.update',
+                'produk.view',
+                'produk.create',
+                'produk.update',
+                'kategori-produk.view',
+                'kategori-produk.create',
+                'kategori-produk.update',
+                'pelanggan.view',
+                'pelanggan.create',
+                'pelanggan.update',
+                'invoice.view',
+                'invoice.create',
+                'invoice.update',
             ])->pluck('id')->toArray()
         );
 
@@ -98,77 +133,134 @@ class AccessSeeder extends Seeder
             ])->pluck('id')->toArray()
         );
 
-        Menu::updateOrCreate(
-            ['path' => '/dashboard'],
-            [
-                'parent_id' => null,
-                'title' => 'Dashboard',
-                'icon' => 'Dashboard',
-                'permission_name' => 'dashboard.view',
-                'sort_order' => 1,
-                'is_active' => true,
-            ]
-        );
+        // Reset old menus and build structured parent-child menus
+        Menu::truncate();
 
-        Menu::updateOrCreate(
-            ['path' => '/dashboard/kategori'],
-            [
-                'parent_id' => null,
-                'title' => 'Kategori',
-                'icon' => 'Category',
-                'permission_name' => 'kategori.view',
-                'sort_order' => 2,
-                'is_active' => true,
-            ]
-        );
+        // 1. Dashboard (Direct Top Menu)
+        Menu::create([
+            'parent_id' => null,
+            'title' => 'Dashboard',
+            'icon' => 'Dashboard',
+            'path' => '/dashboard',
+            'permission_name' => 'dashboard.view',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
 
-        Menu::updateOrCreate(
-            ['path' => '/dashboard/satuan'],
-            [
-                'parent_id' => null,
-                'title' => 'Satuan',
-                'icon' => 'Scale',
-                'permission_name' => 'satuan.view',
-                'sort_order' => 3,
-                'is_active' => true,
-            ]
-        );
+        // 2. Transaksi & Invoice (Direct Top Menu)
+        Menu::create([
+            'parent_id' => null,
+            'title' => 'Transaksi & Invoice',
+            'icon' => 'Receipt',
+            'path' => '/dashboard/invoice',
+            'permission_name' => 'invoice.view',
+            'sort_order' => 2,
+            'is_active' => true,
+        ]);
 
-        Menu::updateOrCreate(
-            ['path' => '/dashboard/barang'],
-            [
-                'parent_id' => null,
-                'title' => 'Barang',
-                'icon' => 'Package',
-                'permission_name' => 'barang.view',
-                'sort_order' => 4,
-                'is_active' => true,
-            ]
-        );
+        // 3. Master Data (Parent Menu with Collapsible Submenu)
+        $masterDataParent = Menu::create([
+            'parent_id' => null,
+            'title' => 'Master Data',
+            'icon' => 'Boxes',
+            'path' => null,
+            'permission_name' => null,
+            'sort_order' => 3,
+            'is_active' => true,
+        ]);
 
-        Menu::updateOrCreate(
-            ['path' => '/dashboard/hak-akses'],
-            [
-                'parent_id' => null,
-                'title' => 'Hak Akses',
-                'icon' => 'Security',
-                'permission_name' => 'hak_akses.view',
-                'sort_order' => 5,
-                'is_active' => true,
-            ]
-        );
+        // Master Data Children
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Bahan Baku',
+            'icon' => 'Package',
+            'path' => '/dashboard/barang',
+            'permission_name' => 'barang.view',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
 
-        Menu::updateOrCreate(
-            ['path' => '/dashboard/users'],
-            [
-                'parent_id' => null,
-                'title' => 'User',
-                'icon' => 'People',
-                'permission_name' => 'user.view',
-                'sort_order' => 6,
-                'is_active' => true,
-            ]
-        );
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Produk & Resep BOM',
+            'icon' => 'Shirt',
+            'path' => '/dashboard/produk',
+            'permission_name' => 'produk.view',
+            'sort_order' => 2,
+            'is_active' => true,
+        ]);
+
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Kategori Produk',
+            'icon' => 'Tags',
+            'path' => '/dashboard/kategori-produk',
+            'permission_name' => 'kategori-produk.view',
+            'sort_order' => 3,
+            'is_active' => true,
+        ]);
+
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Kategori Bahan',
+            'icon' => 'Category',
+            'path' => '/dashboard/kategori',
+            'permission_name' => 'kategori.view',
+            'sort_order' => 4,
+            'is_active' => true,
+        ]);
+
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Satuan Bahan',
+            'icon' => 'Scale',
+            'path' => '/dashboard/satuan',
+            'permission_name' => 'satuan.view',
+            'sort_order' => 5,
+            'is_active' => true,
+        ]);
+
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Data Pelanggan',
+            'icon' => 'Users',
+            'path' => '/dashboard/pelanggan',
+            'permission_name' => 'pelanggan.view',
+            'sort_order' => 6,
+            'is_active' => true,
+        ]);
+
+        // 4. Pengaturan Sistem (Parent Menu with Collapsible Submenu)
+        $settingsParent = Menu::create([
+            'parent_id' => null,
+            'title' => 'Pengaturan',
+            'icon' => 'ShieldCheck',
+            'path' => null,
+            'permission_name' => null,
+            'sort_order' => 4,
+            'is_active' => true,
+        ]);
+
+        // Settings Children
+        Menu::create([
+            'parent_id' => $settingsParent->id,
+            'title' => 'Hak Akses',
+            'icon' => 'Security',
+            'path' => '/dashboard/hak-akses',
+            'permission_name' => 'hak_akses.view',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        Menu::create([
+            'parent_id' => $settingsParent->id,
+            'title' => 'User Management',
+            'icon' => 'People',
+            'path' => '/dashboard/users',
+            'permission_name' => 'user.view',
+            'sort_order' => 2,
+            'is_active' => true,
+        ]);
 
         $admin = User::updateOrCreate(
             ['email' => 'admin@example.com'],
@@ -180,5 +272,23 @@ class AccessSeeder extends Seeder
         );
 
         $admin->roles()->sync([$adminRole->id]);
+
+        // Seed default product categories
+        $defaultProductCategories = [
+            ['name' => 'Seragam Olahraga', 'slug' => 'seragam-olahraga', 'description' => 'Seragam olahraga sekolah & instansi (Stel)', 'is_active' => true],
+            ['name' => 'Seragam Batik Sekolah', 'slug' => 'seragam-batik-sekolah', 'description' => 'Batik identitas sekolah & seragam khusus', 'is_active' => true],
+            ['name' => 'Kemeja PDH / PDL', 'slug' => 'kemeja-pdh-pdl', 'description' => 'Pakaian dinas harian / lapangan instansi & kantor', 'is_active' => true],
+            ['name' => 'Jas Almamater', 'slug' => 'jas-almamater', 'description' => 'Jas almamater kampus, sekolah, dan organisasi', 'is_active' => true],
+            ['name' => 'Kaos & Polo Shirt', 'slug' => 'kaos-dan-polo-shirt', 'description' => 'Kaos event, kaos promosi, dan polo bordir', 'is_active' => true],
+            ['name' => 'Busana Muslim & Gamis', 'slug' => 'busana-muslim-dan-gamis', 'description' => 'Gamis seragam, kerudung, dan jilbab instansi', 'is_active' => true],
+            ['name' => 'Celana & Rok Seragam', 'slug' => 'celana-dan-rok-seragam', 'description' => 'Bawahan seragam sekolah & celana dinas', 'is_active' => true],
+        ];
+
+        foreach ($defaultProductCategories as $pc) {
+            \App\Models\ProductCategory::firstOrCreate(
+                ['slug' => $pc['slug']],
+                $pc
+            );
+        }
     }
 }

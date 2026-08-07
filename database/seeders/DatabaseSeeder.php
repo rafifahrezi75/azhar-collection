@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AccessSeeder::class,
             RawMaterialSeeder::class,
+            CustomerSeeder::class,
         ]);
     }
 }
