@@ -68,9 +68,9 @@ const ProductTable = memo(function ProductTable({
                         <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
                             <th className="py-2.5 px-3.5 w-12 text-center">No</th>
                             <th className="py-2.5 px-3.5 min-w-[240px]">Produk & Foto</th>
-                            <th className="py-2.5 px-3.5 w-24 text-center">Satuan</th>
-                            <th className="py-2.5 px-3.5 w-44">Harga & Varian Ukuran</th>
-                            <th className="py-2.5 px-3.5 min-w-[260px]">Resep Bahan Baku (BOM)</th>
+                            <th className="py-2.5 px-3.5 w-32">Rentang Harga</th>
+                            <th className="py-2.5 px-3.5 w-36">Varian Ukuran</th>
+                            <th className="py-2.5 px-3.5 w-40">Resep & Produksi</th>
                             <th className="py-2.5 px-3.5 w-24 text-center">Status</th>
                             <th className="py-2.5 px-3.5 w-28 text-center">Aksi</th>
                         </tr>
@@ -149,23 +149,20 @@ const ProductTable = memo(function ProductTable({
                                             </div>
                                         </td>
 
-                                        {/* Satuan */}
-                                        <td className="py-2.5 px-3.5 text-center">
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
-                                                {item.default_unit || "Stel"}
-                                            </span>
-                                        </td>
-
-                                        {/* Harga & Varian Ukuran */}
-                                        <td className="py-2.5 px-3.5">
+                                        {/* Rentang Harga */}
+                                        <td className="py-2.5 px-3.5 whitespace-nowrap">
                                             <div className="font-bold text-slate-900 font-mono">
                                                 {priceInfo.text}
                                             </div>
+                                        </td>
+
+                                        {/* Varian Ukuran */}
+                                        <td className="py-2.5 px-3.5">
                                             <div className="mt-0.5">
                                                 {sizes.length > 0 ? (
                                                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
                                                         <Ruler className="w-2.5 h-2.5 text-teal-600" />
-                                                        <span>{sizes.length} Ukuran ({sizes.map((s) => s.size_name).slice(0, 4).join(", ")}{sizes.length > 4 ? "..." : ""})</span>
+                                                        <span>{sizes.length} Ukuran</span>
                                                     </span>
                                                 ) : (
                                                     <span className="text-[10px] text-slate-400">Harga seragam semua ukuran</span>
@@ -173,31 +170,26 @@ const ProductTable = memo(function ProductTable({
                                             </div>
                                         </td>
 
-                                        {/* Resep Bahan (BOM) */}
+                                        {/* Resep & Produksi (Compact) */}
                                         <td className="py-2.5 px-3.5">
-                                            {materials.length === 0 ? (
-                                                <span className="text-slate-400 italic text-[11px]">
-                                                    Belum ada resep bahan
-                                                </span>
-                                            ) : (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {materials.slice(0, 3).map((mat, mIdx) => (
-                                                        <span
-                                                            key={mIdx}
-                                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-50 text-teal-800 border border-teal-200/70"
-                                                        >
-                                                            <Layers className="w-3 h-3 text-teal-600" />
-                                                            <span>{mat.item?.name || "Bahan"}{mat.size_name && mat.size_name !== 'ALL' ? ` [${mat.size_name}]` : ""}:</span>
-                                                            <strong className="text-teal-950 font-bold">{mat.required_qty} {mat.unit_name || mat.item?.unit?.name || ""}</strong>
-                                                        </span>
-                                                    ))}
-                                                    {materials.length > 3 && (
-                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                                            +{materials.length - 3} bahan lainnya
-                                                        </span>
+                                            <div className="flex flex-col gap-1.5">
+                                                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-slate-600">
+                                                    <Layers className="w-3 h-3 text-teal-600" />
+                                                    {materials.length > 0 ? (
+                                                        <span><strong className="text-slate-800">{materials.length}</strong> Bahan Baku</span>
+                                                    ) : (
+                                                        <span className="italic">Belum ada bahan</span>
                                                     )}
-                                                </div>
-                                            )}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-slate-600">
+                                                    <Shirt className="w-3 h-3 text-teal-600" />
+                                                    {item.production_steps?.length > 0 ? (
+                                                        <span><strong className="text-slate-800">{item.production_steps.length}</strong> Langkah Jahit</span>
+                                                    ) : (
+                                                        <span className="italic">Belum ada langkah</span>
+                                                    )}
+                                                </span>
+                                            </div>
                                         </td>
 
                                         {/* Status */}

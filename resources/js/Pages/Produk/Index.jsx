@@ -51,6 +51,7 @@ export default function Index() {
         deleted_image_ids: [],
         primary_image_id: null,
         primary_image_index: null,
+        production_steps: [],
     };
 
     const [form, setForm] = useState(initialFormState);
@@ -95,6 +96,10 @@ export default function Index() {
         setForm(updatedForm);
     };
 
+    const handleProductionStepsChange = (production_steps) => {
+        setForm((prev) => ({ ...prev, production_steps }));
+    };
+
     const handleOpenCreateModal = () => {
         setEditingId(null);
         setForm(initialFormState);
@@ -121,7 +126,8 @@ export default function Index() {
                 item_id: m.item_id,
                 size_name: m.size_name || "ALL",
                 required_qty: m.required_qty,
-                unit_name: m.unit_name || m.item?.unit?.name || "Meter",
+                yield_qty: m.yield_qty ?? 1,
+                unit_name: m.unit_name || m.item?.usage_unit || m.item?.unit?.name || "Meter",
                 notes: m.notes || "",
             })),
             existing_images: (product.images || []).map((img) => ({
@@ -134,6 +140,11 @@ export default function Index() {
             deleted_image_ids: [],
             primary_image_id: primaryImg ? primaryImg.id : null,
             primary_image_index: null,
+            production_steps: (product.production_steps || []).map((ps) => ({
+                production_step_id: ps.production_step_id,
+                step_order: ps.sort_order,
+                wage: ps.wage,
+            })),
         });
         setIsModalOpen(true);
     };
@@ -163,6 +174,7 @@ export default function Index() {
         formData.append("is_active", form.is_active ? "1" : "0");
         formData.append("sizes", JSON.stringify(form.sizes || []));
         formData.append("materials", JSON.stringify(form.materials || []));
+        formData.append("production_steps", JSON.stringify(form.production_steps || []));
 
         if (form.deleted_image_ids && form.deleted_image_ids.length > 0) {
             formData.append("deleted_image_ids", JSON.stringify(form.deleted_image_ids));
@@ -352,6 +364,7 @@ export default function Index() {
                 onSizesChange={handleSizesChange}
                 onMaterialsChange={handleMaterialsChange}
                 onImagesChange={handleImagesChange}
+                onProductionStepsChange={handleProductionStepsChange}
                 onSubmit={handleSubmit}
             />
 

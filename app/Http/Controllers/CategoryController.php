@@ -17,7 +17,7 @@ class CategoryController extends Controller
     public function index()
     {
         return response()->json([
-            'data' => Category::withCount('items')->latest()->get(),
+            'data' => Category::withCount('items')->orderBy('sort_order', 'asc')->get(),
         ]);
     }
 

@@ -15,7 +15,7 @@ class UnitController extends Controller
 
     public function index()
     {
-        $units = Unit::withCount('items')->latest()->get();
+        $units = Unit::withCount('items')->orderBy('sort_order', 'asc')->get();
 
         return response()->json([
             'data' => $units,

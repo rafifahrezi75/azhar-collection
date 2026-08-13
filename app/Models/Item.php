@@ -15,6 +15,8 @@ class Item extends Model
         'name',
         'category_id',
         'unit_id',
+        'usage_unit',
+        'conversion_rate',
         'stock',
         'real_stock',
         'estimated_stock',
@@ -23,15 +25,18 @@ class Item extends Model
         'image',
         'description',
         'is_active',
+        'price',
     ];
 
     protected $casts = [
+        'conversion_rate' => 'decimal:4',
         'stock' => 'integer',
         'real_stock' => 'integer',
         'estimated_stock' => 'integer',
         'is_estimated_stock' => 'boolean',
         'min_stock' => 'integer',
         'is_active' => 'boolean',
+        'price' => 'decimal:2',
     ];
 
     protected static function booted()

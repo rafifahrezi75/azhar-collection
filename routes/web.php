@@ -9,7 +9,9 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductionStepController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SizeController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -62,6 +64,14 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:pelanggan.view')
         ->name('pelanggan.index');
 
+    Route::get('/dashboard/langkah-produksi', [ProductionStepController::class, 'page'])
+        ->middleware('permission:produk.view')
+        ->name('langkah-produksi.index');
+
+    Route::get('/dashboard/ukuran', [SizeController::class, 'page'])
+        ->middleware('permission:produk.view')
+        ->name('ukuran.index');
+
     Route::get('/dashboard/sekolah', function () {
         return redirect('/dashboard/pelanggan');
     });
@@ -80,6 +90,22 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::get('/me', [AuthUserController::class, 'me']);
     Route::get('/dashboard/summary', [DashboardController::class, 'summaryApi'])
         ->middleware('permission:dashboard.view');
+    Route::get('/dashboard/order-analytics', [DashboardController::class, 'orderAnalyticsApi'])
+        ->middleware('permission:dashboard.view');
+
+    // Generic Reorder
+    Route::post('/master/reorder', function (\Illuminate\Http\Request $request) {
+        $table = $request->input('table');
+        $ids = $request->input('ids');
+        if (!is_array($ids)) return response()->json(['message' => 'Invalid IDs'], 400);
+        if (!in_array($table, ['units', 'categories', 'product_categories', 'production_steps', 'sizes'])) {
+            return response()->json(['message' => 'Invalid table'], 400);
+        }
+        foreach ($ids as $index => $id) {
+            \Illuminate\Support\Facades\DB::table($table)->where('id', $id)->update(['sort_order' => $index + 1]);
+        }
+        return response()->json(['message' => 'Reordered successfully']);
+    });
 
     // Categories
     Route::get('/categories', [CategoryController::class, 'index'])
@@ -179,6 +205,32 @@ Route::middleware('auth')->prefix('api')->group(function () {
 
     Route::delete('/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])
         ->middleware('permission:kategori-produk.delete');
+
+    // Production Steps (Master Langkah Produksi / Jahit)
+    Route::get('/production-steps', [ProductionStepController::class, 'index'])
+        ->middleware('permission:produk.view');
+
+    Route::post('/production-steps', [ProductionStepController::class, 'store'])
+        ->middleware('permission:produk.create');
+
+    Route::put('/production-steps/{productionStep}', [ProductionStepController::class, 'update'])
+        ->middleware('permission:produk.update');
+
+    Route::delete('/production-steps/{productionStep}', [ProductionStepController::class, 'destroy'])
+        ->middleware('permission:produk.delete');
+
+    // Sizes (Master Ukuran)
+    Route::get('/sizes', [SizeController::class, 'index'])
+        ->middleware('permission:produk.view');
+
+    Route::post('/sizes', [SizeController::class, 'store'])
+        ->middleware('permission:produk.create');
+
+    Route::put('/sizes/{size}', [SizeController::class, 'update'])
+        ->middleware('permission:produk.update');
+
+    Route::delete('/sizes/{size}', [SizeController::class, 'destroy'])
+        ->middleware('permission:produk.delete');
 
     // Invoices (Transaksi & Input Invoice Lama)
     Route::get('/invoices', [InvoiceController::class, 'index'])

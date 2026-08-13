@@ -2,24 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Category extends Model
+class ProductionStep extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'sort_order',
         'name',
-        'slug',
+        'default_wage',
         'description',
-        'is_active',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'default_wage' => 'decimal:2',
     ];
-
-    public function items()
-    {
-        return $this->hasMany(Item::class);
-    }
 }

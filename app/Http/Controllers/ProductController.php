@@ -25,9 +25,10 @@ class ProductController extends Controller
     {
         $query = Product::with([
             'images',
-            'sizes',
+            'sizes.size',
             'materials.item.unit',
             'materials.item.category',
+            'productionSteps.productionStep',
         ]);
 
         if ($request->filled('search')) {
@@ -89,15 +90,20 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
             'sizes' => 'nullable|array',
-            'sizes.*.size_name' => 'required_with:sizes|string|max:50',
+            'sizes.*.size_id' => 'required_with:sizes|exists:sizes,id',
             'sizes.*.price' => 'nullable|numeric|min:0',
             'sizes.*.notes' => 'nullable|string|max:255',
             'materials' => 'nullable|array',
             'materials.*.item_id' => 'required_with:materials|exists:items,id',
-            'materials.*.size_name' => 'nullable|string|max:50',
+            'materials.*.size_id' => 'nullable|exists:sizes,id',
             'materials.*.required_qty' => 'required_with:materials|numeric|min:0.0001',
+            'materials.*.yield_qty' => 'nullable|numeric|min:0.0001',
+            'materials.*.conversion_rate' => 'nullable|numeric|min:0.0001',
             'materials.*.unit_name' => 'nullable|string|max:50',
             'materials.*.notes' => 'nullable|string|max:255',
+            'production_steps' => 'nullable|array',
+            'production_steps.*.production_step_id' => 'required_with:production_steps|exists:production_steps,id',
+            'production_steps.*.wage' => 'nullable|numeric|min:0',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'primary_image_index' => 'nullable|integer|min:0',
@@ -117,10 +123,10 @@ class ProductController extends Controller
             // Save Sizes
             if (!empty($validated['sizes'])) {
                 foreach ($validated['sizes'] as $idx => $s) {
-                    if (!empty($s['size_name'])) {
+                    if (!empty($s['size_id'])) {
                         ProductSize::create([
                             'product_id' => $product->id,
-                            'size_name' => trim($s['size_name']),
+                            'size_id' => $s['size_id'],
                             'price' => isset($s['price']) && $s['price'] !== '' ? $s['price'] : ($validated['base_price'] ?? 0),
                             'sort_order' => $idx,
                             'notes' => $s['notes'] ?? null,
@@ -136,10 +142,27 @@ class ProductController extends Controller
                         ProductMaterial::create([
                             'product_id' => $product->id,
                             'item_id' => $mat['item_id'],
-                            'size_name' => !empty($mat['size_name']) && $mat['size_name'] !== 'ALL' ? trim($mat['size_name']) : null,
+                            'size_id' => !empty($mat['size_id']) ? $mat['size_id'] : null,
                             'required_qty' => $mat['required_qty'],
+                            'yield_qty' => !empty($mat['yield_qty']) ? (float)$mat['yield_qty'] : 1.0,
+                            'conversion_rate' => !empty($mat['conversion_rate']) ? (float)$mat['conversion_rate'] : 1.0,
                             'unit_name' => $mat['unit_name'] ?? null,
                             'notes' => $mat['notes'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Save Production Steps
+            if (!empty($validated['production_steps'])) {
+                foreach ($validated['production_steps'] as $idx => $step) {
+                    if (!empty($step['production_step_id']) || !empty($step['custom_name'])) {
+                        \App\Models\ProductProductionStep::create([
+                            'product_id' => $product->id,
+                            'production_step_id' => !empty($step['production_step_id']) ? $step['production_step_id'] : null,
+                            'custom_name' => $step['custom_name'] ?? null,
+                            'wage' => $step['wage'] ?? 0,
+                            'sort_order' => $idx,
                         ]);
                     }
                 }
@@ -166,9 +189,10 @@ class ProductController extends Controller
 
             $product->load([
                 'images',
-                'sizes',
+                'sizes.size',
                 'materials.item.unit',
                 'materials.item.category',
+                'productionSteps.productionStep',
             ]);
 
             return response()->json([
@@ -182,9 +206,10 @@ class ProductController extends Controller
     {
         $product->load([
             'images',
-            'sizes',
+            'sizes.size',
             'materials.item.unit',
             'materials.item.category',
+            'productionSteps.productionStep',
         ]);
 
         return response()->json([
@@ -206,15 +231,21 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
             'sizes' => 'nullable|array',
-            'sizes.*.size_name' => 'required_with:sizes|string|max:50',
+            'sizes.*.size_id' => 'required_with:sizes|exists:sizes,id',
             'sizes.*.price' => 'nullable|numeric|min:0',
             'sizes.*.notes' => 'nullable|string|max:255',
             'materials' => 'nullable|array',
             'materials.*.item_id' => 'required_with:materials|exists:items,id',
-            'materials.*.size_name' => 'nullable|string|max:50',
+            'materials.*.size_id' => 'nullable|exists:sizes,id',
             'materials.*.required_qty' => 'required_with:materials|numeric|min:0.0001',
+            'materials.*.yield_qty' => 'nullable|numeric|min:0.0001',
+            'materials.*.conversion_rate' => 'nullable|numeric|min:0.0001',
             'materials.*.unit_name' => 'nullable|string|max:50',
             'materials.*.notes' => 'nullable|string|max:255',
+            'production_steps' => 'nullable|array',
+            'production_steps.*.production_step_id' => 'nullable|exists:production_steps,id',
+            'production_steps.*.custom_name' => 'nullable|string|max:255',
+            'production_steps.*.wage' => 'nullable|numeric|min:0',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'deleted_image_ids' => 'nullable|array',
@@ -238,10 +269,10 @@ class ProductController extends Controller
             $product->sizes()->delete();
             if (!empty($validated['sizes'])) {
                 foreach ($validated['sizes'] as $idx => $s) {
-                    if (!empty($s['size_name'])) {
+                    if (!empty($s['size_id'])) {
                         ProductSize::create([
                             'product_id' => $product->id,
-                            'size_name' => trim($s['size_name']),
+                            'size_id' => $s['size_id'],
                             'price' => isset($s['price']) && $s['price'] !== '' ? $s['price'] : ($validated['base_price'] ?? 0),
                             'sort_order' => $idx,
                             'notes' => $s['notes'] ?? null,
@@ -258,10 +289,28 @@ class ProductController extends Controller
                         ProductMaterial::create([
                             'product_id' => $product->id,
                             'item_id' => $mat['item_id'],
-                            'size_name' => !empty($mat['size_name']) && $mat['size_name'] !== 'ALL' ? trim($mat['size_name']) : null,
+                            'size_id' => !empty($mat['size_id']) ? $mat['size_id'] : null,
                             'required_qty' => $mat['required_qty'],
+                            'yield_qty' => !empty($mat['yield_qty']) ? (float)$mat['yield_qty'] : 1.0,
+                            'conversion_rate' => !empty($mat['conversion_rate']) ? (float)$mat['conversion_rate'] : 1.0,
                             'unit_name' => $mat['unit_name'] ?? null,
                             'notes' => $mat['notes'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Sync Production Steps
+            $product->productionSteps()->delete();
+            if (!empty($validated['production_steps'])) {
+                foreach ($validated['production_steps'] as $idx => $step) {
+                    if (!empty($step['production_step_id']) || !empty($step['custom_name'])) {
+                        \App\Models\ProductProductionStep::create([
+                            'product_id' => $product->id,
+                            'production_step_id' => !empty($step['production_step_id']) ? $step['production_step_id'] : null,
+                            'custom_name' => $step['custom_name'] ?? null,
+                            'wage' => $step['wage'] ?? 0,
+                            'sort_order' => $idx,
                         ]);
                     }
                 }
@@ -323,9 +372,10 @@ class ProductController extends Controller
 
             $product->load([
                 'images',
-                'sizes',
+                'sizes.size',
                 'materials.item.unit',
                 'materials.item.category',
+                'productionSteps.productionStep',
             ]);
 
             return response()->json([
@@ -368,6 +418,13 @@ class ProductController extends Controller
             $decoded = json_decode($request->input('materials'), true);
             if (is_array($decoded)) {
                 $request->merge(['materials' => $decoded]);
+            }
+        }
+
+        if (is_string($request->input('production_steps'))) {
+            $decoded = json_decode($request->input('production_steps'), true);
+            if (is_array($decoded)) {
+                $request->merge(['production_steps' => $decoded]);
             }
         }
 

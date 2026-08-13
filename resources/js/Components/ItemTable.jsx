@@ -29,17 +29,27 @@ const ItemTable = memo(function ItemTable({
 }) {
     const [previewImage, setPreviewImage] = useState(null);
 
+    const formatCurrency = (val) => {
+        return new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(val || 0);
+    };
+
     return (
         <div className="bg-white border border-slate-200/90 rounded-md overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
                         <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
-                            <th className="px-3.5 py-2.5">#</th>
+                            <th className="px-3.5 py-2.5">No</th>
                             <th className="px-3.5 py-2.5">Foto</th>
                             <th className="px-3.5 py-2.5">Kode & Nama Bahan</th>
                             <th className="px-3.5 py-2.5">Kategori</th>
                             <th className="px-3.5 py-2.5">Satuan</th>
+                            <th className="px-3.5 py-2.5">Harga Dasar</th>
                             <th className="px-3.5 py-2.5">Kondisi Stok</th>
                             <th className="px-3.5 py-2.5">Status</th>
                             <th className="px-3.5 py-2.5 text-right">Aksi</th>
@@ -140,6 +150,13 @@ const ItemTable = memo(function ItemTable({
                                                         +{conversions.length} Satuan Kemasan
                                                     </span>
                                                 )}
+                                            </div>
+                                        </td>
+
+                                        {/* Harga Dasar */}
+                                        <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                            <div className="text-xs font-mono font-bold text-teal-700">
+                                                {formatCurrency(item.price || 0)}
                                             </div>
                                         </td>
 

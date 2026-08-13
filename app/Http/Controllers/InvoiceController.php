@@ -38,7 +38,7 @@ class InvoiceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Invoice::with(['customer', 'items.product', 'creator']);
+        $query = Invoice::with(['customer', 'items.product.productionSteps.productionStep', 'items.product.sizes.size', 'items.product.materials.item', 'creator']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -194,38 +194,52 @@ class InvoiceController extends Controller
                             }
                         }
 
-                        // Calculate total needed per raw item
-                        $deductions = []; // [item_id => ['item' => Item, 'amount' => float]]
+                        // Calculate total needed per raw item using Two-Stage Formula:
+                        // Stage 1: Usage Qty (Meter) = (Size Qty / Yield Qty) * Required Qty
+                        // Stage 2: Warehouse Qty (Kg) = Usage Qty / Conversion Rate
+                        $deductions = []; // [item_id => ['item' => Item, 'total_usage_qty' => float, 'total_warehouse_qty' => float, 'usage_unit' => string, 'warehouse_unit' => string]]
 
                         if (!empty($breakdownMap)) {
                             // Calculate per size
                             foreach ($breakdownMap as $sizeName => $sizeQty) {
                                 if ($sizeQty <= 0) continue;
 
-                                // Group materials by item_id
-                                $itemIds = $product->materials->pluck('item_id')->unique();
-                                foreach ($itemIds as $matItemId) {
-                                    // Try specific size rule first
-                                    $sizeRule = $product->materials->first(function ($m) use ($matItemId, $sizeName) {
-                                        return $m->item_id == $matItemId && $m->size_name === $sizeName;
+                                // Get materials specifically configured for this size
+                                $sizeMaterials = $product->materials->filter(function ($m) use ($sizeName) {
+                                    return $m->size_name === $sizeName;
+                                });
+
+                                // Fallback to universal materials if this size has no specific BOM
+                                if ($sizeMaterials->isEmpty()) {
+                                    $sizeMaterials = $product->materials->filter(function ($m) {
+                                        return empty($m->size_name) || $m->size_name === 'ALL';
                                     });
+                                }
 
-                                    // Fallback to default (ALL or null)
-                                    if (!$sizeRule) {
-                                        $sizeRule = $product->materials->first(function ($m) use ($matItemId) {
-                                            return $m->item_id == $matItemId && (empty($m->size_name) || $m->size_name === 'ALL');
-                                        });
-                                    }
-
+                                foreach ($sizeMaterials as $sizeRule) {
                                     if ($sizeRule && $sizeRule->item) {
-                                        $qtyNeeded = $sizeQty * (float)$sizeRule->required_qty;
+                                        $rawItem = $sizeRule->item;
+                                        $matItemId = $sizeRule->item_id;
+                                        $requiredQty = (float)($sizeRule->required_qty ?: 0);
+                                        $yieldQty = max(0.0001, (float)($sizeRule->yield_qty ?: 1.0));
+                                        $conversionRate = max(0.0001, (float)($sizeRule->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
+
+                                        // Stage 1: Kebutuhan pola pakai
+                                        $usageQty = ($sizeQty / $yieldQty) * $requiredQty;
+                                        // Stage 2: Potongan stok gudang
+                                        $warehouseQty = $usageQty / $conversionRate;
+
                                         if (!isset($deductions[$matItemId])) {
                                             $deductions[$matItemId] = [
-                                                'item' => $sizeRule->item,
-                                                'amount' => 0,
+                                                'item' => $rawItem,
+                                                'total_usage_qty' => 0,
+                                                'total_warehouse_qty' => 0,
+                                                'usage_unit' => $sizeRule->unit_name ?: ($rawItem->unit?->name ?: 'Meter'),
+                                                'warehouse_unit' => $rawItem->unit?->name ?: 'Pcs',
                                             ];
                                         }
-                                        $deductions[$matItemId]['amount'] += $qtyNeeded;
+                                        $deductions[$matItemId]['total_usage_qty'] += $usageQty;
+                                        $deductions[$matItemId]['total_warehouse_qty'] += $warehouseQty;
                                     }
                                 }
                             }
@@ -238,15 +252,28 @@ class InvoiceController extends Controller
 
                             foreach ($defaultMaterials as $mat) {
                                 if ($mat->item) {
+                                    $rawItem = $mat->item;
                                     $matItemId = $mat->item_id;
-                                    $qtyNeeded = $totalLineQty * (float)$mat->required_qty;
+                                    $requiredQty = (float)($mat->required_qty ?: 0);
+                                    $yieldQty = max(0.0001, (float)($mat->yield_qty ?: 1.0));
+                                    $conversionRate = max(0.0001, (float)($mat->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
+
+                                    // Stage 1: Kebutuhan pola pakai
+                                    $usageQty = ($totalLineQty / $yieldQty) * $requiredQty;
+                                    // Stage 2: Potongan stok gudang
+                                    $warehouseQty = $usageQty / $conversionRate;
+
                                     if (!isset($deductions[$matItemId])) {
                                         $deductions[$matItemId] = [
-                                            'item' => $mat->item,
-                                            'amount' => 0,
+                                            'item' => $rawItem,
+                                            'total_usage_qty' => 0,
+                                            'total_warehouse_qty' => 0,
+                                            'usage_unit' => $mat->unit_name ?: ($rawItem->unit?->name ?: 'Meter'),
+                                            'warehouse_unit' => $rawItem->unit?->name ?: 'Pcs',
                                         ];
                                     }
-                                    $deductions[$matItemId]['amount'] += $qtyNeeded;
+                                    $deductions[$matItemId]['total_usage_qty'] += $usageQty;
+                                    $deductions[$matItemId]['total_warehouse_qty'] += $warehouseQty;
                                 }
                             }
                         }
@@ -254,24 +281,35 @@ class InvoiceController extends Controller
                         // Apply deductions & stock mutations
                         foreach ($deductions as $d) {
                             $rawItem = $d['item'];
-                            $totalNeeded = $d['amount'];
-                            if ($rawItem && $totalNeeded > 0) {
-                                $stockBefore = $rawItem->real_stock ?? 0;
-                                $stockAfter = max(0, $stockBefore - $totalNeeded);
+                            $warehouseDeduction = round($d['total_warehouse_qty'], 4);
+                            $usageTotal = round($d['total_usage_qty'], 4);
+                            $usageUnit = $d['usage_unit'] ?? 'Meter';
+                            $warehouseUnit = $d['warehouse_unit'] ?? 'Pcs';
+
+                            if ($rawItem && $warehouseDeduction > 0) {
+                                $stockBefore = (float)($rawItem->real_stock ?? 0);
+                                $stockAfter = max(0, $stockBefore - $warehouseDeduction);
 
                                 $rawItem->update([
                                     'real_stock' => $stockAfter,
+                                    'stock' => max(0, ($rawItem->stock ?? 0) - $warehouseDeduction),
                                 ]);
+
+                                $note = "Pemotongan bahan: {$usageTotal} {$usageUnit} (setara {$warehouseDeduction} {$warehouseUnit}) untuk Invoice #{$invoice->invoice_number} ({$invoiceItem->item_name} x {$invoiceItem->qty})";
 
                                 StockMutation::create([
                                     'item_id' => $rawItem->id,
                                     'user_id' => Auth::id(),
-                                    'type' => 'OUT',
-                                    'amount' => $totalNeeded,
-                                    'stock_before' => $stockBefore,
-                                    'stock_after' => $stockAfter,
-                                    'reason' => "Pemotongan bahan untuk Invoice #{$invoice->invoice_number} ({$invoiceItem->item_name} x {$invoiceItem->qty})",
-                                    'pic_name' => Auth::user()?->name ?? 'Admin',
+                                    'type' => 'out',
+                                    'quantity' => $warehouseDeduction,
+                                    'unit_id' => $rawItem->unit_id,
+                                    'multiplier' => 1,
+                                    'total_base_quantity' => $warehouseDeduction,
+                                    'previous_stock' => $stockBefore,
+                                    'current_stock' => $stockAfter,
+                                    'notes' => $note,
+                                    'reference_no' => $invoice->invoice_number,
+                                    'mutation_date' => now(),
                                 ]);
                             }
                         }
@@ -279,7 +317,7 @@ class InvoiceController extends Controller
                 }
             }
 
-            $invoice->load(['customer', 'items.product.images', 'items.product.sizes', 'creator']);
+            $invoice->load(['customer', 'items.product.images', 'items.product.sizes', 'items.product.productionSteps.productionStep', 'creator']);
 
             return response()->json([
                 'message' => 'Invoice berhasil disimpan',
@@ -294,6 +332,7 @@ class InvoiceController extends Controller
             'customer',
             'items.product.images',
             'items.product.sizes',
+            'items.product.productionSteps.productionStep',
             'items.product.materials.item.unit',
             'creator',
         ]);

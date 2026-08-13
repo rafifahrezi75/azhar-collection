@@ -21,7 +21,9 @@ import {
     FileText,
     History,
     Shirt,
-    Tags
+    Tags,
+    Scissors,
+    Ruler
 } from "lucide-react";
 
 const Sidebar = memo(function Sidebar({
@@ -98,6 +100,8 @@ const Sidebar = memo(function Sidebar({
         if (name.includes("people") || name.includes("user")) return <Users className="w-4.5 h-4.5 shrink-0" />;
         if (name.includes("setting") || name.includes("pengaturan")) return <Settings className="w-4.5 h-4.5 shrink-0" />;
         if (name.includes("master") || name.includes("box")) return <FolderKanban className="w-4.5 h-4.5 shrink-0" />;
+        if (name.includes("langkah") || name.includes("produksi") || name.includes("scissors")) return <Scissors className="w-4.5 h-4.5 shrink-0" />;
+        if (name.includes("ukuran") || name.includes("ruler") || name.includes("size")) return <Ruler className="w-4.5 h-4.5 shrink-0" />;
         return <CircleDot className="w-3.5 h-3.5 shrink-0" />;
     }, []);
 

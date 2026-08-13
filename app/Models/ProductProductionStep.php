@@ -4,32 +4,30 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProductSize extends Model
+class ProductProductionStep extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'product_id',
-        'size_id',
-        'price',
+        'production_step_id',
+        'custom_name',
+        'wage',
         'sort_order',
-        'notes',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'sort_order' => 'integer',
+        'wage' => 'decimal:2',
     ];
 
-    public function product(): BelongsTo
+    public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function size(): BelongsTo
+    public function productionStep()
     {
-        return $this->belongsTo(Size::class);
+        return $this->belongsTo(ProductionStep::class);
     }
 }

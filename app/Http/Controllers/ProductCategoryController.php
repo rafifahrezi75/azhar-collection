@@ -37,7 +37,7 @@ class ProductCategoryController extends Controller
             $query->where('is_active', $isActive);
         }
 
-        $categories = $query->orderBy('name', 'asc')->get();
+        $categories = $query->orderBy('sort_order', 'asc')->get();
 
         return response()->json([
             'success' => true,

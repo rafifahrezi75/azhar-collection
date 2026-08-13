@@ -12,6 +12,11 @@ class DatabaseSeeder extends Seeder
             AccessSeeder::class,
             RawMaterialSeeder::class,
             CustomerSeeder::class,
+            ProductionStepSeeder::class,
+            SizeSeeder::class,
+            ProductSeeder::class,
+            MenuUpdateSeeder::class,
+            TransactionSeeder::class,
         ]);
     }
 }

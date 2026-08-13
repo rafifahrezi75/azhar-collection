@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->boolean('is_estimated_stock')->default(false)->after('stock');
+            $table->decimal('price', 15, 2)->default(0)->after('unit_id');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->dropColumn('is_estimated_stock');
+            $table->dropColumn('price');
         });
     }
 };

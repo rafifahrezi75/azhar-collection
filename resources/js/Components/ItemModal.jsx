@@ -282,8 +282,8 @@ const ItemModal = memo(function ItemModal({
                                     />
                                 </div>
 
-                                {/* Category & Base Unit */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                {/* Category, Base Unit, Price */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                                             Kategori <span className="text-rose-500">*</span>
@@ -306,7 +306,7 @@ const ItemModal = memo(function ItemModal({
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                            Satuan Dasar <span className="text-rose-500">*</span>
+                                            Satuan Dasar (Gudang) <span className="text-rose-500">*</span>
                                         </label>
                                         <select
                                             name="unit_id"
@@ -322,6 +322,26 @@ const ItemModal = memo(function ItemModal({
                                                 </option>
                                             ))}
                                         </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                            Harga per {baseUnitSymbol}
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                                <span className="text-xs font-semibold text-slate-500">Rp</span>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                name="price"
+                                                value={form.price}
+                                                onChange={onChange}
+                                                min="0"
+                                                className="w-full border border-slate-300 rounded-md pl-7 pr-2.5 py-1.5 text-xs sm:text-sm font-mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                                                placeholder="0"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -160,7 +160,7 @@ export default function Index() {
                         <table className="w-full text-left border-collapse text-xs sm:text-sm">
                             <thead>
                                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
-                                    <th className="px-3.5 py-2.5">#</th>
+                                    <th className="px-3.5 py-2.5">No</th>
                                     <th className="px-3.5 py-2.5">Nama User</th>
                                     <th className="px-3.5 py-2.5">Email</th>
                                     <th className="px-3.5 py-2.5">Role Dimiliki</th>

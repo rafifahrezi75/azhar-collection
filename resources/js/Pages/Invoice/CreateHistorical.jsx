@@ -276,7 +276,7 @@ export default function CreateHistorical() {
         }
     }, [form.payment_status, totalAmount]);
 
-    // Live Bill of Materials (BOM) Requirements Calculation
+    // Live Bill of Materials (BOM) Requirements Calculation (2-Stage Yield & Conversion)
     const materialRequirements = useMemo(() => {
         const requirementsMap = {};
 
@@ -285,26 +285,48 @@ export default function CreateHistorical() {
             const prod = products.find((p) => String(p.id) === String(item.product_id));
             if (!prod || !prod.materials) return;
 
-            const itemQty = parseInt(item.qty) || 0;
+            const breakdown = item.size_breakdown || {};
+            const hasBreakdown = Object.keys(breakdown).length > 0;
+            const totalLineQty = Number(item.qty) || 0;
 
             prod.materials.forEach((mat) => {
                 const raw = mat.item;
                 if (!raw) return;
 
                 const rawId = raw.id;
-                const neededForThisRow = itemQty * parseFloat(mat.required_qty);
+                const usageUnit = mat.unit_name || raw.usage_unit || raw.unit?.name || "Meter";
+                const warehouseUnit = raw.unit?.name || "Kg";
+                const convRate = parseFloat(mat.conversion_rate ?? raw.conversion_rate) || 1.0;
+                const yieldQty = parseFloat(mat.yield_qty) || 1.0;
+                const reqPerYield = parseFloat(mat.required_qty) || 0.0;
+
+                let lineUsageQty = 0;
+                if (hasBreakdown && mat.size_name && mat.size_name !== "ALL") {
+                    const sizeQty = Number(breakdown[mat.size_name]) || 0;
+                    lineUsageQty = (sizeQty / yieldQty) * reqPerYield;
+                } else if (!hasBreakdown || mat.size_name === "ALL" || !mat.size_name) {
+                    lineUsageQty = (totalLineQty / yieldQty) * reqPerYield;
+                }
+
+                if (lineUsageQty <= 0) return;
+
+                const warehouseDeduction = lineUsageQty / convRate;
 
                 if (!requirementsMap[rawId]) {
                     requirementsMap[rawId] = {
                         item_id: rawId,
                         item_name: raw.name,
                         item_code: raw.code,
-                        unit_name: mat.unit_name || raw.unit?.name || "Meter",
+                        unit_name: usageUnit,
+                        warehouse_unit: warehouseUnit,
+                        conv_rate: convRate,
                         total_needed: 0,
+                        warehouse_deduction: 0,
                         current_stock: raw.real_stock ?? 0,
                     };
                 }
-                requirementsMap[rawId].total_needed += neededForThisRow;
+                requirementsMap[rawId].total_needed += lineUsageQty;
+                requirementsMap[rawId].warehouse_deduction += warehouseDeduction;
             });
         });
 

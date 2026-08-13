@@ -50,6 +50,11 @@ class Product extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
+    public function productionSteps(): HasMany
+    {
+        return $this->hasMany(ProductProductionStep::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     public function getPrimaryImageUrlAttribute(): ?string
     {
         // Check if images relation is loaded

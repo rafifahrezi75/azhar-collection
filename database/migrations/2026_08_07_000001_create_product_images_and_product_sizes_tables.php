@@ -25,16 +25,15 @@ return new class extends Migration
         Schema::create('product_sizes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->string('size_name');
+            $table->foreignId('size_id')->constrained('sizes')->onDelete('cascade');
             $table->decimal('price', 15, 2)->default(0);
             $table->integer('sort_order')->default(0);
             $table->string('notes')->nullable();
             $table->timestamps();
         });
 
-        // 3. Add size_name column to product_materials table for size-specific BOM
         Schema::table('product_materials', function (Blueprint $table) {
-            $table->string('size_name')->nullable()->after('item_id');
+            $table->foreignId('size_id')->nullable()->constrained('sizes')->onDelete('cascade')->after('item_id');
         });
     }
 
@@ -44,7 +43,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('product_materials', function (Blueprint $table) {
-            $table->dropColumn('size_name');
+            $table->dropForeign(['size_id']);
+            $table->dropColumn('size_id');
         });
 
         Schema::dropIfExists('product_sizes');

@@ -24,7 +24,7 @@ const CategoryTable = memo(function CategoryTable({
                 <table className="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
                         <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
-                            <th className="px-3.5 py-2.5">#</th>
+                            <th className="px-3.5 py-2.5">No</th>
                             <th className="px-3.5 py-2.5">Nama Kategori</th>
                             <th className="px-3.5 py-2.5">Deskripsi</th>
                             <th className="px-3.5 py-2.5">Jumlah Barang</th>

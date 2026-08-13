@@ -249,35 +249,57 @@ export default function Create({ initialType = "REGULAR" }) {
         }
     };
 
-    // Live Aggregated BOM Requirement calculation
+    // Live Aggregated BOM Requirement calculation (2-Stage Yield & Conversion)
     const aggregatedBOM = useMemo(() => {
         const bomMap = {};
         items.forEach((line) => {
             if (!line.product_id) return;
             const prod = products.find((p) => String(p.id) === String(line.product_id));
-            if (prod && prod.materials) {
-                const lineQty = Number(line.qty) || 0;
-                prod.materials.forEach((mat) => {
-                    const itemId = mat.item_id;
-                    const itemName = mat.item?.name || "Bahan Baku";
-                    const itemCode = mat.item?.code || "-";
-                    const unit = mat.unit_name || mat.item?.unit?.name || "Meter";
-                    const reqQty = Number(mat.required_qty) || 0;
-                    const totalReq = reqQty * lineQty;
+            if (!prod || !prod.materials) return;
 
-                    if (!bomMap[itemId]) {
-                        bomMap[itemId] = {
-                            id: itemId,
-                            name: itemName,
-                            code: itemCode,
-                            unit: unit,
-                            currentStock: mat.item?.real_stock ?? 0,
-                            totalRequired: 0,
-                        };
-                    }
-                    bomMap[itemId].totalRequired += totalReq;
-                });
-            }
+            const breakdown = line.size_breakdown || {};
+            const hasBreakdown = Object.keys(breakdown).length > 0;
+            const totalLineQty = Number(line.qty) || 0;
+
+            prod.materials.forEach((mat) => {
+                const raw = mat.item;
+                const itemId = mat.item_id;
+                const itemName = raw?.name || "Bahan Baku";
+                const itemCode = raw?.code || "-";
+                const usageUnit = mat.unit_name || raw?.usage_unit || raw?.unit?.name || "Meter";
+                const warehouseUnit = raw?.unit?.name || "Kg";
+                const convRate = parseFloat(mat.conversion_rate ?? raw?.conversion_rate) || 1.0;
+                const yieldQty = parseFloat(mat.yield_qty) || 1.0;
+                const reqPerYield = parseFloat(mat.required_qty) || 0.0;
+
+                let lineUsageQty = 0;
+                if (hasBreakdown && mat.size_name && mat.size_name !== "ALL") {
+                    const sizeQty = Number(breakdown[mat.size_name]) || 0;
+                    lineUsageQty = (sizeQty / yieldQty) * reqPerYield;
+                } else if (!hasBreakdown || mat.size_name === "ALL" || !mat.size_name) {
+                    lineUsageQty = (totalLineQty / yieldQty) * reqPerYield;
+                }
+
+                if (lineUsageQty <= 0) return;
+
+                const warehouseDeduction = lineUsageQty / convRate;
+
+                if (!bomMap[itemId]) {
+                    bomMap[itemId] = {
+                        id: itemId,
+                        name: itemName,
+                        code: itemCode,
+                        usageUnit: usageUnit,
+                        warehouseUnit: warehouseUnit,
+                        convRate: convRate,
+                        currentStock: raw?.real_stock ?? 0,
+                        totalUsage: 0,
+                        totalWarehouseDeduction: 0,
+                    };
+                }
+                bomMap[itemId].totalUsage += lineUsageQty;
+                bomMap[itemId].totalWarehouseDeduction += warehouseDeduction;
+            });
         });
         return Object.values(bomMap);
     }, [items, products]);
@@ -855,6 +877,10 @@ export default function Create({ initialType = "REGULAR" }) {
                                                     const prod = products.find((p) => String(p.id) === String(line.product_id));
                                                     if (!prod || !prod.materials || prod.materials.length === 0) return null;
 
+                                                    const breakdown = line.size_breakdown || {};
+                                                    const hasBreakdown = Object.keys(breakdown).length > 0;
+                                                    const totalLineQty = Number(line.qty) || 0;
+
                                                     return (
                                                         <div key={lIdx} className="p-2.5 rounded-md bg-slate-50 border border-slate-200 text-xs space-y-2">
                                                             <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
@@ -870,20 +896,46 @@ export default function Create({ initialType = "REGULAR" }) {
                                                             </div>
                                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                                                 {prod.materials.map((mat, mIdx) => {
-                                                                    const reqPerUnit = Number(mat.required_qty) || 0;
-                                                                    const totalReq = reqPerUnit * (Number(line.qty) || 0);
-                                                                    const unit = mat.unit_name || mat.item?.unit?.name || "Unit";
-                                                                    const currentStock = Number(mat.item?.real_stock) || 0;
-                                                                    const isSufficient = currentStock >= totalReq;
+                                                                    const raw = mat.item;
+                                                                    const yieldQty = parseFloat(mat.yield_qty) || 1.0;
+                                                                    const reqPerYield = parseFloat(mat.required_qty) || 0.0;
+                                                                    const usageUnit = mat.unit_name || raw?.usage_unit || raw?.unit?.name || "Meter";
+                                                                    const convRate = parseFloat(mat.conversion_rate ?? raw?.conversion_rate) || 1.0;
+
+                                                                    let usageQty = 0;
+                                                                    if (hasBreakdown && mat.size_name && mat.size_name !== "ALL") {
+                                                                        const sizeQty = Number(breakdown[mat.size_name]) || 0;
+                                                                        usageQty = (sizeQty / yieldQty) * reqPerYield;
+                                                                    } else if (!hasBreakdown || mat.size_name === "ALL" || !mat.size_name) {
+                                                                        usageQty = (totalLineQty / yieldQty) * reqPerYield;
+                                                                    }
+
+                                                                    if (usageQty <= 0) return null;
+
+                                                                    const warehouseDeduction = usageQty / convRate;
 
                                                                     return (
                                                                         <div key={mat.id || mIdx} className="p-1.5 rounded bg-white border border-slate-200 text-[11px] flex items-center justify-between">
-                                                                            <span className="font-semibold text-slate-700 truncate mr-2" title={mat.item?.name}>
-                                                                                {mat.item?.name || "Bahan Baku"}
-                                                                            </span>
-                                                                            <span className="font-bold text-teal-800 font-mono shrink-0">
-                                                                                {totalReq.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {unit}
-                                                                            </span>
+                                                                            <div className="truncate mr-2">
+                                                                                <span className="font-semibold text-slate-700 block truncate" title={raw?.name}>
+                                                                                    {raw?.name || "Bahan Baku"}
+                                                                                </span>
+                                                                                {mat.size_name && mat.size_name !== "ALL" && (
+                                                                                    <span className="text-[9px] text-teal-600 font-semibold font-mono">
+                                                                                        Size {mat.size_name}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="text-right shrink-0">
+                                                                                <span className="font-bold text-teal-800 font-mono block">
+                                                                                    {usageQty.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {usageUnit}
+                                                                                </span>
+                                                                                {convRate > 1 && (
+                                                                                    <span className="text-[9px] text-slate-400 font-mono">
+                                                                                        ≈ {warehouseDeduction.toFixed(3)} {raw?.unit?.name || "Kg"}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -896,7 +948,7 @@ export default function Create({ initialType = "REGULAR" }) {
                                             {/* Grand Total Aggregation */}
                                             <div className="pt-2 border-t border-slate-200">
                                                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                                    Total Akumulasi Kebutuhan Gudang (Semua Item):
+                                                    Total Akumulasi Pemotongan Stok Gudang (Semua Item):
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     {aggregatedBOM.map((mat) => (
@@ -907,14 +959,24 @@ export default function Create({ initialType = "REGULAR" }) {
                                                             <div>
                                                                 <div className="font-bold text-slate-800">{mat.name}</div>
                                                                 <div className="text-[10px] text-slate-500 font-mono">
-                                                                    Stok Saat Ini: {mat.currentStock.toLocaleString("id-ID")} {mat.unit}
+                                                                    Stok Gudang: {mat.currentStock.toLocaleString("id-ID")} {mat.warehouseUnit}
                                                                 </div>
+                                                                {mat.convRate > 1 && (
+                                                                    <div className="text-[9px] text-teal-700">
+                                                                        1 {mat.warehouseUnit} = {mat.convRate} {mat.usageUnit}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div className="text-right">
-                                                                <span className="text-[10px] text-slate-500 block">Total Kebutuhan:</span>
-                                                                <span className="font-bold text-teal-800 font-mono text-sm">
-                                                                    {mat.totalRequired.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {mat.unit}
+                                                                <span className="text-[10px] text-slate-500 block">Total Potong Gudang:</span>
+                                                                <span className="font-bold text-teal-800 font-mono text-sm block">
+                                                                    {mat.totalWarehouseDeduction.toLocaleString("id-ID", { maximumFractionDigits: 3 })} {mat.warehouseUnit}
                                                                 </span>
+                                                                {mat.convRate > 1 && (
+                                                                    <span className="text-[10px] text-teal-600 font-mono">
+                                                                        ({mat.totalUsage.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {mat.usageUnit})
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ))}

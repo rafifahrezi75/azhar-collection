@@ -53,6 +53,9 @@ export default function Index() {
         name: "",
         category_id: "",
         unit_id: "",
+        usage_unit: "",
+        conversion_rate: 1,
+        price: 0,
         stock: 0,
         real_stock: 0,
         estimated_stock: 0,
@@ -252,6 +255,9 @@ export default function Index() {
             name: item.name || "",
             category_id: String(item.category_id || ""),
             unit_id: String(item.unit_id || ""),
+            usage_unit: item.usage_unit || "",
+            conversion_rate: item.conversion_rate ?? 1,
+            price: item.price ?? 0,
             stock: item.stock ?? (realStockVal + estStockVal),
             real_stock: realStockVal,
             estimated_stock: estStockVal,
@@ -341,6 +347,9 @@ export default function Index() {
             formData.append("name", form.name);
             formData.append("category_id", form.category_id);
             formData.append("unit_id", form.unit_id);
+            formData.append("usage_unit", form.usage_unit || "");
+            formData.append("conversion_rate", form.conversion_rate || "1");
+            formData.append("price", form.price || "0");
             formData.append("real_stock", realStockNum);
             formData.append("estimated_stock", estStockNum);
             formData.append("stock", totalStockNum);

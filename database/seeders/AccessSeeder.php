@@ -147,86 +147,114 @@ class AccessSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 2. Transaksi & Invoice (Direct Top Menu)
+        // 2. Transaksi & Invoice (Direct Top Menu) — AFTER Master Data
         Menu::create([
             'parent_id' => null,
             'title' => 'Transaksi & Invoice',
             'icon' => 'Receipt',
             'path' => '/dashboard/invoice',
             'permission_name' => 'invoice.view',
-            'sort_order' => 2,
+            'sort_order' => 3,
             'is_active' => true,
         ]);
 
-        // 3. Master Data (Parent Menu with Collapsible Submenu)
+        // 3. Master Data (Parent Menu with Collapsible Submenu) — BEFORE Transaksi
         $masterDataParent = Menu::create([
             'parent_id' => null,
             'title' => 'Master Data',
             'icon' => 'Boxes',
             'path' => null,
             'permission_name' => null,
-            'sort_order' => 3,
-            'is_active' => true,
-        ]);
-
-        // Master Data Children
-        Menu::create([
-            'parent_id' => $masterDataParent->id,
-            'title' => 'Bahan Baku',
-            'icon' => 'Package',
-            'path' => '/dashboard/barang',
-            'permission_name' => 'barang.view',
-            'sort_order' => 1,
-            'is_active' => true,
-        ]);
-
-        Menu::create([
-            'parent_id' => $masterDataParent->id,
-            'title' => 'Produk & Resep BOM',
-            'icon' => 'Shirt',
-            'path' => '/dashboard/produk',
-            'permission_name' => 'produk.view',
             'sort_order' => 2,
             'is_active' => true,
         ]);
 
-        Menu::create([
-            'parent_id' => $masterDataParent->id,
-            'title' => 'Kategori Produk',
-            'icon' => 'Tags',
-            'path' => '/dashboard/kategori-produk',
-            'permission_name' => 'kategori-produk.view',
-            'sort_order' => 3,
-            'is_active' => true,
-        ]);
-
+        // Master Data Children — ordered by prerequisites first
+        // 1. Kategori Bahan (harus ada sebelum Bahan Baku)
         Menu::create([
             'parent_id' => $masterDataParent->id,
             'title' => 'Kategori Bahan',
             'icon' => 'Category',
             'path' => '/dashboard/kategori',
             'permission_name' => 'kategori.view',
-            'sort_order' => 4,
+            'sort_order' => 1,
             'is_active' => true,
         ]);
 
+        // 2. Satuan Bahan (harus ada sebelum Bahan Baku)
         Menu::create([
             'parent_id' => $masterDataParent->id,
             'title' => 'Satuan Bahan',
             'icon' => 'Scale',
             'path' => '/dashboard/satuan',
             'permission_name' => 'satuan.view',
+            'sort_order' => 2,
+            'is_active' => true,
+        ]);
+
+        // 3. Bahan Baku (butuh Kategori & Satuan)
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Bahan Baku',
+            'icon' => 'Package',
+            'path' => '/dashboard/barang',
+            'permission_name' => 'barang.view',
+            'sort_order' => 3,
+            'is_active' => true,
+        ]);
+
+        // 4. Kategori Produk
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Kategori Produk',
+            'icon' => 'Tags',
+            'path' => '/dashboard/kategori-produk',
+            'permission_name' => 'kategori-produk.view',
+            'sort_order' => 4,
+            'is_active' => true,
+        ]);
+
+        // 5. Ukuran (harus ada sebelum Produk)
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Ukuran',
+            'icon' => 'Ruler',
+            'path' => '/dashboard/ukuran',
+            'permission_name' => 'produk.view',
             'sort_order' => 5,
             'is_active' => true,
         ]);
 
+        // 6. Langkah Produksi (harus ada sebelum Produk)
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Langkah Produksi',
+            'icon' => 'Scissors',
+            'path' => '/dashboard/langkah-produksi',
+            'permission_name' => 'produk.view',
+            'sort_order' => 6,
+            'is_active' => true,
+        ]);
+
+        // 7. Produk & Resep BOM (butuh semua master di atas)
+        Menu::create([
+            'parent_id' => $masterDataParent->id,
+            'title' => 'Produk & Resep BOM',
+            'icon' => 'Shirt',
+            'path' => '/dashboard/produk',
+            'permission_name' => 'produk.view',
+            'sort_order' => 7,
+            'is_active' => true,
+        ]);
+
+        // 8. Data Pelanggan
         Menu::create([
             'parent_id' => $masterDataParent->id,
             'title' => 'Data Pelanggan',
             'icon' => 'Users',
             'path' => '/dashboard/pelanggan',
             'permission_name' => 'pelanggan.view',
-            'sort_order' => 6,
+            'sort_order' => 8,
             'is_active' => true,
         ]);
 
