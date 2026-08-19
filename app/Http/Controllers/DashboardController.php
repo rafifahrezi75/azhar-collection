@@ -59,6 +59,83 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function customerYearlyTrendApi(Request $request)
+    {
+        // Available years from invoices
+        $dbYears = Invoice::whereNotNull('order_date')
+            ->selectRaw('YEAR(order_date) as yr')
+            ->distinct()
+            ->orderBy('yr', 'desc')
+            ->pluck('yr')
+            ->toArray();
+        $currentY = (int) Carbon::now()->year;
+        $availableYears = array_values(array_unique(array_merge($dbYears, [$currentY, $currentY - 1])));
+        rsort($availableYears);
+
+        // All customers that ever had an invoice
+        $customers = Customer::select('id', 'name', 'code', 'institution_name')
+            ->whereHas('invoices')
+            ->orderBy('name')
+            ->get();
+
+        // Build per-customer, per-year stats
+        $rows = [];
+        foreach ($customers as $cust) {
+            $yearData = [];
+            foreach ($availableYears as $yr) {
+                $invs = Invoice::where('customer_id', $cust->id)
+                    ->whereYear('order_date', $yr)
+                    ->with('items')
+                    ->get();
+
+                $total     = (float) $invs->sum('total_amount');
+                $paid      = (float) $invs->sum('paid_amount');
+                $qty       = (int)   $invs->reduce(fn($c, $i) => $c + $i->items->sum('qty'), 0);
+                $countLunas    = $invs->where('payment_status', 'lunas')->count();
+                $countDp       = $invs->where('payment_status', 'dp')->count();
+                $countBelum    = $invs->where('payment_status', 'belum_bayar')->count();
+                $countSelesai  = $invs->whereIn('production_status', ['selesai', 'dikirim'])->count();
+                $countTotal    = $invs->count();
+                $outstanding   = max(0, $total - $paid);
+                $fulfillRate   = $countTotal > 0 ? round($countSelesai / $countTotal * 100) : 0;
+                $paidRate      = $total > 0 ? round($paid / $total * 100) : 0;
+
+                $yearData[] = [
+                    'year'          => (int) $yr,
+                    'total_amount'  => $total,
+                    'paid_amount'   => $paid,
+                    'outstanding'   => $outstanding,
+                    'qty'           => $qty,
+                    'invoices'      => $countTotal,
+                    'lunas'         => $countLunas,
+                    'dp'            => $countDp,
+                    'belum_bayar'   => $countBelum,
+                    'prod_selesai'  => $countSelesai,
+                    'fulfill_rate'  => $fulfillRate,  // % invoice yg sudah selesai produksi
+                    'paid_rate'     => $paidRate,     // % uang yang sudah masuk
+                ];
+            }
+            $rows[] = [
+                'customer_id'      => $cust->id,
+                'name'             => $cust->name,
+                'institution_name' => $cust->institution_name,
+                'code'             => $cust->code,
+                'years'            => $yearData,
+            ];
+        }
+
+        // Only include customers that have at least one invoice across all years
+        $rows = array_values(array_filter($rows, fn($r) => collect($r['years'])->sum('invoices') > 0));
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'customers'       => $rows,
+                'available_years' => $availableYears,
+            ],
+        ]);
+    }
+
     public function getOrderAnalyticsData($customerId = 'ALL', $year = null, $compareYear = null): array
     {
         $currentYear = (int) ($year ?: Carbon::now()->year);

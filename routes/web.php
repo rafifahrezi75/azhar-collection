@@ -6,6 +6,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HakAksesController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceItemProductionStepController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
@@ -34,6 +35,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/invoice/create', [InvoiceController::class, 'createPage'])
         ->middleware('permission:invoice.create')
         ->name('invoice.create');
+
+    Route::get('/dashboard/invoice/{invoice}', [InvoiceController::class, 'showPage'])
+        ->name('invoice.show')
+        ->middleware('permission:invoice.view');
+
+    Route::get('/dashboard/invoice/{invoice}/print', [InvoiceController::class, 'print'])
+        ->middleware('permission:invoice.view')
+        ->name('invoice.print');
+
+    Route::get('/dashboard/invoice/{invoice}/production-pdf', [InvoiceController::class, 'printProductionPDF'])
+        ->middleware('permission:invoice.view')
+        ->name('invoice.production-pdf');
 
     Route::get('/dashboard/invoice/input-lama', [InvoiceController::class, 'createHistoricalPage'])
         ->middleware('permission:invoice.create')
@@ -92,6 +105,8 @@ Route::middleware('auth')->prefix('api')->group(function () {
         ->middleware('permission:dashboard.view');
     Route::get('/dashboard/order-analytics', [DashboardController::class, 'orderAnalyticsApi'])
         ->middleware('permission:dashboard.view');
+    Route::get('/dashboard/customer-yearly-trend', [DashboardController::class, 'customerYearlyTrendApi'])
+        ->middleware('permission:dashboard.view');
 
     // Generic Reorder
     Route::post('/master/reorder', function (\Illuminate\Http\Request $request) {
@@ -106,6 +121,16 @@ Route::middleware('auth')->prefix('api')->group(function () {
         }
         return response()->json(['message' => 'Reordered successfully']);
     });
+
+    // Invoice Item Production Steps Assignment (Legacy - to be removed later)
+    Route::post('/invoice-item-production-steps/{invoice}/generate', [InvoiceItemProductionStepController::class, 'generateForInvoice']);
+    Route::put('/invoice-item-production-steps/{step}/assign', [InvoiceItemProductionStepController::class, 'assignUser']);
+    Route::put('/invoice-item-production-steps/{step}/status', [InvoiceItemProductionStepController::class, 'toggleStatus']);
+
+    // SPK Production Assignments
+    Route::post('/production-assignments', [\App\Http\Controllers\ProductionAssignmentController::class, 'store']);
+    Route::put('/production-assignments/steps/{step}/status', [\App\Http\Controllers\ProductionAssignmentController::class, 'toggleStepStatus']);
+    Route::delete('/production-assignments/{assignment}', [\App\Http\Controllers\ProductionAssignmentController::class, 'destroy']);
 
     // Categories
     Route::get('/categories', [CategoryController::class, 'index'])

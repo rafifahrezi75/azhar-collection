@@ -7,6 +7,7 @@ import CategoryDonutChart from "@/Components/Dashboard/CategoryDonutChart";
 import OrderAnalyticsFilterBar from "@/Components/Dashboard/OrderAnalyticsFilterBar";
 import OrderAnalyticsChart from "@/Components/Dashboard/OrderAnalyticsChart";
 import TopProductsCard from "@/Components/Dashboard/TopProductsCard";
+import CustomerYearlyTrendChart from "@/Components/Dashboard/CustomerYearlyTrendChart";
 import {
     Layers,
     Users,
@@ -317,7 +318,12 @@ export default function Dashboard({ initialSummary = null, initialOrderAnalytics
                 </div>
 
                 {/* ========================================================= */}
-                {/* SECTION 2: INVENTARIS & STOK BAHAN BAKU                   */}
+                {/* SECTION 2: TREN PELANGGAN TAHUNAN                          */}
+                {/* ========================================================= */}
+                <CustomerYearlyTrendChart />
+
+                {/* ========================================================= */}
+                {/* SECTION 3: INVENTARIS & STOK BAHAN BAKU                   */}
                 {/* ========================================================= */}
                 <div className="pt-4 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-200">

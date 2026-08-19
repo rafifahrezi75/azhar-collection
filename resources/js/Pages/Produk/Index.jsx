@@ -172,9 +172,13 @@ export default function Index() {
         formData.append("base_price", form.base_price ?? 0);
         formData.append("description", form.description || "");
         formData.append("is_active", form.is_active ? "1" : "0");
-        formData.append("sizes", JSON.stringify(form.sizes || []));
-        formData.append("materials", JSON.stringify(form.materials || []));
-        formData.append("production_steps", JSON.stringify(form.production_steps || []));
+        const validSizes = (form.sizes || []).filter(s => s.size_id);
+        const validMaterials = (form.materials || []).filter(m => m.item_id);
+        const validSteps = (form.production_steps || []).filter(s => s.production_step_id);
+
+        formData.append("sizes", JSON.stringify(validSizes));
+        formData.append("materials", JSON.stringify(validMaterials));
+        formData.append("production_steps", JSON.stringify(validSteps));
 
         if (form.deleted_image_ids && form.deleted_image_ids.length > 0) {
             formData.append("deleted_image_ids", JSON.stringify(form.deleted_image_ids));

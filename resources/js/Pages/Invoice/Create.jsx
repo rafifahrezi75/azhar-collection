@@ -42,7 +42,7 @@ export default function Create({ initialType = "REGULAR" }) {
     const [submitting, setSubmitting] = useState(false);
 
     // Collapsible BOM drawer state
-    const [showBOMDrawer, setShowBOMDrawer] = useState(true);
+    const [showBOMDrawer, setShowBOMDrawer] = useState(false);
 
     // Quick add customer modal state
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -774,62 +774,69 @@ export default function Create({ initialType = "REGULAR" }) {
                                                 </div>
                                             )}
 
-                                            {/* Sub Kebutuhan Bahan Gudang per Item */}
-                                            {matchedProduct && matchedProduct.materials && matchedProduct.materials.length > 0 && (
-                                                <div className="mt-2.5 pt-2.5 border-t border-slate-200/70">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                                                            <Boxes className="w-3.5 h-3.5 text-teal-600" />
-                                                            <span>Kebutuhan Bahan Gudang ({matchedProduct.name}):</span>
-                                                            <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
-                                                                {matchedProduct.materials.length} Komponen Bahan
-                                                            </span>
+                                            {/* Sub Kebutuhan Bahan Gudang & Langkah Produksi per Item */}
+                                            {matchedProduct && (
+                                                <details className="mt-2.5 pt-2.5 border-t border-slate-200/70 group">
+                                                    <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold text-slate-700 hover:text-teal-700 transition-colors">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Layers className="w-3.5 h-3.5 text-teal-600" />
+                                                            <span>Detail BOM & Produksi ({matchedProduct.materials?.length || 0} Bahan)</span>
                                                         </div>
-                                                        <span className="text-[10px] text-slate-500 font-mono">
-                                                            Subtotal untuk {item.qty} {item.unit}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                                        {matchedProduct.materials.map((mat, mIdx) => {
-                                                            const reqPerUnit = Number(mat.required_qty) || 0;
-                                                            const totalReqForThisItem = reqPerUnit * (Number(item.qty) || 0);
-                                                            const currentStock = Number(mat.item?.real_stock) || 0;
-                                                            const unit = mat.unit_name || mat.item?.unit?.name || "Unit";
-                                                            const isSufficient = currentStock >= totalReqForThisItem;
-
-                                                            return (
-                                                                <div
-                                                                    key={mat.id || mIdx}
-                                                                    className="p-2 rounded-md bg-white border border-slate-200 text-xs space-y-1 shadow-2xs"
-                                                                >
-                                                                    <div className="flex items-start justify-between gap-1">
-                                                                        <span className="font-bold text-slate-800 truncate" title={mat.item?.name}>
-                                                                            {mat.item?.name || "Bahan Baku"}
-                                                                        </span>
-                                                                        <span className="text-[10px] text-slate-500 shrink-0 font-mono">
-                                                                            @{reqPerUnit} {unit}/{item.unit}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
-                                                                        <div>
-                                                                            <span className="text-slate-400 text-[10px]">Stok: </span>
-                                                                            <span className={`font-mono font-semibold ${isSufficient ? "text-slate-700" : "text-amber-600 font-bold"}`}>
-                                                                                {currentStock.toLocaleString("id-ID")} {unit}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="text-right">
-                                                                            <span className="text-slate-400 text-[10px]">Perlu: </span>
-                                                                            <span className="font-bold text-teal-700 font-mono">
-                                                                                {totalReqForThisItem.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {unit}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
+                                                        <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
+                                                    </summary>
+                                                    <div className="mt-3 space-y-3">
+                                                        {/* BOM Table/Grid */}
+                                                        {matchedProduct.materials && matchedProduct.materials.length > 0 && (
+                                                            <div>
+                                                                <div className="text-[10px] text-slate-500 font-mono mb-1">Kebutuhan Bahan untuk {item.qty} {item.unit}:</div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                                    {matchedProduct.materials.map((mat, mIdx) => {
+                                                                        const reqPerUnit = Number(mat.required_qty) || 0;
+                                                                        const totalReqForThisItem = reqPerUnit * (Number(item.qty) || 0);
+                                                                        const currentStock = Number(mat.item?.real_stock) || 0;
+                                                                        const unit = mat.unit_name || mat.item?.unit?.name || "Unit";
+                                                                        const isSufficient = currentStock >= totalReqForThisItem;
+                                                                        return (
+                                                                            <div key={mat.id || mIdx} className="p-2 rounded-md bg-white border border-slate-200 text-xs space-y-1 shadow-2xs">
+                                                                                <div className="flex items-start justify-between gap-1">
+                                                                                    <span className="font-bold text-slate-800 truncate" title={mat.item?.name}>{mat.item?.name || "Bahan Baku"}</span>
+                                                                                    <span className="text-[10px] text-slate-500 shrink-0 font-mono">@{reqPerUnit} {unit}/{item.unit}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+                                                                                    <div>
+                                                                                        <span className="text-slate-400 text-[10px]">Stok: </span>
+                                                                                        <span className={`font-mono font-semibold ${isSufficient ? "text-slate-700" : "text-amber-600 font-bold"}`}>{currentStock.toLocaleString("id-ID")} {unit}</span>
+                                                                                    </div>
+                                                                                    <div className="text-right">
+                                                                                        <span className="text-slate-400 text-[10px]">Perlu: </span>
+                                                                                        <span className="font-bold text-teal-700 font-mono">{totalReqForThisItem.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {unit}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
-                                                            );
-                                                        })}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Production Steps */}
+                                                        {matchedProduct.production_steps && matchedProduct.production_steps.length > 0 && (
+                                                            <div className="pt-2 border-t border-slate-200/50">
+                                                                <div className="text-[10px] font-bold uppercase text-slate-600 flex items-center gap-1 mb-1.5">
+                                                                    <Zap className="w-3 h-3" /> Langkah Produksi / Upah:
+                                                                </div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                    {matchedProduct.production_steps.map((step, sIdx) => (
+                                                                        <div key={sIdx} className="flex justify-between items-center bg-white p-1.5 rounded-md border border-slate-200 text-[11px]">
+                                                                            <span className="font-semibold text-slate-700">{sIdx + 1}. {step.production_step?.name || step.custom_name}</span>
+                                                                            <span className="font-mono text-indigo-600 font-bold">{formatCurrency(step.wage)}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                </div>
+                                                </details>
                                             )}
                                         </div>
                                     );
@@ -867,85 +874,7 @@ export default function Create({ initialType = "REGULAR" }) {
                                         </p>
                                     ) : (
                                         <>
-                                            {/* Sub-Grouped Per Item */}
-                                            <div className="space-y-2.5">
-                                                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                                    Rincian Sub Kebutuhan per Item Pesanan:
-                                                </div>
-                                                {items.map((line, lIdx) => {
-                                                    if (!line.product_id) return null;
-                                                    const prod = products.find((p) => String(p.id) === String(line.product_id));
-                                                    if (!prod || !prod.materials || prod.materials.length === 0) return null;
-
-                                                    const breakdown = line.size_breakdown || {};
-                                                    const hasBreakdown = Object.keys(breakdown).length > 0;
-                                                    const totalLineQty = Number(line.qty) || 0;
-
-                                                    return (
-                                                        <div key={lIdx} className="p-2.5 rounded-md bg-slate-50 border border-slate-200 text-xs space-y-2">
-                                                            <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                                                                <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                                                                    <span className="w-4 h-4 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold flex items-center justify-center">
-                                                                        {lIdx + 1}
-                                                                    </span>
-                                                                    <span>{line.item_name || prod.name}</span>
-                                                                </span>
-                                                                <span className="text-[11px] font-semibold text-slate-600 font-mono">
-                                                                    Qty: {line.qty} {line.unit}
-                                                                </span>
-                                                            </div>
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                                                {prod.materials.map((mat, mIdx) => {
-                                                                    const raw = mat.item;
-                                                                    const yieldQty = parseFloat(mat.yield_qty) || 1.0;
-                                                                    const reqPerYield = parseFloat(mat.required_qty) || 0.0;
-                                                                    const usageUnit = mat.unit_name || raw?.usage_unit || raw?.unit?.name || "Meter";
-                                                                    const convRate = parseFloat(mat.conversion_rate ?? raw?.conversion_rate) || 1.0;
-
-                                                                    let usageQty = 0;
-                                                                    if (hasBreakdown && mat.size_name && mat.size_name !== "ALL") {
-                                                                        const sizeQty = Number(breakdown[mat.size_name]) || 0;
-                                                                        usageQty = (sizeQty / yieldQty) * reqPerYield;
-                                                                    } else if (!hasBreakdown || mat.size_name === "ALL" || !mat.size_name) {
-                                                                        usageQty = (totalLineQty / yieldQty) * reqPerYield;
-                                                                    }
-
-                                                                    if (usageQty <= 0) return null;
-
-                                                                    const warehouseDeduction = usageQty / convRate;
-
-                                                                    return (
-                                                                        <div key={mat.id || mIdx} className="p-1.5 rounded bg-white border border-slate-200 text-[11px] flex items-center justify-between">
-                                                                            <div className="truncate mr-2">
-                                                                                <span className="font-semibold text-slate-700 block truncate" title={raw?.name}>
-                                                                                    {raw?.name || "Bahan Baku"}
-                                                                                </span>
-                                                                                {mat.size_name && mat.size_name !== "ALL" && (
-                                                                                    <span className="text-[9px] text-teal-600 font-semibold font-mono">
-                                                                                        Size {mat.size_name}
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="text-right shrink-0">
-                                                                                <span className="font-bold text-teal-800 font-mono block">
-                                                                                    {usageQty.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {usageUnit}
-                                                                                </span>
-                                                                                {convRate > 1 && (
-                                                                                    <span className="text-[9px] text-slate-400 font-mono">
-                                                                                        ≈ {warehouseDeduction.toFixed(3)} {raw?.unit?.name || "Kg"}
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {/* Grand Total Aggregation */}
+                                            {/* Grand Total Aggregation ONLY to avoid double info */}
                                             <div className="pt-2 border-t border-slate-200">
                                                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                                                     Total Akumulasi Pemotongan Stok Gudang (Semua Item):

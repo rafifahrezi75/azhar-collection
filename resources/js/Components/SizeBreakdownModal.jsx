@@ -385,9 +385,8 @@ const SizeBreakdownModal = memo(function SizeBreakdownModal({
                         </button>
                     </div>
 
-                    {/* Standard / Number / Product Grid with Editable Price & Qty */}
                     {activeTab !== "custom" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                             {activePresetList.map((size) => {
                                 const val = sizes[size] ?? "";
                                 const hasValue = val !== "" && Number(val) > 0;
@@ -397,65 +396,72 @@ const SizeBreakdownModal = memo(function SizeBreakdownModal({
                                 return (
                                     <div
                                         key={size}
-                                        className={`rounded-lg p-2.5 transition-all border space-y-2 ${
+                                        className={`rounded-xl p-3 transition-all border ${
                                             hasValue
-                                                ? "border-teal-500 bg-teal-50/40 ring-1 ring-teal-500/20 shadow-2xs"
-                                                : "border-slate-200 bg-slate-50/40 hover:bg-white hover:border-slate-300"
+                                                ? "border-teal-500 bg-teal-50/30 ring-1 ring-teal-500/20 shadow-sm"
+                                                : "border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300"
                                         }`}
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-slate-800 tracking-tight">
-                                                Ukuran {size}
-                                            </span>
-                                            {hasValue && (
-                                                <span className="text-[10px] font-bold text-teal-800 bg-teal-100/90 px-1.5 py-0.2 rounded font-mono">
-                                                    Sub: {formatCurrency(itemSubtotal)}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <span className="text-sm font-bold text-slate-800">
+                                                    Ukuran {size}
                                                 </span>
-                                            )}
-                                        </div>
+                                                {hasValue && (
+                                                    <div className="text-[11px] font-bold text-teal-700 mt-0.5">
+                                                        Subtotal: {formatCurrency(itemSubtotal)}
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                        {/* Qty Stepper */}
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleStep(size, -1)}
-                                                className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs transition-colors cursor-pointer border border-slate-200"
-                                            >
-                                                -
-                                            </button>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                placeholder="0"
-                                                value={val}
-                                                onChange={(e) => handleSizeChange(size, e.target.value)}
-                                                className={`flex-1 h-7 text-center font-bold text-xs rounded border transition-colors ${
-                                                    hasValue
-                                                        ? "border-teal-500 bg-white text-teal-950 font-mono ring-1 ring-teal-500/30"
-                                                        : "border-slate-200 bg-white text-slate-700"
-                                                }`}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => handleStep(size, 1)}
-                                                className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-xs transition-colors cursor-pointer border border-slate-200"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
+                                            <div className="flex items-center gap-4">
+                                                {/* Editable Price */}
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-semibold text-slate-500 mb-1">Harga Satuan</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="100"
+                                                        value={customPrices[size] !== undefined ? customPrices[size] : sizePrice}
+                                                        onChange={(e) => handlePriceChange(size, e.target.value)}
+                                                        placeholder={String(defaultUnitPrice || 0)}
+                                                        className="w-24 px-2 py-1.5 text-xs font-mono font-bold border border-slate-200 rounded-md bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-right shadow-sm"
+                                                    />
+                                                </div>
 
-                                        {/* Editable Price per Size Input */}
-                                        <div className="flex items-center gap-1.5 pt-0.5">
-                                            <span className="text-[10px] font-semibold text-slate-500 shrink-0">Rp/pcs:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="100"
-                                                value={customPrices[size] !== undefined ? customPrices[size] : sizePrice}
-                                                onChange={(e) => handlePriceChange(size, e.target.value)}
-                                                placeholder={String(defaultUnitPrice || 0)}
-                                                className="w-full px-2 py-0.5 text-xs font-mono font-semibold border border-slate-200 rounded bg-white focus:border-teal-500 text-right"
-                                            />
+                                                {/* Qty Stepper */}
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-semibold text-slate-500 mb-1">Kuantitas</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleStep(size, -1)}
+                                                            className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-sm transition-colors cursor-pointer border border-slate-200 shadow-sm"
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            placeholder="0"
+                                                            value={val}
+                                                            onChange={(e) => handleSizeChange(size, e.target.value)}
+                                                            className={`w-12 h-7 text-center font-bold text-sm rounded-md border transition-colors shadow-sm ${
+                                                                hasValue
+                                                                    ? "border-teal-500 bg-white text-teal-900 ring-1 ring-teal-500/30"
+                                                                    : "border-slate-200 bg-white text-slate-700"
+                                                            }`}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleStep(size, 1)}
+                                                            className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-sm transition-colors cursor-pointer border border-slate-200 shadow-sm"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 );

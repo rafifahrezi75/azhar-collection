@@ -133,8 +133,15 @@ export default function DashboardLayout({ children }) {
                 </header>
 
                 {/* Main Body with compact padding */}
-                <main className="flex-1 p-3.5 sm:p-4 md:p-5 overflow-y-auto">
-                    {children}
+                <main className="flex-1 p-3.5 sm:p-4 md:p-5 overflow-y-auto flex flex-col justify-between">
+                    <div>
+                        {children}
+                    </div>
+                    
+                    {/* Footer */}
+                    <footer className="mt-8 pt-4 border-t border-slate-200/60 text-center text-[11px] text-slate-500 font-medium">
+                        &copy; {new Date().getFullYear()} Azhar Collection. Hak Cipta Dilindungi.
+                    </footer>
                 </main>
             </div>
         </div>

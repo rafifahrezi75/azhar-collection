@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { Head, router, usePage } from "@inertiajs/react";
+import { Link, Head, router, usePage } from "@inertiajs/react";
 import axios from "axios";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import PageHeaderBar from "@/Components/PageHeaderBar";
 import Pagination from "@/Components/Pagination";
 import InvoiceFilterModal from "@/Components/InvoiceFilterModal";
-import InvoiceDetailModal from "@/Components/InvoiceDetailModal";
 import InvoicePrintModal from "@/Components/InvoicePrintModal";
 import { hasPermission } from "@/utils/permissions";
 import { Toast, confirmDialog } from "@/utils/sweetalert";
@@ -48,9 +47,8 @@ export default function Index() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     // Modals
-    const [selectedInvoice, setSelectedInvoice] = useState(null);
-    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState(null);
 
     const canCreate = useMemo(() => hasPermission(permissions, "invoice.create"), [permissions]);
     const canDelete = useMemo(() => hasPermission(permissions, "invoice.delete"), [permissions]);
@@ -88,17 +86,6 @@ export default function Index() {
     useEffect(() => {
         loadData();
     }, [loadData]);
-
-    const handleOpenDetail = async (invoice) => {
-        try {
-            const res = await axios.get(`/api/invoices/${invoice.id}`);
-            setSelectedInvoice(res.data?.data || invoice);
-            setIsDetailModalOpen(true);
-        } catch {
-            setSelectedInvoice(invoice);
-            setIsDetailModalOpen(true);
-        }
-    };
 
     const handleOpenPrint = async (invoice) => {
         try {
@@ -200,8 +187,7 @@ export default function Index() {
                     addTitle="Buat Invoice Baru (Pesanan Baru / Pesanan Lama)"
                     canCreate={canCreate}
                 />
-
-                {/* Summary Stat Cards */}
+                        {/* Summary Stat Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {/* Total Invoice */}
                     <div className="bg-white p-3.5 rounded-md border border-slate-200 shadow-2xs flex items-center gap-3">
@@ -402,15 +388,14 @@ export default function Index() {
                                                 {/* Aksi (Unified Style & Colors) */}
                                                 <td className="py-2.5 px-3.5 text-center">
                                                     <div className="flex items-center justify-center gap-1.5">
-                                                        {/* View Detail Modal (Sky) */}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleOpenDetail(inv)}
+                                                        {/* View Detail Page (Sky) */}
+                                                        <Link
+                                                            href={`/dashboard/invoice/${inv.id}`}
                                                             title="Lihat Detail Transaksi"
                                                             className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
                                                         >
                                                             <Eye className="w-3.5 h-3.5" />
-                                                        </button>
+                                                        </Link>
 
                                                         {/* Print Modal (Teal) */}
                                                         <button
@@ -473,21 +458,6 @@ export default function Index() {
                 onEndDateChange={setEndDate}
                 onReset={handleResetFilters}
                 onClose={() => setIsFilterModalOpen(false)}
-            />
-
-            {/* Dedicated Invoice Detail Modal */}
-            <InvoiceDetailModal
-                isOpen={isDetailModalOpen}
-                invoice={selectedInvoice}
-                onClose={() => {
-                    setIsDetailModalOpen(false);
-                    setSelectedInvoice(null);
-                }}
-                onPrint={(inv) => {
-                    setIsDetailModalOpen(false);
-                    setSelectedInvoice(inv);
-                    setIsPrintModalOpen(true);
-                }}
             />
 
             {/* Dedicated Invoice Print Modal */}

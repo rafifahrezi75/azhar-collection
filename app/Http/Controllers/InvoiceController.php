@@ -36,6 +36,28 @@ class InvoiceController extends Controller
         ]);
     }
 
+    public function showPage(Invoice $invoice): Response
+    {
+        $invoice->load([
+            'customer',
+            'items.product.images',
+            'items.product.sizes',
+            'items.product.productionSteps.productionStep',
+            'items.productionSteps.assignee',
+            'items.productionAssignments.assignee',
+            'items.productionAssignments.steps',
+            'items.product.materials.item.unit',
+            'creator',
+        ]);
+
+        $users = \App\Models\User::select('id', 'name', 'email')->orderBy('name')->get();
+
+        return Inertia::render('Invoice/Show', [
+            'invoice' => $invoice,
+            'users' => $users,
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = Invoice::with(['customer', 'items.product.productionSteps.productionStep', 'items.product.sizes.size', 'items.product.materials.item', 'creator']);
@@ -171,6 +193,8 @@ class InvoiceController extends Controller
                     'size_breakdown' => $itemData['size_breakdown'] ?? null,
                     'description' => $itemData['description'] ?? null,
                 ]);
+
+                $this->syncProductionSteps($invoiceItem);
 
                 // If cut_stock is active and item is linked to a Product, deduct raw materials
                 if ($invoice->cut_stock && !empty($itemData['product_id'])) {
@@ -333,6 +357,9 @@ class InvoiceController extends Controller
             'items.product.images',
             'items.product.sizes',
             'items.product.productionSteps.productionStep',
+            'items.productionSteps.assignee',
+            'items.productionAssignments.assignee',
+            'items.productionAssignments.steps',
             'items.product.materials.item.unit',
             'creator',
         ]);
@@ -349,5 +376,63 @@ class InvoiceController extends Controller
         return response()->json([
             'message' => 'Invoice berhasil dihapus',
         ]);
+    }
+
+    public function print(Invoice $invoice)
+    {
+        $invoice->load([
+            'customer',
+            'items.product.sizes',
+            'creator',
+        ]);
+
+        // F4 landscape is roughly 215.9mm x 330.2mm (or we can just use standard a4 landscape)
+        // dompdf accepts standard named sizes like 'a4', 'legal', 'letter', or array of points.
+        // F4 is often (0,0, 609.448, 935.433).
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoice-pdf', compact('invoice'))
+            ->setPaper('a5', 'landscape');
+
+        return $pdf->stream('Struk-'.$invoice->invoice_number.'.pdf');
+    }
+
+    public function printProductionPDF(Invoice $invoice)
+    {
+        $invoice->load([
+            'customer',
+            'items.product.images',
+            'items.product.sizes',
+            'items.product.productionSteps.productionStep',
+            'items.productionSteps.assignee',
+            'items.product.materials.item.unit',
+            'creator',
+        ]);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('production-pdf', compact('invoice'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->stream('SPK-'.$invoice->invoice_number.'.pdf');
+    }
+
+    private function syncProductionSteps(InvoiceItem $invoiceItem)
+    {
+        // Check if steps already exist. If we are updating and product hasn't changed, we might not want to wipe them 
+        // to preserve assigned workers and status. Let's only create if they don't exist, or if product changed.
+        // For simplicity, let's say if count == 0, we create them. If product changed, we wipe and recreate.
+        $existingCount = $invoiceItem->productionSteps()->count();
+        if ($existingCount === 0 && $invoiceItem->product_id) {
+            $product = \App\Models\Product::with('productionSteps.productionStep')->find($invoiceItem->product_id);
+            if ($product) {
+                foreach ($product->productionSteps as $step) {
+                    \App\Models\InvoiceItemProductionStep::create([
+                        'invoice_item_id' => $invoiceItem->id,
+                        'production_step_id' => $step->production_step_id,
+                        'step_name' => $step->custom_name ?: ($step->productionStep->name ?? 'Tahap Produksi'),
+                        'wage' => $step->wage,
+                        'step_order' => $step->sort_order,
+                        'status' => 'PENDING',
+                    ]);
+                }
+            }
+        }
     }
 }

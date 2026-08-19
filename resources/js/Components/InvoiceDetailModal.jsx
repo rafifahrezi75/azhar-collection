@@ -1,4 +1,6 @@
-import React, { memo, useState } from "react";
+import React, { memo, useState, useEffect } from "react";
+import axios from "axios";
+import Swal from "sweetalert2";
 import {
     X,
     Receipt,
@@ -28,8 +30,49 @@ const InvoiceDetailModal = memo(function InvoiceDetailModal({
     onClose,
     onPrint,
 }) {
-    const [activeTab, setActiveTab] = useState("items"); // 'items' | 'bom'
+    const [activeTab, setActiveTab] = useState("items"); // 'items' | 'bom' | 'production'
+    const [users, setUsers] = useState([]);
     
+    useEffect(() => {
+        if (activeTab === 'production' && users.length === 0) {
+            axios.get('/api/users-management')
+                .then(res => {
+                    const usersList = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+                    setUsers(usersList);
+                })
+                .catch(err => console.error(err));
+        }
+    }, [activeTab]);
+
+    const handleAssignWorker = (stepId, userId) => {
+        axios.put(`/api/invoice-item-production-steps/${stepId}/assign`, { user_id: userId })
+            .then(res => {
+                Swal.fire({icon: 'success', title: 'Berhasil', text: 'Pekerja berhasil ditugaskan', timer: 1000, showConfirmButton: false})
+                    .then(() => window.location.reload());
+            })
+            .catch(err => Swal.fire({icon: 'error', title: 'Gagal', text: 'Gagal menugaskan pekerja'}));
+    };
+
+    const handleToggleStatus = (stepId, currentStatus) => {
+        const newStatus = currentStatus === 'SELESAI' ? 'PENDING' : 'SELESAI';
+        axios.put(`/api/invoice-item-production-steps/${stepId}/status`, { status: newStatus })
+            .then(res => {
+                Swal.fire({icon: 'success', title: 'Berhasil', text: 'Status diperbarui', timer: 1000, showConfirmButton: false})
+                    .then(() => window.location.reload());
+            })
+            .catch(err => Swal.fire({icon: 'error', title: 'Gagal', text: 'Gagal merubah status'}));
+    };
+
+    
+    const handleGenerateSteps = () => {
+        axios.post(`/api/invoice-item-production-steps/${invoice.id}/generate`)
+            .then(res => {
+                Swal.fire({icon: 'success', title: 'Berhasil', text: 'Data produksi berhasil dibuat', timer: 1000, showConfirmButton: false})
+                    .then(() => window.location.reload());
+            })
+            .catch(err => Swal.fire({icon: 'error', title: 'Gagal', text: 'Gagal membuat data produksi'}));
+    };
+
     if (!isOpen || !invoice) return null;
 
     const customer = invoice.customer || {};
@@ -260,10 +303,94 @@ const InvoiceDetailModal = memo(function InvoiceDetailModal({
                             <Layers className="w-4 h-4" />
                             Kebutuhan Bahan Gudang
                         </button>
+                        <button
+                            onClick={() => setActiveTab("production")}
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md text-sm font-bold transition-all ${
+                                activeTab === "production"
+                                    ? "bg-white text-emerald-600 shadow-sm border border-slate-200/60"
+                                    : "text-slate-500 hover:bg-slate-100/50"
+                            }`}
+                        >
+                            <Scissors className="w-4 h-4" />
+                            Progres Produksi
+                        </button>
                     </div>
 
                     {/* Tab Content */}
                     <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+                                                {activeTab === "production" && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Scissors className="w-5 h-5 text-emerald-600" />
+                                    <h3 className="text-lg font-bold text-slate-800">Progres Langkah Produksi</h3>
+                                </div>
+                                <div className="space-y-6">
+                                    {items.map((item, idx) => (
+                                        <div key={item.id} className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                                            <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                                                <div>
+                                                    <span className="font-bold text-slate-800">{item.item_name}</span>
+                                                    <span className="text-xs text-slate-500 ml-2">{item.qty} {item.unit}</span>
+                                                </div>
+                                            </div>
+                                            <div className="p-0 overflow-x-auto">
+                                                <table className="w-full text-sm text-left">
+                                                    <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                                                        <tr>
+                                                            <th className="px-4 py-3">Langkah</th>
+                                                            <th className="px-4 py-3 min-w-[200px]">Pekerja</th>
+                                                            <th className="px-4 py-3 text-center min-w-[120px]">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {item.production_steps && item.production_steps.length > 0 ? item.production_steps.map((step) => (
+                                                            <tr key={step.id} className="hover:bg-slate-50/50">
+                                                                <td className="px-4 py-3 font-medium text-slate-700">
+                                                                    {step.step_name}
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    <select
+                                                                        value={step.assigned_to || ""}
+                                                                        onChange={(e) => handleAssignWorker(step.id, e.target.value)}
+                                                                        className="text-xs border-slate-200 rounded-md bg-white w-full"
+                                                                    >
+                                                                        <option value="">-- Belum Ditugaskan --</option>
+                                                                        {users.map(u => (
+                                                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </td>
+                                                                <td className="px-4 py-3 text-center">
+                                                                    <button
+                                                                        onClick={() => handleToggleStatus(step.id, step.status)}
+                                                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                                                                            step.status === 'SELESAI' 
+                                                                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
+                                                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                                                                        }`}
+                                                                    >
+                                                                        {step.status === 'SELESAI' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                                                                        {step.status === 'SELESAI' ? 'Selesai' : 'Pending'}
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        )) : (
+                                                            <tr><td colSpan="3" className="px-4 py-6 text-center">
+    <div className="text-slate-400 italic mb-3">Belum ada langkah produksi (Pesanan Lama).</div>
+    <button onClick={handleGenerateSteps} className="px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-md hover:bg-indigo-100 transition-colors text-xs border border-indigo-200">
+        Generate Langkah Produksi
+    </button>
+</td></tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === "items" && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 {items.map((item, idx) => {
