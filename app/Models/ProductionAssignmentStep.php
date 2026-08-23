@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductionAssignmentStep extends Model
 {
@@ -32,5 +33,10 @@ class ProductionAssignmentStep extends Model
     public function productionStep(): BelongsTo
     {
         return $this->belongsTo(ProductionStep::class, 'production_step_id');
+    }
+
+    public function progressLogs(): HasMany
+    {
+        return $this->hasMany(ProductionProgressLog::class, 'production_assignment_step_id');
     }
 }

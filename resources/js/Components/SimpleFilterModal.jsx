@@ -40,31 +40,33 @@ const SimpleFilterModal = memo(function SimpleFilterModal({
                     {extraFilter}
 
                     {/* Status Filter */}
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                            Status
-                        </label>
-                        <div className="grid grid-cols-3 gap-1.5">
-                            {[
-                                { id: "all", label: "Semua" },
-                                { id: "active", label: "Aktif" },
-                                { id: "inactive", label: "Nonaktif" },
-                            ].map((item) => (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => onStatusFilterChange(item.id)}
-                                    className={`px-2 py-1.5 rounded-md border text-xs font-semibold transition-all cursor-pointer text-center ${
-                                        statusFilter === item.id
-                                            ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
-                                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                                    }`}
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
+                    {onStatusFilterChange && (
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                Status
+                            </label>
+                            <div className="grid grid-cols-3 gap-1.5">
+                                {[
+                                    { id: "all", label: "Semua" },
+                                    { id: "active", label: "Aktif" },
+                                    { id: "inactive", label: "Nonaktif" },
+                                ].map((item) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => onStatusFilterChange(item.id)}
+                                        className={`px-2 py-1.5 rounded-md border text-xs font-semibold transition-all cursor-pointer text-center ${
+                                            statusFilter === item.id
+                                                ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                                                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                                        }`}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Footer */}

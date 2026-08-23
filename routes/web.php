@@ -10,11 +10,16 @@ use App\Http\Controllers\InvoiceItemProductionStepController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductionAssignmentController;
+use App\Http\Controllers\ProductionProgressController;
 use App\Http\Controllers\ProductionStepController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SizeController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -36,6 +41,10 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:invoice.create')
         ->name('invoice.create');
 
+    Route::get('/dashboard/invoice/input-lama', [InvoiceController::class, 'createHistoricalPage'])
+        ->middleware('permission:invoice.create')
+        ->name('invoice.input-lama');
+
     Route::get('/dashboard/invoice/{invoice}', [InvoiceController::class, 'showPage'])
         ->name('invoice.show')
         ->middleware('permission:invoice.view');
@@ -48,9 +57,12 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:invoice.view')
         ->name('invoice.production-pdf');
 
-    Route::get('/dashboard/invoice/input-lama', [InvoiceController::class, 'createHistoricalPage'])
-        ->middleware('permission:invoice.create')
-        ->name('invoice.input-lama');
+    // Pembelian / Kulaan
+    Route::get('/dashboard/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+    Route::get('/dashboard/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
+    Route::post('/dashboard/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+    Route::get('/dashboard/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+    Route::get('/dashboard/purchases/{purchase}/pdf', [PurchaseController::class, 'printPdf'])->name('purchases.pdf');
 
     // Master Data
     Route::get('/dashboard/kategori', [CategoryController::class, 'page'])
@@ -96,6 +108,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/users', [UserManagementController::class, 'page'])
         ->middleware('permission:user.view')
         ->name('users.index');
+
+    // Production Progress
+    Route::get('/dashboard/production-progress', [ProductionProgressController::class, 'index'])->name('production-progress.index');
+    Route::get('/dashboard/production-progress/invoice/{invoice}', [ProductionProgressController::class, 'show'])->name('production-progress.show');
+    Route::get('/dashboard/production-progress/invoice/{invoice}/input', [ProductionProgressController::class, 'input'])->name('production-progress.input');
+    Route::post('/dashboard/production-progress', [ProductionProgressController::class, 'store'])->name('production-progress.store');
+    Route::delete('/dashboard/production-progress/{productionProgressLog}', [ProductionProgressController::class, 'destroy'])->name('production-progress.destroy');
 });
 
 // API Routes guarded by Web Session Auth
@@ -109,16 +128,19 @@ Route::middleware('auth')->prefix('api')->group(function () {
         ->middleware('permission:dashboard.view');
 
     // Generic Reorder
-    Route::post('/master/reorder', function (\Illuminate\Http\Request $request) {
+    Route::post('/master/reorder', function (Request $request) {
         $table = $request->input('table');
         $ids = $request->input('ids');
-        if (!is_array($ids)) return response()->json(['message' => 'Invalid IDs'], 400);
-        if (!in_array($table, ['units', 'categories', 'product_categories', 'production_steps', 'sizes'])) {
+        if (! is_array($ids)) {
+            return response()->json(['message' => 'Invalid IDs'], 400);
+        }
+        if (! in_array($table, ['units', 'categories', 'product_categories', 'production_steps', 'sizes'])) {
             return response()->json(['message' => 'Invalid table'], 400);
         }
         foreach ($ids as $index => $id) {
-            \Illuminate\Support\Facades\DB::table($table)->where('id', $id)->update(['sort_order' => $index + 1]);
+            DB::table($table)->where('id', $id)->update(['sort_order' => $index + 1]);
         }
+
         return response()->json(['message' => 'Reordered successfully']);
     });
 
@@ -128,9 +150,9 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::put('/invoice-item-production-steps/{step}/status', [InvoiceItemProductionStepController::class, 'toggleStatus']);
 
     // SPK Production Assignments
-    Route::post('/production-assignments', [\App\Http\Controllers\ProductionAssignmentController::class, 'store']);
-    Route::put('/production-assignments/steps/{step}/status', [\App\Http\Controllers\ProductionAssignmentController::class, 'toggleStepStatus']);
-    Route::delete('/production-assignments/{assignment}', [\App\Http\Controllers\ProductionAssignmentController::class, 'destroy']);
+    Route::post('/production-assignments', [ProductionAssignmentController::class, 'store']);
+    Route::put('/production-assignments/steps/{step}/status', [ProductionAssignmentController::class, 'toggleStepStatus']);
+    Route::delete('/production-assignments/{assignment}', [ProductionAssignmentController::class, 'destroy']);
 
     // Categories
     Route::get('/categories', [CategoryController::class, 'index'])

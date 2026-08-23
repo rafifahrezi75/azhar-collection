@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Menu;
 use App\Models\Permission;
+use App\Models\ProductCategory;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -147,25 +148,47 @@ class AccessSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 2. Transaksi & Invoice (Direct Top Menu) — AFTER Master Data
+        // 2. Transaksi & Invoice (Direct Top Menu)
         Menu::create([
             'parent_id' => null,
             'title' => 'Transaksi & Invoice',
             'icon' => 'Receipt',
             'path' => '/dashboard/invoice',
             'permission_name' => 'invoice.view',
+            'sort_order' => 2,
+            'is_active' => true,
+        ]);
+
+        // 3. Progress Penjahit (Direct Top Menu)
+        Menu::create([
+            'parent_id' => null,
+            'title' => 'Progress Penjahit',
+            'icon' => 'Scissors',
+            'path' => '/dashboard/production-progress',
+            'permission_name' => null,
             'sort_order' => 3,
             'is_active' => true,
         ]);
 
-        // 3. Master Data (Parent Menu with Collapsible Submenu) — BEFORE Transaksi
+        // 4. Pembelian / Kulaan (Direct Top Menu)
+        Menu::create([
+            'parent_id' => null,
+            'title' => 'Pembelian / Kulaan',
+            'icon' => 'ShoppingBag',
+            'path' => '/dashboard/purchases',
+            'permission_name' => null,
+            'sort_order' => 4,
+            'is_active' => true,
+        ]);
+
+        // 5. Master Data (Parent Menu with Collapsible Submenu)
         $masterDataParent = Menu::create([
             'parent_id' => null,
             'title' => 'Master Data',
             'icon' => 'Boxes',
             'path' => null,
             'permission_name' => null,
-            'sort_order' => 2,
+            'sort_order' => 5,
             'is_active' => true,
         ]);
 
@@ -258,14 +281,14 @@ class AccessSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 4. Pengaturan Sistem (Parent Menu with Collapsible Submenu)
+        // 6. Pengaturan Sistem (Parent Menu with Collapsible Submenu)
         $settingsParent = Menu::create([
             'parent_id' => null,
             'title' => 'Pengaturan',
-            'icon' => 'ShieldCheck',
+            'icon' => 'Settings',
             'path' => null,
             'permission_name' => null,
-            'sort_order' => 4,
+            'sort_order' => 6,
             'is_active' => true,
         ]);
 
@@ -313,7 +336,7 @@ class AccessSeeder extends Seeder
         ];
 
         foreach ($defaultProductCategories as $pc) {
-            \App\Models\ProductCategory::firstOrCreate(
+            ProductCategory::firstOrCreate(
                 ['slug' => $pc['slug']],
                 $pc
             );

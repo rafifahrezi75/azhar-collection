@@ -10,6 +10,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AccessSeeder::class,
+            TailorSeeder::class,
+            SchoolSeeder::class,
             RawMaterialSeeder::class,
             CustomerSeeder::class,
             ProductionStepSeeder::class,
@@ -17,6 +19,9 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             MenuUpdateSeeder::class,
             TransactionSeeder::class,
+            PurchaseSeeder::class,
+            ProductionAssignmentSeeder::class,
+            ProductionProgressSeeder::class,
         ]);
     }
 }

@@ -23,7 +23,8 @@ import {
     Shirt,
     Tags,
     Scissors,
-    Ruler
+    Ruler,
+    ShoppingBag
 } from "lucide-react";
 
 const Sidebar = memo(function Sidebar({
@@ -86,6 +87,7 @@ const Sidebar = memo(function Sidebar({
     const getIconComponent = useCallback((iconName, permName) => {
         const name = (iconName || permName || "").toLowerCase();
         if (name.includes("dashboard")) return <LayoutDashboard className="w-4.5 h-4.5 shrink-0" />;
+        if (name.includes("shoppingbag") || name.includes("belanja") || name.includes("pembelian") || name.includes("kulaan")) return <ShoppingBag className="w-4.5 h-4.5 shrink-0" />;
         if (name.includes("pelanggan") || name.includes("pemesan") || name.includes("customer") || name.includes("client")) return <Users className="w-4.5 h-4.5 shrink-0" />;
         if (name.includes("sekolah") || name.includes("school") || name.includes("education")) return <GraduationCap className="w-4.5 h-4.5 shrink-0" />;
         if (name.includes("receipt") || name.includes("transaksi")) return <Receipt className="w-4.5 h-4.5 shrink-0" />;

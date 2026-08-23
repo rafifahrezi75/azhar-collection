@@ -9,8 +9,8 @@ use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class TransactionSeeder extends Seeder
 {
@@ -23,8 +23,9 @@ class TransactionSeeder extends Seeder
         $products = Product::with('sizes.size')->get();
         $admin = User::first();
 
-        if ($customers->isEmpty() || $products->isEmpty() || !$admin) {
+        if ($customers->isEmpty() || $products->isEmpty() || ! $admin) {
             $this->command->warn('Skipping TransactionSeeder because Customers, Products, or Admin is missing.');
+
             return;
         }
 
@@ -54,14 +55,14 @@ class TransactionSeeder extends Seeder
                 if ($product->sizes->count() > 0) {
                     $sizes = $product->sizes->random(rand(1, min(3, $product->sizes->count())));
                     foreach ($sizes as $s) {
-                        // Realistic large quantities for schools
-                        $qty = rand(20, 150);
+                        // Realistic order quantities per size for a konveksi
+                        $qty = rand(6, 40);
                         $sizeName = $s->size ? $s->size->size_name : "Ukuran {$s->size_id}";
                         $sizeBreakdown[$sizeName] = $qty;
                         $totalQty += $qty;
                     }
                 } else {
-                    $totalQty = rand(50, 300);
+                    $totalQty = rand(12, 100);
                 }
 
                 $unitPrice = $product->base_price ?: 120000;
@@ -76,13 +77,13 @@ class TransactionSeeder extends Seeder
                     'unit_price' => $unitPrice,
                     'subtotal' => $subtotal,
                     'size_breakdown' => $sizeBreakdown,
-                    'description' => "Pesanan kolektif {$product->name}"
+                    'description' => "Pesanan kolektif {$product->name}",
                 ];
             }
 
             $paymentStatus = $paymentStatuses[array_rand($paymentStatuses)];
             $productionStatus = $productionStatuses[array_rand($productionStatuses)];
-            
+
             $paidAmount = 0;
             if ($paymentStatus === 'LUNAS') {
                 $paidAmount = $totalAmount;
