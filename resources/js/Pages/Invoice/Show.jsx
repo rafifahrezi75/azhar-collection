@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 import {
     Receipt, Calendar, User, Phone, MapPin, CheckCircle2, Check,
     Clock, AlertCircle, Package, Layers, Printer, DollarSign,
-    Info, History, Zap, Scissors, ArrowLeft, Plus, X, Trash2
+    Info, History, Zap, Scissors, ArrowLeft, Plus, X, Trash2, ChevronDown
 } from "lucide-react";
 
 export default function Show({ invoice: initialInvoice, users: initialUsers = [] }) {
@@ -29,6 +29,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
 
     // SPK Form State
     const [showSPKForm, setShowSPKForm] = useState(false);
+    const [openSpkCards, setOpenSpkCards] = useState({});
     const [spkForm, setSpkForm] = useState({
         invoice_item_id: "",
         user_id: "",
@@ -268,125 +269,106 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
         <DashboardLayout>
             <Head title={`Invoice #${invoice.invoice_number}`} />
 
-            <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Link href="/dashboard/invoice" className="p-2 hover:bg-slate-50 rounded-md border border-slate-200 transition-colors bg-white shadow-sm">
-                        <ArrowLeft className="w-5 h-5 text-slate-600" />
+            <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                    <Link href="/dashboard/invoice" className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors cursor-pointer border border-slate-200 shadow-2xs">
+                        <ArrowLeft className="w-4 h-4" />
                     </Link>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Detail Invoice</h1>
-                        <p className="text-sm text-slate-500">Lihat rincian pesanan dan progres produksi</p>
+                    <div className="flex gap-2">
+                        <button onClick={() => window.open(`/dashboard/invoice/${invoice.id}/production-pdf`, '_blank')} className="px-3 py-1.5 bg-white text-slate-700 font-semibold border border-slate-200 rounded-md shadow-2xs hover:bg-slate-50 flex items-center gap-1.5 text-xs transition-colors cursor-pointer">
+                            <Printer className="w-3.5 h-3.5" /> SPK PDF
+                        </button>
+                        <button onClick={() => window.open(`/dashboard/invoice/${invoice.id}/print`, '_blank')} className="px-3 py-1.5 bg-teal-600 text-white font-semibold rounded-md shadow-sm hover:bg-teal-700 flex items-center gap-1.5 text-xs transition-colors cursor-pointer">
+                            <Receipt className="w-3.5 h-3.5" /> Cetak Nota
+                        </button>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <button onClick={() => window.open(`/dashboard/invoice/${invoice.id}/production-pdf`, '_blank')} className="px-3 py-2 bg-white text-slate-700 font-bold border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 flex items-center gap-2 text-xs transition-colors cursor-pointer">
-                        <Printer className="w-4 h-4" /> SPK PDF
-                    </button>
-                    <button onClick={() => window.open(`/dashboard/invoice/${invoice.id}/print`, '_blank')} className="px-3 py-2 bg-teal-600 text-white font-bold rounded-md shadow-sm hover:bg-teal-700 flex items-center gap-2 text-xs transition-colors cursor-pointer">
-                        <Receipt className="w-4 h-4" /> Cetak Nota
-                    </button>
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Left Column: Summary */}
-                <div className="lg:col-span-1 space-y-6">
-                    {/* Status Card */}
-                    <div className="bg-white rounded-md border border-slate-200 shadow-sm p-3">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 rounded-md bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
-                                <Receipt className="w-6 h-6" />
-                            </div>
+                <div className="lg:col-span-1 space-y-4">
+                    {/* Invoice + Financial Summary */}
+                    <div className="bg-white rounded-md border border-slate-200 shadow-sm p-4">
+                        <div className="flex items-center justify-between mb-3">
                             <div>
-                                <div className="text-xs font-semibold text-slate-400 tracking-wider uppercase">No. Invoice</div>
-                                <h3 className="font-bold text-slate-900 text-xs">#{invoice.invoice_number}</h3>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Invoice</p>
+                                <p className="text-lg font-bold text-slate-800">#{invoice.invoice_number}</p>
                             </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mb-6">
-                            {invoice.payment_status === "LUNAS" ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Lunas
-                                </span>
-                            ) : invoice.payment_status === "DP" ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                                    <Clock className="w-3.5 h-3.5" /> DP / Sebagian
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                                    <AlertCircle className="w-3.5 h-3.5" /> Belum Lunas
-                                </span>
-                            )}
-
-                            {invoice.production_status === "SELESAI" ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                                    <Package className="w-3.5 h-3.5" /> Selesai
-                                </span>
-                            ) : invoice.production_status === "PROSES" ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                    <Zap className="w-3.5 h-3.5" /> Diproses
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                                    <History className="w-3.5 h-3.5" /> Pending
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="bg-slate-900 rounded-md p-3 text-white mb-6">
-                            <div className="mb-4">
-                                <div className="text-slate-400 text-xs font-medium mb-1">Total Tagihan</div>
-                                <div className="text-xs font-bold font-mono">{formatCurrency(invoice.total_amount)}</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-700">
-                                <div>
-                                    <div className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-1">Telah Dibayar</div>
-                                    <div className="font-mono text-xs">{formatCurrency(invoice.paid_amount)}</div>
-                                </div>
-                                <div>
-                                    <div className="text-rose-400 text-[10px] uppercase font-bold tracking-wider mb-1">Sisa Tagihan</div>
-                                    <div className="font-mono text-xs">{formatCurrency(remainingBalance)}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
-                                <User className="w-4 h-4 text-teal-600" /> Informasi Pelanggan
-                            </h4>
-                            <div className="space-y-3">
-                                <div>
-                                    <div className="text-xs text-slate-500 mb-0.5">Nama Pelanggan</div>
-                                    <div className="font-semibold text-slate-800 text-xs">{invoice.customer_name || customer.name || "-"}</div>
-                                </div>
-                                {customer.phone && (
-                                    <div className="flex items-start gap-2">
-                                        <Phone className="w-4 h-4 text-slate-400 mt-0.5" />
-                                        <span className="text-xs text-slate-600">{customer.phone}</span>
-                                    </div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {invoice.payment_status === "LUNAS" ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                        <CheckCircle2 className="w-3 h-3" /> Lunas
+                                    </span>
+                                ) : invoice.payment_status === "DP" ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-amber-50 text-amber-700 border-amber-200">
+                                        <Clock className="w-3 h-3" /> DP
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-rose-50 text-rose-700 border-rose-200">
+                                        <AlertCircle className="w-3 h-3" /> Belum Lunas
+                                    </span>
                                 )}
-                                {customer.address && (
-                                    <div className="flex items-start gap-2">
-                                        <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
-                                        <span className="text-xs text-slate-600">{customer.address}</span>
-                                    </div>
+                                {invoice.production_status === "SELESAI" ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                        <Package className="w-3 h-3" /> Selesai
+                                    </span>
+                                ) : invoice.production_status === "PROSES" ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-indigo-50 text-indigo-700 border-indigo-200">
+                                        <Zap className="w-3 h-3" /> Diproses
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-slate-100 text-slate-600 border-slate-200">
+                                        <History className="w-3 h-3" /> Pending
+                                    </span>
                                 )}
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-3 mt-4">
-                                <div className="bg-slate-50 p-3 rounded-md border border-slate-100">
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-                                        <Calendar className="w-3.5 h-3.5" /> Tgl Pesan
-                                    </div>
-                                    <div className="font-medium text-xs text-slate-800">{formatDate(invoice.order_date)}</div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 mb-4">
+                            <span>Tgl Pesan: <span className="text-slate-700 font-medium">{formatDate(invoice.order_date)}</span></span>
+                            <span>Target: <span className="text-slate-700 font-medium">{formatDate(invoice.completion_date)}</span></span>
+                        </div>
+
+                        <div className="bg-slate-900 rounded-lg p-3 text-white">
+                            <div className="mb-3">
+                                <div className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">Total Tagihan</div>
+                                <div className="text-base font-bold font-mono">{formatCurrency(invoice.total_amount)}</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-700">
+                                <div>
+                                    <div className="text-emerald-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">Dibayar</div>
+                                    <div className="font-mono text-xs font-semibold">{formatCurrency(invoice.paid_amount)}</div>
                                 </div>
-                                <div className="bg-slate-50 p-3 rounded-md border border-slate-100">
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-                                        <Clock className="w-3.5 h-3.5" /> Target Selesai
-                                    </div>
-                                    <div className="font-medium text-xs text-slate-800">{formatDate(invoice.completion_date)}</div>
+                                <div>
+                                    <div className="text-rose-400 text-[10px] uppercase font-bold tracking-wider mb-0.5">Sisa</div>
+                                    <div className="font-mono text-xs font-semibold">{formatCurrency(remainingBalance)}</div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="bg-white rounded-md border border-slate-200 shadow-sm p-4">
+                        <h4 className="text-xs font-bold text-slate-700 flex items-center gap-2 mb-3">
+                            <User className="w-4 h-4 text-teal-600" /> Informasi Pelanggan
+                        </h4>
+                        <div className="space-y-3">
+                            <div>
+                                <div className="text-xs text-slate-400 mb-0.5">Nama Pelanggan</div>
+                                <div className="font-semibold text-slate-800 text-xs">{invoice.customer_name || customer.name || "-"}</div>
+                            </div>
+                            {customer.phone && (
+                                <div className="flex items-start gap-2">
+                                    <Phone className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
+                                    <span className="text-xs text-slate-600">{customer.phone}</span>
+                                </div>
+                            )}
+                            {customer.address && (
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
+                                    <span className="text-xs text-slate-600">{customer.address}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -395,72 +377,72 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                 <div className="lg:col-span-2">
                     <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
                         {/* Tabs Header */}
-                        <div className="flex bg-slate-50 border-b border-slate-200 sticky top-0 z-10 p-2 gap-2">
+                        <div className="flex bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10 p-1.5 gap-1">
                             <button
                                 onClick={() => setActiveTab("items")}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     activeTab === "items"
-                                        ? "bg-white text-teal-600 shadow-sm border border-slate-200/60"
+                                        ? "bg-white text-teal-600 shadow-soft-2xs border border-slate-200/60"
                                         : "text-slate-500 hover:bg-slate-200/50"
                                 }`}
                             >
-                                <Package className="w-4 h-4" /> Rincian Pesanan
+                                <Package className="w-3.5 h-3.5" /> Rincian Pesanan
                             </button>
                             <button
                                 onClick={() => setActiveTab("bom")}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     activeTab === "bom"
-                                        ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
+                                        ? "bg-white text-indigo-600 shadow-soft-2xs border border-slate-200/60"
                                         : "text-slate-500 hover:bg-slate-200/50"
                                 }`}
                             >
-                                <Layers className="w-4 h-4" /> Bahan Baku
+                                <Layers className="w-3.5 h-3.5" /> Bahan Baku
                             </button>
                             <button
                                 onClick={() => setActiveTab("spk")}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     activeTab === "spk"
-                                        ? "bg-white text-emerald-600 shadow-sm border border-slate-200/60"
+                                        ? "bg-white text-teal-600 shadow-soft-2xs border border-slate-200/60"
                                         : "text-slate-500 hover:bg-slate-200/50"
                                 }`}
                             >
-                                <Scissors className="w-4 h-4" /> SPK Pekerja
+                                <Scissors className="w-3.5 h-3.5" /> SPK Pekerja
                             </button>
                         </div>
 
                         {/* Tab Content */}
-                        <div className="flex-1 p-3">
+                        <div className="flex-1 p-4">
                             
                             {/* Rincian Pesanan Tab */}
                             {activeTab === "items" && (
-                                <div className="space-y-4 animate-in fade-in duration-300">
+                                <div className="space-y-3 animate-in fade-in duration-300">
                                     {items.map((item) => (
-                                        <div key={item.id} className="bg-white rounded-md border border-slate-200 overflow-hidden shadow-sm">
-                                            <div className="p-3 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+                                        <div key={item.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-soft-2xs">
+                                            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
                                                 <div>
                                                     <h4 className="font-bold text-slate-800 text-xs">{item.item_name}</h4>
                                                     <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 font-medium">
-                                                        <span className="inline-flex items-center bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                                                        <span className="inline-flex items-center bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
                                                             {item.qty} {item.unit}
                                                         </span>
-                                                        <span>&bull;</span>
+                                                        <span className="text-slate-300">&bull;</span>
                                                         <span>{formatCurrency(item.unit_price)} / {item.unit}</span>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Subtotal</div>
+                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Subtotal</div>
                                                     <div className="font-bold text-teal-600 text-xs">{formatCurrency(item.subtotal)}</div>
                                                 </div>
                                             </div>
                                             {item.size_breakdown && Object.keys(item.size_breakdown).length > 0 && (
-                                                <div className="p-3 bg-slate-50/50 flex flex-wrap gap-3">
-                                                    <div className="w-full text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-1">
-                                                        <Layers className="w-3.5 h-3.5" /> Rincian Ukuran
+                                                <div className="p-4 bg-slate-50/50 flex flex-wrap gap-2">
+                                                    <div className="w-full text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5 mb-1">
+                                                        <Layers className="w-3 h-3" /> Rincian Ukuran
                                                     </div>
                                                     {Object.entries(item.size_breakdown).map(([size, qty]) => (
-                                                        <div key={size} className="bg-white border border-slate-200 px-3 py-1.5 rounded-md flex items-center gap-3 shadow-sm">
-                                                            <span className="font-bold text-slate-700">{size}</span>
-                                                            <span className="text-xs font-medium text-slate-500">{qty} Pcs</span>
+                                                        <div key={size} className="bg-white border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-2 shadow-2xs">
+                                                            <span className="font-bold text-slate-700 text-xs">{size}</span>
+                                                            <span className="text-[11px] font-medium text-slate-500">{qty} Pcs</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -473,14 +455,14 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                             {/* BOM Tab */}
                             {activeTab === "bom" && (
                                 <div className="animate-in fade-in duration-300 space-y-4">
-                                    <div className="bg-indigo-50/50 p-3 rounded-md border border-indigo-100 mb-4">
-                                        <h4 className="font-bold text-indigo-800 flex items-center gap-2">
-                                            <Layers className="w-4 h-4 text-indigo-500" /> Estimasi Kebutuhan Bahan
+                                    <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+                                        <h4 className="font-bold text-indigo-800 flex items-center gap-2 text-xs">
+                                            <Layers className="w-3.5 h-3.5 text-indigo-500" /> Estimasi Kebutuhan Bahan
                                         </h4>
-                                        <p className="text-xs text-indigo-600 mt-1">Berdasarkan kalkulasi resep bahan baku per item pesanan.</p>
+                                        <p className="text-[11px] text-indigo-600 mt-1">Berdasarkan kalkulasi resep bahan baku per item pesanan.</p>
                                     </div>
                                     {bomPerItem.length > 0 ? (
-                                        <div className="space-y-4">
+                                        <div className="space-y-3">
                                             {bomPerItem.map((itemBOM, index) => {
                                                 const groupedMaterials = itemBOM.materials ? itemBOM.materials.reduce((acc, mat) => {
                                                     (acc[mat.forSize] = acc[mat.forSize] || []).push(mat);
@@ -488,32 +470,32 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                 }, {}) : {};
                                                 
                                                 return (
-                                                    <details key={index} className="group bg-white rounded-md border border-slate-200 overflow-hidden shadow-sm">
-                                                        <summary className="bg-slate-50 border-b border-slate-200 p-3 cursor-pointer flex items-center justify-between hover:bg-slate-100 transition-colors">
-                                                            <h5 className="font-bold text-slate-800">{itemBOM.itemName}</h5>
+                                                    <details key={index} className="group bg-white rounded-lg border border-slate-200 overflow-hidden shadow-soft-2xs">
+                                                        <summary className="bg-slate-50/80 border-b border-slate-200 p-3 cursor-pointer flex items-center justify-between hover:bg-slate-100/60 transition-colors">
+                                                            <h5 className="font-bold text-slate-800 text-xs">{itemBOM.itemName}</h5>
                                                             <span className="text-slate-400 group-open:rotate-180 transition-transform duration-200">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                                                             </span>
                                                         </summary>
-                                                        <div className="p-3 space-y-4">
+                                                        <div className="p-3 space-y-3">
                                                             {Object.keys(groupedMaterials).length > 0 ? (
                                                                 Object.entries(groupedMaterials).map(([size, materials]) => (
-                                                                    <details key={size} className="group/size border border-slate-200 rounded-md overflow-hidden">
-                                                                        <summary className="bg-slate-100 px-3 py-2 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-200 transition-colors">
+                                                                    <details key={size} className="group/size border border-slate-200 rounded-lg overflow-hidden">
+                                                                        <summary className="bg-slate-100/80 px-3 py-2 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-200/60 transition-colors">
                                                                             <div className="flex items-center gap-2">
-                                                                                <Layers className="w-4 h-4 text-slate-500" />
+                                                                                <Layers className="w-3.5 h-3.5 text-slate-500" />
                                                                                 <span className="font-bold text-xs text-slate-700">
                                                                                     {size === 'ALL' ? 'Semua / Per Baju' : `Ukuran ${size}`}
                                                                                 </span>
                                                                             </div>
                                                                             <span className="text-slate-400 group-open/size:rotate-180 transition-transform duration-200">
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                                                                             </span>
                                                                         </summary>
                                                                         <div className="overflow-x-auto">
                                                                             <table className="w-full text-left border-collapse">
                                                                                 <thead>
-                                                                                    <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                                                                                    <tr className="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider border-b border-slate-200">
                                                                                         <th className="p-3 font-semibold">Bahan Baku</th>
                                                                                         <th className="p-3 font-semibold text-center">Kebutuhan</th>
                                                                                         <th className="p-3 font-semibold text-center">Stok Gudang</th>
@@ -527,25 +509,25 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                                                             <tr key={idx} className="hover:bg-slate-50/50">
                                                                                                 <td className="p-3">
                                                                                                     <div className="font-semibold text-slate-800 text-xs">{bom.name}</div>
-                                                                                                    <div className="text-xs text-slate-400 mt-0.5">{bom.code}</div>
+                                                                                                    <div className="text-[11px] text-slate-400 mt-0.5">{bom.code}</div>
                                                                                                 </td>
                                                                                                 <td className="p-3 text-center">
-                                                                                                    <span className="font-bold text-indigo-600">{bom.totalRequired}</span>
-                                                                                                    <span className="text-xs text-slate-500 ml-1">{bom.unit}</span>
+                                                                                                    <span className="font-bold text-indigo-600 text-xs">{bom.totalRequired}</span>
+                                                                                                    <span className="text-[11px] text-slate-500 ml-1">{bom.unit}</span>
                                                                                                 </td>
                                                                                                 <td className="p-3 text-center">
-                                                                                                    <span className="font-medium text-slate-700">{bom.currentStock}</span>
-                                                                                                    <span className="text-xs text-slate-400 ml-1">{bom.unit}</span>
+                                                                                                    <span className="font-medium text-slate-700 text-xs">{bom.currentStock}</span>
+                                                                                                    <span className="text-[11px] text-slate-400 ml-1">{bom.unit}</span>
                                                                                                 </td>
                                                                                                 <td className="p-3 text-center">
                                                                                                     {bom.currentStock === "-" ? (
-                                                                                                        <span className="inline-flex px-2 py-1 rounded text-[10px] font-bold bg-slate-100 text-slate-500 uppercase tracking-wider">No Data</span>
+                                                                                                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500 uppercase tracking-wider">No Data</span>
                                                                                                     ) : isShortage ? (
-                                                                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 uppercase tracking-wider">
+                                                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 uppercase tracking-wider">
                                                                                                             <AlertCircle className="w-3 h-3" /> Kurang
                                                                                                         </span>
                                                                                                     ) : (
-                                                                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 uppercase tracking-wider">
+                                                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 uppercase tracking-wider">
                                                                                                             <CheckCircle2 className="w-3 h-3" /> Aman
                                                                                                         </span>
                                                                                                     )}
@@ -569,7 +551,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                             })}
                                         </div>
                                     ) : (
-                                        <div className="p-8 text-center text-slate-500 border border-dashed border-slate-300 rounded-md">
+                                        <div className="p-8 text-center text-slate-500 border border-dashed border-slate-300 rounded-lg">
                                             Tidak ada data bahan baku untuk pesanan ini.
                                         </div>
                                     )}
@@ -582,28 +564,28 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                     <div className="flex items-center justify-between mb-4">
                                         <div>
                                             <h4 className="font-bold text-slate-800 text-xs flex items-center gap-2">
-                                                <Scissors className="w-5 h-5 text-emerald-600" /> Penugasan Karyawan (SPK)
+                                                <Scissors className="w-4 h-4 text-teal-600" /> Penugasan Karyawan (SPK)
                                             </h4>
-                                            <p className="text-xs text-slate-500 mt-1">Buat dan kelola surat perintah kerja ke karyawan.</p>
+                                            <p className="text-[11px] text-slate-500 mt-1">Buat dan kelola surat perintah kerja ke karyawan.</p>
                                         </div>
                                         <button 
                                             onClick={() => setShowSPKForm(!showSPKForm)}
-                                            className={`px-3 py-2 rounded-md font-bold text-xs shadow-sm flex items-center gap-2 transition-colors cursor-pointer ${showSPKForm ? 'bg-slate-100 text-slate-600 border border-slate-300 hover:bg-slate-200' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                                            className={`px-3 py-1.5 rounded-lg font-bold text-xs shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer ${showSPKForm ? 'bg-slate-100 text-slate-600 border border-slate-300 hover:bg-slate-200' : 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm'}`}
                                         >
-                                            {showSPKForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                            {showSPKForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                                             {showSPKForm ? "Batal" : "Buat Penugasan Baru"}
                                         </button>
                                     </div>
 
                                     {/* Create Form */}
                                     {showSPKForm && (
-                                        <div className="bg-emerald-50/50 rounded-md border border-emerald-100 p-3 mb-6 animate-in slide-in-from-top-3 duration-300 shadow-sm">
+                                        <div className="bg-teal-50/50 rounded-lg border border-teal-100 p-4 mb-4 animate-in slide-in-from-top-3 duration-300 shadow-soft-2xs">
                                             <form onSubmit={handleCreateSPK}>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Item Baju</label>
                                                         <select 
-                                                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs px-3 py-2 bg-white"
+                                                            className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             value={spkForm.invoice_item_id}
                                                             onChange={e => {
                                                                 const itemId = e.target.value;
@@ -619,7 +601,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Karyawan</label>
                                                         <select 
-                                                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs px-3 py-2 bg-white"
+                                                            className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             value={spkForm.user_id}
                                                             onChange={e => setSpkForm({...spkForm, user_id: e.target.value})}
                                                             required
@@ -632,7 +614,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Jumlah (Qty)</label>
                                                         <input 
                                                             type="number" 
-                                                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs px-3 py-2 bg-white"
+                                                            className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             placeholder="Berapa pcs?"
                                                             value={spkForm.qty}
                                                             onChange={e => setSpkForm({...spkForm, qty: e.target.value})}
@@ -644,7 +626,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Target Waktu (Opsional)</label>
                                                         <input 
                                                             type="date" 
-                                                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs px-3 py-2 bg-white"
+                                                            className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             value={spkForm.target_date}
                                                             onChange={e => setSpkForm({...spkForm, target_date: e.target.value})}
                                                         />
@@ -652,20 +634,20 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                 </div>
 
                                                 {selectedItemForSPK && selectedItemForSPK.product?.production_steps && (
-                                                    <div className="mb-6 bg-white p-3 rounded-md border border-slate-200">
+                                                    <div className="mb-4 bg-white p-3 rounded-lg border border-slate-200">
                                                         <label className="block text-xs font-semibold text-slate-700 mb-2">Langkah Produksi yang Ditugaskan & Target Qty:</label>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                                             {selectedItemForSPK.product.production_steps.map(ps => {
                                                                 const isChecked = spkForm.steps.some(s => (typeof s === 'object' ? s.id : s) === ps.id);
                                                                 const currentStepObj = spkForm.steps.find(s => (typeof s === 'object' ? s.id : s) === ps.id);
                                                                 const currentQty = typeof currentStepObj === 'object' ? currentStepObj.qty : (spkForm.qty || selectedItemForSPK.qty || 1);
 
                                                                 return (
-                                                                    <div key={ps.id} className={`p-2.5 rounded-md border transition-all ${isChecked ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
+                                                                    <div key={ps.id} className={`p-2.5 rounded-lg border transition-all ${isChecked ? 'bg-teal-50/60 border-teal-300 shadow-2xs' : 'bg-slate-50 border-slate-200'}`}>
                                                                         <label className="flex items-center gap-2 cursor-pointer">
                                                                             <input 
                                                                                 type="checkbox" 
-                                                                                className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                                                                className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                                                                                 checked={isChecked}
                                                                                 onChange={e => {
                                                                                     if (e.target.checked) {
@@ -689,7 +671,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                                                 <input 
                                                                                     type="number"
                                                                                     min="1"
-                                                                                    className="w-20 rounded border-slate-300 text-xs px-2 py-1 bg-white focus:ring-emerald-500 focus:border-emerald-500 font-semibold text-slate-700"
+                                                                                    className="w-20 rounded-lg border-slate-300 text-xs px-2 py-1 bg-white focus:ring-teal-500 focus:border-teal-500 font-semibold text-slate-700"
                                                                                     value={currentQty}
                                                                                     onChange={e => {
                                                                                         const newQty = e.target.value;
@@ -716,8 +698,8 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                 )}
 
                                                 <div className="flex justify-end">
-                                                    <button type="submit" className="px-5 py-2 bg-emerald-600 text-white font-bold rounded-md hover:bg-emerald-700 shadow-sm transition-colors flex items-center gap-2 cursor-pointer">
-                                                        <CheckCircle2 className="w-4 h-4" /> Simpan Penugasan
+                                                    <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer text-xs">
+                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Simpan Penugasan
                                                     </button>
                                                 </div>
                                             </form>
@@ -725,74 +707,78 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                     )}
 
                                     {/* Existing SPKs */}
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         {items.flatMap(i => i.production_assignments || []).length > 0 ? (
                                             items.flatMap(item =>
                                                 [...(item.production_assignments || [])]
                                                     .sort((a, b) => b.id - a.id)
-                                                    .map(assignment => (
-                                                        <div key={assignment.id} className="bg-white border border-slate-200 rounded-md overflow-hidden shadow-sm">
-                                                            <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-8 h-8 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                                                                        {(assignment.assignee?.name || 'U').charAt(0).toUpperCase()}
-                                                                    </div>
-                                                                    <div>
-                                                                        <h5 className="font-bold text-slate-800 text-xs">{assignment.assignee?.name || 'Karyawan'}</h5>
-                                                                        <p className="text-xs text-slate-500 font-medium">{item.item_name}</p>
-                                                                    </div>
+                                                    .map(assignment => {
+                                                        const isOpen = openSpkCards[assignment.id] === true;
+                                                        return (
+                                                        <div key={assignment.id} className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-soft-2xs">
+                                                            <div className="bg-slate-50/80 border-b border-slate-200 px-3 py-2.5 flex items-center gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setOpenSpkCards(prev => ({ ...prev, [assignment.id]: !isOpen }))}
+                                                                    className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-200/60 text-slate-400 transition-colors cursor-pointer shrink-0"
+                                                                >
+                                                                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
+                                                                </button>
+                                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                                                    {(assignment.assignee?.name || 'U').charAt(0).toUpperCase()}
                                                                 </div>
-                                                                <div className="flex items-center gap-3 text-xs font-bold">
-                                                                    {assignment.target_date && (
-                                                                        <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
-                                                                            <Calendar className="w-4 h-4" />
-                                                                            Target: {formatDate(assignment.target_date)}
-                                                                        </div>
-                                                                    )}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <h5 className="font-bold text-slate-800 text-xs truncate">{assignment.assignee?.name || 'Karyawan'}</h5>
+                                                                    <p className="text-[11px] text-slate-500 font-medium truncate">{item.item_name}</p>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 shrink-0">
                                                                     {assignment.status === 'SELESAI' ? (
-                                                                        <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> Selesai</span>
+                                                                        <span className="text-emerald-600 flex items-center gap-1 text-xs font-bold"><CheckCircle2 className="w-3.5 h-3.5"/> Selesai</span>
                                                                     ) : assignment.status === 'IN_PROGRESS' ? (
-                                                                        <span className="text-indigo-600 flex items-center gap-1"><Zap className="w-4 h-4"/> Proses</span>
+                                                                        <span className="text-indigo-600 flex items-center gap-1 text-xs font-bold"><Zap className="w-3.5 h-3.5"/> Proses</span>
                                                                     ) : (
-                                                                        <span className="text-slate-500 flex items-center gap-1"><Clock className="w-4 h-4"/> Pending</span>
+                                                                        <span className="text-slate-500 flex items-center gap-1 text-xs font-bold"><Clock className="w-3.5 h-3.5"/> Pending</span>
                                                                     )}
-                                                                    <button onClick={() => handleDeleteSPK(assignment.id)} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md cursor-pointer ml-2">
-                                                                        <Trash2 className="w-4 h-4" />
+                                                                    <button onClick={() => handleDeleteSPK(assignment.id)} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md cursor-pointer transition-colors" title="Hapus SPK">
+                                                                        <Trash2 className="w-3.5 h-3.5" />
                                                                     </button>
                                                                 </div>
                                                             </div>
-                                                            <div className="p-3">
-                                                                <h6 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Langkah Kerja yang Ditugaskan:</h6>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                                    {(assignment.steps || []).map(step => (
-                                                                        <button
-                                                                            key={step.id}
-                                                                            onClick={() => handleToggleSPKStep(step.id, step.status)}
-                                                                            className={`flex items-center justify-between p-2.5 rounded-md border transition-all text-left cursor-pointer ${step.status === 'SELESAI' ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-slate-300'}`}
-                                                                        >
-                                                                            <div className="flex flex-col pr-2">
-                                                                                <span className={`font-medium text-xs ${step.status === 'SELESAI' ? 'text-emerald-800' : 'text-slate-700'}`}>{step.step_name}</span>
-                                                                                <span className="text-[11px] text-slate-400 font-normal">{step.qty || assignment.qty || item.qty} {item.unit || 'Pcs'}</span>
-                                                                            </div>
-                                                                            {step.status === 'SELESAI' ? (
-                                                                                <div className="w-4 h-4 rounded bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
-                                                                                    <Check className="w-3 h-3 stroke-[3]" />
+                                                            {isOpen && (
+                                                                <div className="p-3">
+                                                                    <h6 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Langkah Kerja yang Ditugaskan:</h6>
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                        {(assignment.steps || []).map(step => (
+                                                                            <button
+                                                                                key={step.id}
+                                                                                onClick={() => handleToggleSPKStep(step.id, step.status)}
+                                                                                className={`flex items-center justify-between p-2.5 rounded-lg border transition-all text-left cursor-pointer ${step.status === 'SELESAI' ? 'bg-emerald-50 border-emerald-300 shadow-2xs' : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-2xs'}`}
+                                                                            >
+                                                                                <div className="flex flex-col pr-2">
+                                                                                    <span className={`font-medium text-[11px] ${step.status === 'SELESAI' ? 'text-emerald-700' : 'text-slate-700'}`}>{step.step_name}</span>
+                                                                                    <span className="text-[10px] text-slate-400 font-normal">{step.qty || assignment.qty || item.qty} {item.unit || 'Pcs'}</span>
                                                                                 </div>
-                                                                            ) : (
-                                                                                <div className="w-4 h-4 rounded border-2 border-slate-300 bg-white flex-shrink-0" />
-                                                                            )}
-                                                                        </button>
-                                                                    ))}
+                                                                                {step.status === 'SELESAI' ? (
+                                                                                    <div className="w-4 h-4 rounded-md bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
+                                                                                        <Check className="w-3 h-3 stroke-[3]" />
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="w-4 h-4 rounded-md border-2 border-slate-300 bg-white flex-shrink-0" />
+                                                                                )}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
+                                                            )}
                                                         </div>
-                                                    ))
+                                                        );
+                                                    })
                                             )
                                         ) : (
-                                            <div className="p-8 text-center bg-slate-50 rounded-md border border-dashed border-slate-300">
-                                                <Scissors className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                                                <h4 className="font-bold text-slate-600 mb-1">Belum ada penugasan</h4>
-                                                <p className="text-xs text-slate-500">Klik "Buat Penugasan Baru" untuk membagi tugas ke karyawan.</p>
+                                            <div className="p-8 text-center bg-slate-50/80 rounded-lg border border-dashed border-slate-300">
+                                                <Scissors className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                                <h4 className="font-bold text-slate-600 mb-1 text-xs">Belum ada penugasan</h4>
+                                                <p className="text-[11px] text-slate-500">Klik "Buat Penugasan Baru" untuk membagi tugas ke karyawan.</p>
                                             </div>
                                         )}
                                     </div>
@@ -802,6 +788,8 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                         </div>
                     </div>
                 </div>
+            </div>
+
             </div>
         </DashboardLayout>
     );

@@ -19,7 +19,7 @@ const CategoryTable = memo(function CategoryTable({
     const displayCategories = (categories && categories.length > 0) ? categories : (items || []);
 
     return (
-        <div className="bg-white border border-slate-200/90 rounded-md overflow-hidden shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-soft-sm">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
@@ -87,7 +87,7 @@ const CategoryTable = memo(function CategoryTable({
                                                         type="button"
                                                         onClick={() => onEdit(item)}
                                                         title="Edit Kategori"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-all duration-200 border border-indigo-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -98,7 +98,7 @@ const CategoryTable = memo(function CategoryTable({
                                                         type="button"
                                                         onClick={() => onDelete(item.id)}
                                                         title="Hapus Kategori"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition-all duration-200 border border-rose-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>

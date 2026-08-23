@@ -16,11 +16,11 @@ export default function InvoicePrintModal({ isOpen, onClose, invoice }) {
 
     return (
         <div className="fixed inset-0 bg-slate-950/70 flex items-center justify-center z-50 animate-in fade-in duration-200 backdrop-blur-sm p-4 sm:p-6">
-            <div className="bg-slate-100 w-full max-w-5xl h-[90vh] rounded-xl flex flex-col overflow-hidden shadow-2xl border border-slate-200/60 animate-in zoom-in-95 duration-200">
+            <div className="bg-slate-100 w-full max-w-5xl h-[90vh] rounded-xl flex flex-col overflow-hidden shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="h-16 px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
                             <Printer className="w-5 h-5" />
                         </div>
                         <div>
@@ -51,7 +51,7 @@ export default function InvoicePrintModal({ isOpen, onClose, invoice }) {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200"
                         >
                             <X className="w-5 h-5" />
                         </button>

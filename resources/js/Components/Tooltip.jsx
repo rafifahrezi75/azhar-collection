@@ -30,7 +30,7 @@ const Tooltip = memo(function Tooltip({
                 className={`absolute ${positionClasses[position] || positionClasses.bottom} hidden group-hover:flex group-focus-within:flex flex-col items-center pointer-events-none z-50 animate-in fade-in zoom-in-95 duration-100`}
             >
                 <div className={`w-0 h-0 absolute ${arrowClasses[position] || arrowClasses.bottom}`} />
-                <div className="bg-slate-900 text-white text-[10.5px] font-semibold px-2 py-0.5 rounded shadow-lg whitespace-nowrap select-none">
+                <div className="bg-slate-900 text-white text-[10.5px] font-semibold px-2 py-0.5 rounded-lg shadow-soft-lg whitespace-nowrap select-none">
                     {content}
                 </div>
             </div>

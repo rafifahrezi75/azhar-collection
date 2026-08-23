@@ -1,277 +1,212 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <title>Nota - {{ $invoice->invoice_number }}</title>
     <style>
+        /* Mengatur kertas menjadi A5 Landscape (Tidur) */
+        @page {
+            size: 210mm 148mm;
+            margin: 5mm 10mm; /* Margin dikecilkan */
+        }
+
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 14px;
+            font-size: 13px;
             margin: 0;
             padding: 0;
-            color: #0f172a;
+            color: #1e3a8a;
+            background-color: #fff;
         }
+
         .container {
             width: 100%;
-            margin: 0 auto;
-            padding: 20px;
+            box-sizing: border-box;
         }
+
         .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .text-left { text-align: left; }
-        .font-bold { font-weight: bold; }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        td, th {
-            vertical-align: top;
-        }
-        
-        .header-table {
-            margin-bottom: 10px;
-        }
-        .header-left {
-            width: 60%;
-        }
-        .header-right {
-            width: 40%;
-            text-align: right;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-        
-        .logo-text {
-            font-size: 32px;
+
+        /* HEADER SECTION */
+        .header-table { width: 100%; margin-bottom: 2px; }
+        .logo-title {
+            font-size: 26px;
             font-weight: 900;
-            color: #1e3a8a; /* Dark blue matching receipt */
-            margin-bottom: 2px;
-            letter-spacing: -1px;
-        }
-        .sub-logo {
-            font-size: 14px;
-            color: #1e3a8a;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .address-box {
-            font-size: 11px;
-            color: #334155;
-            line-height: 1.4;
-        }
-        
-        .invoice-title {
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: #1e3a8a;
-            margin: 15px 0;
             letter-spacing: 1px;
+            margin-bottom: -4px;
+            font-family: 'Arial Black', Impact, sans-serif;
         }
-        
-        .nota-no {
-            font-weight: bold;
-            font-size: 14px;
-            color: #1e3a8a;
-            margin-bottom: 5px;
-        }
-        
-        table.items {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-            border: 2px solid #3b82f6;
-        }
-        table.items th {
-            border: 1px solid #3b82f6;
-            padding: 8px;
-            text-align: center;
-            font-weight: bold;
-            color: #1e3a8a;
-        }
-        table.items td {
-            border: 1px solid #3b82f6;
-            padding: 8px;
-            vertical-align: top;
-        }
-        
-        .size-detail {
+        .logo-subtitle {
             font-size: 11px;
-            color: #475569;
-            margin-top: 4px;
-            padding-left: 10px;
-        }
-        
-        .footer-table {
-            width: 100%;
-            margin-top: 10px;
-        }
-        
-        .signature-area {
-            width: 60%;
-        }
-        
-        .signature-box {
-            display: inline-block;
-            width: 45%;
-            text-align: center;
             font-weight: bold;
-            color: #1e3a8a;
+            letter-spacing: 0.5px;
         }
-        .signature-line {
-            margin-top: 60px;
-            border-bottom: 1px dotted #1e3a8a;
-            width: 80%;
-            margin-left: auto;
-            margin-right: auto;
+        .address-box {
+            display: inline-block;
+            margin-left: 10px;
+            font-size: 10px;
+            line-height: 1.2;
         }
-        
-        .totals-area {
-            width: 40%;
-        }
-        table.totals {
+
+        /* MASTER TABLE (Gabungan Items & Totals) */
+        table.master-table {
             width: 100%;
             border-collapse: collapse;
-            border: 2px solid #3b82f6;
+            height: 95mm; /* KUNCI UTAMA: Memaksa tabel melar sampai mentok bawah kertas A5 */
         }
-        table.totals td {
-            border: 1px solid #3b82f6;
-            padding: 8px;
-            color: #1e3a8a;
+
+        table.master-table th {
+            border: 1px solid #1e3a8a;
+            padding: 4px;
+            text-align: center;
             font-weight: bold;
+            font-size: 12px;
+            height: 1%; /* Agar header tidak ikut melar */
         }
-        
-        .customer-info {
-            text-align: left;
-            display: inline-block;
+
+        table.master-table td.cell {
+            border: 1px solid #1e3a8a;
+            padding: 4px;
+            font-size: 12px;
+            vertical-align: top;
         }
     </style>
 </head>
 <body>
     <div class="container">
+
         <!-- Header -->
         <table class="header-table">
             <tr>
-                <td class="header-left">
-                    <div class="logo-text">AZHAR</div>
-                    <div class="sub-logo">AZHAR COLLECTION</div>
-                    <div class="address-box">
-                        a : Jl. Contoh Alamat No. 123, Kota<br>
-                        e : azharcollection@gmail.com<br>
-                        p : Telp/Hp: 0812-3456-7890
-                    </div>
+                <td style="width: 55%; vertical-align: top;">
+                    <table style="width: auto;">
+                        <tr>
+                            <td class="text-center" style="padding-right: 10px;">
+                                <div class="logo-title">AZHAR</div>
+                                <div class="logo-subtitle">AZHAR COLLECTION</div>
+                            </td>
+                            <td style="border-left: 1px solid #1e3a8a; padding-left: 10px;">
+                                <div class="address-box">
+                                    a : Damarsi Rt.03 Rw.01 Buduran-Sidoarjo<br>
+                                    e : email: azharcollection@gmail.com<br>
+                                    p : Telp/Hp: 081330666807 (Ach. Haris)<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;087855476538 (Lazuardi)
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td class="header-right">
-                    Sidoarjo, {{ date('d F Y', strtotime($invoice->order_date)) }}<br>
-                    <div style="margin-top: 10px; text-align: right;">
-                        <div class="customer-info">
-                            Kepada yang Terhormat<br>
-                            Bpk/Ibu <br>
-                            Toko/PT : <span style="border-bottom: 1px dotted #000; padding-bottom: 2px;">{{ $invoice->customer_name }}</span><br>
-                            No. Telp/HP : <span style="border-bottom: 1px dotted #000; padding-bottom: 2px;">{{ $invoice->customer->phone ?? '....................' }}</span>
-                        </div>
+                <!-- Bagian Alamat Mentok Kanan -->
+                <td style="width: 45%; text-align: right; vertical-align: top;">
+                    <div style="display: inline-block; text-align: left; font-size: 12px; line-height: 1.3;">
+                        <div style="margin-bottom: 2px;">Sidoarjo, {{ date('d F Y', strtotime($invoice->order_date)) }}</div>
+                        Kepada yang Terhormat<br>
+                        Bpk / Ibu <br>
+                        Toko / PT : <span>{{ $invoice->customer_name }}</span><br>
+                        No. Telp/HP : <span>{{ $invoice->customer->phone ?? '' }}</span>
                     </div>
                 </td>
             </tr>
         </table>
-        
-        <div class="invoice-title">INVOICE</div>
-        
-        <div class="nota-no">
-            Nota No : <span style="border-bottom: 1px dotted #000; display: inline-block; min-width: 150px; font-weight: normal; color: #333;">{{ $invoice->invoice_number }}</span>
-        </div>
 
-        <!-- Items -->
-        <table class="items">
+        <!-- Judul Invoice (Margin Atas bisa diubah di margin-top di bawah ini) -->
+        <table style="width: 100%; margin-bottom: 2px; margin-top: 5px;">
+            <tr>
+                <td style="width: 33%; vertical-align: bottom; font-weight: bold; font-size: 12px;">
+                    Nota No : {{ $invoice->invoice_number }}
+                </td>
+                <td style="width: 34%; text-align: center; vertical-align: bottom; font-weight: bold; font-size: 16px; letter-spacing: 1px;">
+                    INVOICE
+                </td>
+                <td style="width: 33%;"></td>
+            </tr>
+        </table>
+
+        <!-- MASTER TABLE -->
+        <table class="master-table">
             <thead>
                 <tr>
-                    <th style="width: 15%;">Banyak</th>
-                    <th style="width: 40%;">Nama Produk</th>
+                    <th style="width: 12%;">Banyak</th>
+                    <th style="width: 48%;">Nama Produk</th>
                     <th style="width: 20%;">Harga Satuan</th>
-                    <th style="width: 25%;">Jumlah</th>
+                    <th style="width: 20%;">Jumlah</th>
                 </tr>
             </thead>
             <tbody>
+                <!-- Data Produk -->
                 @foreach($invoice->items as $item)
-                <tr>
-                    <td class="text-center" style="font-size: 16px;">{{ $item->qty }}</td>
-                    <td>
-                        <div style="font-size: 16px;">{{ $item->item_name }}</div>
+                <tr style="height: 1%;"> <!-- height 1% agar baris data tidak melar -->
+                    <td class="cell text-center">{{ $item->qty }}</td>
+                    <td class="cell">
+                        {{ $item->item_name }}
                         @php
                             $sizes = [];
                             if($item->size_breakdown) {
                                 $breakdown = is_string($item->size_breakdown) ? json_decode($item->size_breakdown, true) : $item->size_breakdown;
                                 if(is_array($breakdown)) {
                                     foreach($breakdown as $k => $v) {
-                                        if(is_array($v) && isset($v['size']) && isset($v['qty'])) {
-                                            if($v['qty'] > 0) $sizes[] = $v['size'] . ' (' . $v['qty'] . ')';
+                                        if(is_array($v) && isset($v['size']) && isset($v['qty']) && $v['qty'] > 0) {
+                                            $sizes[] = $v['size'] . '('.$v['qty'].')';
                                         } else if (is_numeric($v) && $v > 0) {
-                                            $sizes[] = $k . ' (' . $v . ')';
+                                            $sizes[] = $k . '('.$v.')';
                                         }
                                     }
                                 }
                             }
                         @endphp
                         @if(!empty($sizes))
-                            <div class="size-detail">Ukuran: {{ implode(', ', $sizes) }}</div>
+                            <span style="font-size: 11px; margin-left: 5px;">({{ implode(', ', $sizes) }})</span>
                         @endif
                     </td>
-                    <td class="text-right" style="font-size: 16px;">{{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                    <td class="text-right" style="font-size: 16px;">{{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                    <td class="cell text-right">{{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                    <td class="cell text-right">{{ number_format($item->subtotal, 0, ',', '.') }}</td>
                 </tr>
                 @endforeach
-                <!-- Fill empty rows to make it look like a receipt book if few items -->
-                @for($i = count($invoice->items); $i < 5; $i++)
+
+                <!-- KOTAK KOSONG (Tanpa height 1%, jadi otomatis akan MELAR mengisi sisa ruang ke bawah) -->
+                @php
+                    $totalRows = 11;
+                    $itemCount = count($invoice->items);
+                    $emptyRows = $totalRows - $itemCount;
+                    if($emptyRows < 0) $emptyRows = 0;
+                @endphp
+
+                @for($i = 0; $i < $emptyRows; $i++)
                 <tr>
-                    <td style="color: transparent;">-</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td class="cell">&nbsp;</td>
+                    <td class="cell"></td>
+                    <td class="cell"></td>
+                    <td class="cell"></td>
                 </tr>
                 @endfor
+
+                <!-- SUMMARY & TANDA TANGAN (Langsung menyambung di tabel yang sama) -->
+                <tr style="height: 1%;"> <!-- height 1% menahan agar footer tidak ikut melar -->
+                    <td colspan="2" rowspan="3" style="border: none; vertical-align: bottom; text-align: center; padding-bottom: 5px;">
+                        <div style="display: inline-block; width: 45%; font-weight: bold; font-size: 12px; padding-top: 15px;">
+                            Tanda Terima<br><br><br><br>
+                            ( ___________________ )
+                        </div>
+                        <div style="display: inline-block; width: 45%; font-weight: bold; font-size: 12px; padding-top: 15px;">
+                            Hormat Kami<br><br><br><br>
+                            ( ___________________ )
+                        </div>
+                    </td>
+                    <td class="cell text-center" style="font-weight: bold; vertical-align: middle;">TOTAL</td>
+                    <td class="cell text-right" style="font-weight: bold; vertical-align: middle;">{{ number_format($invoice->total_amount, 0, ',', '.') }}</td>
+                </tr>
+                <tr style="height: 1%;">
+                    <td class="cell text-center" style="vertical-align: middle;">Uang Muka</td>
+                    <td class="cell text-right" style="vertical-align: middle;">{{ number_format($invoice->paid_amount, 0, ',', '.') }}</td>
+                </tr>
+                <tr style="height: 1%;">
+                    @php $sisa = $invoice->total_amount - $invoice->paid_amount; @endphp
+                    <td class="cell text-center" style="vertical-align: middle;">Kekurangan</td>
+                    <td class="cell text-right" style="vertical-align: middle;">{{ number_format($sisa > 0 ? $sisa : 0, 0, ',', '.') }}</td>
+                </tr>
             </tbody>
         </table>
 
-        <!-- Footer -->
-        <table class="footer-table">
-            <tr>
-                <td class="signature-area">
-                    <div class="signature-box">
-                        Tanda Terima
-                        <div class="signature-line">(.........................)</div>
-                    </div>
-                    <div class="signature-box">
-                        Hormat Kami
-                        <div class="signature-line">(.........................)</div>
-                    </div>
-                </td>
-                <td class="totals-area">
-                    <table class="totals">
-                        <tr>
-                            <td style="width: 50%; text-align: center;">TOTAL</td>
-                            <td style="width: 50%; text-align: right; font-size: 18px;">{{ number_format($invoice->total_amount, 0, ',', '.') }}</td>
-                        </tr>
-                        <tr>
-                            <td style="text-align: center;">Uang Muka</td>
-                            <td style="text-align: right; font-size: 16px;">{{ number_format($invoice->paid_amount, 0, ',', '.') }}</td>
-                        </tr>
-                        @php $sisa = $invoice->total_amount - $invoice->paid_amount; @endphp
-                        <tr>
-                            <td style="text-align: center;">Kekurangan</td>
-                            <td style="text-align: right; font-size: 16px;">{{ number_format($sisa > 0 ? $sisa : 0, 0, ',', '.') }}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-        
-        @if($invoice->notes)
-        <div style="margin-top: 15px; font-size: 12px; color: #475569;">
-            * Catatan: {{ $invoice->notes }}
-        </div>
-        @endif
     </div>
 </body>
 </html>

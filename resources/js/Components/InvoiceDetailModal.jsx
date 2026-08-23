@@ -131,7 +131,7 @@ const InvoiceDetailModal = memo(function InvoiceDetailModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50 animate-in fade-in duration-200 overflow-y-auto">
-            <div className="bg-slate-50/90 rounded-2xl max-w-6xl w-full shadow-2xl border border-slate-200/60 animate-in zoom-in-95 duration-150 flex flex-col md:flex-row overflow-hidden max-h-[92vh]">
+            <div className="bg-slate-50/90 rounded-xl max-w-6xl w-full shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 flex flex-col md:flex-row overflow-hidden max-h-[92vh]">
                 
                 {/* Left Column: Summary & Customer Info */}
                 <div className="w-full md:w-1/3 bg-white p-5 sm:p-7 border-r border-slate-200/60 flex flex-col overflow-y-auto custom-scrollbar">
@@ -272,7 +272,7 @@ const InvoiceDetailModal = memo(function InvoiceDetailModal({
                             </button>
                             <button
                                 onClick={onClose}
-                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-transparent"
+                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200 border border-transparent"
                             >
                                 <X className="w-5 h-5" />
                             </button>

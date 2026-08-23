@@ -263,7 +263,7 @@ const SizeBreakdownModal = memo(function SizeBreakdownModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl border border-slate-200/80 animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="bg-white rounded-xl max-w-2xl w-full shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh] overflow-hidden">
                 
                 {/* Header */}
                 <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
@@ -283,7 +283,7 @@ const SizeBreakdownModal = memo(function SizeBreakdownModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all duration-200 cursor-pointer"
                     >
                         <X className="w-4.5 h-4.5" />
                     </button>

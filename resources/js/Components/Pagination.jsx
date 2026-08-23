@@ -16,7 +16,6 @@ const Pagination = memo(function Pagination({
     const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-    // Generate page numbers with ellipses
     const getPageNumbers = () => {
         const pages = [];
         const maxVisible = 5;
@@ -44,24 +43,26 @@ const Pagination = memo(function Pagination({
         return pages;
     };
 
+    const btnBase = "w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer shadow-soft-2xs";
+
     return (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 bg-slate-50/50 border-t border-slate-200 text-xs text-slate-700 select-none">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white border-t border-slate-100 text-xs text-slate-600 select-none">
             {/* Left: Info & Per Page selector */}
             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start flex-wrap">
-                <span className="font-medium text-slate-700">
-                    Menampilkan <strong className="font-bold text-slate-900">{startItem}</strong> -{" "}
-                    <strong className="font-bold text-slate-900">{endItem}</strong> dari{" "}
-                    <strong className="font-bold text-slate-900">{totalItems}</strong> data
+                <span className="font-medium text-slate-500">
+                    Menampilkan <strong className="font-bold text-slate-700">{startItem}</strong> -{" "}
+                    <strong className="font-bold text-slate-700">{endItem}</strong> dari{" "}
+                    <strong className="font-bold text-slate-700">{totalItems}</strong> data
                 </span>
 
                 {onItemsPerPageChange && (
-                    <div className="flex items-center gap-1.5 pl-3 border-l border-slate-300">
+                    <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200">
                         <span className="text-[11px] text-slate-500 font-medium">Tampilkan:</span>
                         <div className="relative inline-block">
                             <select
                                 value={itemsPerPage}
                                 onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-                                className="appearance-none bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 rounded-md pl-2.5 pr-7 py-1 text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-colors cursor-pointer shadow-2xs"
+                                className="appearance-none bg-white border border-slate-200 rounded-lg pl-2.5 pr-7 py-1 text-xs font-semibold text-slate-700 shadow-soft-2xs transition-all duration-200 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 cursor-pointer"
                             >
                                 {pageSizeOptions.map((size) => (
                                     <option key={size} value={size}>
@@ -77,43 +78,25 @@ const Pagination = memo(function Pagination({
 
             {/* Right: Page Navigation Buttons */}
             <div className="flex items-center gap-1">
-                {/* First Page */}
-                <button
-                    type="button"
-                    onClick={() => onPageChange(1)}
-                    disabled={currentPage === 1}
-                    title="Halaman Pertama"
-                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-2xs"
-                >
+                <button type="button" onClick={() => onPageChange(1)} disabled={currentPage === 1} title="Halaman Pertama" className={btnBase}>
                     <ChevronsLeft className="w-3.5 h-3.5" />
                 </button>
-
-                {/* Prev Page */}
-                <button
-                    type="button"
-                    onClick={() => onPageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    title="Halaman Sebelumnya"
-                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-2xs"
-                >
+                <button type="button" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} title="Halaman Sebelumnya" className={btnBase}>
                     <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
 
-                {/* Page Numbers */}
                 {getPageNumbers().map((page, index) =>
                     page === "..." ? (
-                        <span key={`ellipsis-${index}`} className="px-1.5 text-slate-400 font-bold">
-                            ...
-                        </span>
+                        <span key={`ellipsis-${index}`} className="px-1.5 text-slate-400 font-bold">...</span>
                     ) : (
                         <button
                             key={`page-${page}`}
                             type="button"
                             onClick={() => onPageChange(page)}
-                            className={`min-w-[28px] h-7 px-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
                                 currentPage === page
-                                    ? "bg-slate-900 text-white shadow-xs"
-                                    : "bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 shadow-2xs"
+                                    ? "bg-teal-600 text-white shadow-soft-xs"
+                                    : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-soft-2xs"
                             }`}
                         >
                             {page}
@@ -121,25 +104,10 @@ const Pagination = memo(function Pagination({
                     )
                 )}
 
-                {/* Next Page */}
-                <button
-                    type="button"
-                    onClick={() => onPageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    title="Halaman Berikutnya"
-                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-2xs"
-                >
+                <button type="button" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} title="Halaman Berikutnya" className={btnBase}>
                     <ChevronRight className="w-3.5 h-3.5" />
                 </button>
-
-                {/* Last Page */}
-                <button
-                    type="button"
-                    onClick={() => onPageChange(totalPages)}
-                    disabled={currentPage === totalPages}
-                    title="Halaman Terakhir"
-                    className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-2xs"
-                >
+                <button type="button" onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages} title="Halaman Terakhir" className={btnBase}>
                     <ChevronsRight className="w-3.5 h-3.5" />
                 </button>
             </div>

@@ -68,11 +68,11 @@ const CustomerModal = memo(function CustomerModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200 overflow-y-auto">
-            <div className="bg-white rounded-md max-w-4xl w-full p-4 sm:p-5 shadow-xl space-y-4 border border-slate-200 animate-in zoom-in-95 duration-150 my-auto max-h-[92vh] overflow-y-auto custom-scrollbar flex flex-col">
+            <div className="bg-white rounded-xl max-w-4xl w-full p-4 sm:p-5 shadow-soft-xl space-y-4 border border-slate-100 animate-in zoom-in-95 duration-150 my-auto max-h-[92vh] overflow-y-auto custom-scrollbar flex flex-col">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+                        <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
                             <Users className="w-5 h-5" />
                         </div>
                         <div>
@@ -87,7 +87,7 @@ const CustomerModal = memo(function CustomerModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -321,7 +321,7 @@ const CustomerModal = memo(function CustomerModal({
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-md text-xs font-semibold transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+                            className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-all duration-200 shadow-soft-xs disabled:opacity-50 cursor-pointer"
                         >
                             {submitting ? "Memproses..." : isEditing ? "Simpan Perubahan" : "Simpan Data Pelanggan"}
                         </button>

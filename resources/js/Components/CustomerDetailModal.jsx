@@ -84,7 +84,7 @@ const CustomerDetailModal = memo(function CustomerDetailModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200 overflow-y-auto">
-            <div className="bg-white rounded-lg max-w-2xl w-full p-4 sm:p-6 shadow-xl space-y-5 border border-slate-200 animate-in zoom-in-95 duration-150 my-auto max-h-[92vh] overflow-y-auto custom-scrollbar">
+            <div className="bg-white rounded-xl max-w-2xl w-full p-4 sm:p-6 shadow-soft-xl space-y-5 border border-slate-100 animate-in zoom-in-95 duration-150 my-auto max-h-[92vh] overflow-y-auto custom-scrollbar">
                 {/* Modal Header */}
                 <div className="flex items-start justify-between border-b border-slate-100 pb-3.5">
                     <div className="flex items-start gap-3">
@@ -124,7 +124,7 @@ const CustomerDetailModal = memo(function CustomerDetailModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
                         title="Tutup Detail"
                     >
                         <X className="w-5 h-5" />

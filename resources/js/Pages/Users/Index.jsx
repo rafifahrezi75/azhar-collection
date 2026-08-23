@@ -259,7 +259,7 @@ export default function Index() {
                                     setSelectedRoleId(e.target.value);
                                     setCurrentPage(1);
                                 }}
-                                className="w-full border border-slate-300 rounded-md px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white font-medium"
+                                className="w-full border border-slate-300 rounded-md px-3 py-2 text-xs focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all bg-white font-medium"
                             >
                                 <option value="">Semua Role</option>
                                 {roles.map((r) => (

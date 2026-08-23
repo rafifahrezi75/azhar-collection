@@ -5,29 +5,76 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  }
-  body {
-    font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #f8fafc;
-    color: #0f172a;
-    -webkit-font-smoothing: antialiased;
-  }
+    * {
+        font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    }
+    body {
+        font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+        background-color: #f8fafc;
+        color: #1e293b;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    /* Soft UI focus ring utility */
+    :focus-visible {
+        outline: 2px solid #800080;
+        outline-offset: 2px;
+    }
 }
 
-/* Custom Scrollbar */
+@layer components {
+    /* Soft card base */
+    .soft-card {
+        @apply bg-white rounded-lg border border-slate-200 shadow-soft-sm;
+    }
+    /* Soft elevated card */
+    .soft-card-elevated {
+        @apply bg-white rounded-lg border border-slate-200/80 shadow-soft-md;
+    }
+    /* Soft button base */
+    .soft-btn {
+        @apply rounded-lg shadow-soft-xs transition-all duration-200;
+    }
+    .soft-btn:hover {
+        @apply shadow-soft-sm;
+    }
+    .soft-btn:active {
+        @apply shadow-soft-2xs;
+        transform: translateY(0.5px);
+    }
+    /* Soft input base */
+    .soft-input {
+        @apply rounded-lg border border-slate-300 bg-white shadow-soft-2xs transition-all duration-200;
+    }
+    .soft-input:focus {
+        @apply border-teal-500 ring-2 ring-teal-500/20 shadow-soft-xs;
+    }
+}
+
+/* Custom Scrollbar — soft style */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+    width: 5px;
+    height: 5px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
-  border-radius: 9999px;
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.45);
+    background: rgba(148, 163, 184, 0.35);
+}
+
+/* Smooth transitions globally */
+* {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 0ms;
+}
+
+button, a, input, select, textarea {
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

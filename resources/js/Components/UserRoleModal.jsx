@@ -15,11 +15,11 @@ const UserRoleModal = memo(function UserRoleModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-            <div className="bg-white rounded-md max-w-md w-full p-5 sm:p-6 shadow-xl space-y-3.5 border border-slate-200 animate-in zoom-in-95 duration-150">
+            <div className="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-soft-xl space-y-3.5 border border-slate-100 animate-in zoom-in-95 duration-150">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+                        <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
                             <Shield className="w-4.5 h-4.5" />
                         </div>
                         <div>
@@ -33,7 +33,7 @@ const UserRoleModal = memo(function UserRoleModal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200"
                     >
                         <X className="w-4.5 h-4.5" />
                     </button>

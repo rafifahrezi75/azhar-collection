@@ -70,7 +70,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                             setData('current_password', e.target.value)
                         }
                         type="password"
-                        className="mt-1 block w-full text-xs sm:text-sm rounded-md border-slate-300 focus:ring-1 focus:ring-emerald-500"
+                        className="mt-1 block w-full text-xs sm:text-sm"
                         autoComplete="current-password"
                         placeholder="••••••••"
                     />
@@ -90,7 +90,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         value={data.password}
                         onChange={(e) => setData('password', e.target.value)}
                         type="password"
-                        className="mt-1 block w-full text-xs sm:text-sm rounded-md border-slate-300 focus:ring-1 focus:ring-emerald-500"
+                        className="mt-1 block w-full text-xs sm:text-sm"
                         autoComplete="new-password"
                         placeholder="••••••••"
                     />
@@ -111,7 +111,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                             setData('password_confirmation', e.target.value)
                         }
                         type="password"
-                        className="mt-1 block w-full text-xs sm:text-sm rounded-md border-slate-300 focus:ring-1 focus:ring-emerald-500"
+                        className="mt-1 block w-full text-xs sm:text-sm"
                         autoComplete="new-password"
                         placeholder="••••••••"
                     />
@@ -126,7 +126,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                     <button
                         type="submit"
                         disabled={processing}
-                        className="rounded-md px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                        className="rounded-lg px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold shadow-soft-xs transition-all duration-200 cursor-pointer"
                     >
                         Simpan Kata Sandi
                     </button>
@@ -138,7 +138,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         leave="transition ease-in-out duration-300"
                         leaveTo="opacity-0"
                     >
-                        <p className="text-xs text-emerald-600 font-bold">
+                        <p className="text-xs text-teal-600 font-bold">
                             Kata sandi berhasil diperbarui.
                         </p>
                     </Transition>

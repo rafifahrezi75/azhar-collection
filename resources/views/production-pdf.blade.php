@@ -1,101 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <title>Surat Perintah Kerja (SPK) - {{ $invoice->invoice_number }}</title>
     <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 13px;
+            font-size: 12px;
             margin: 0;
             padding: 0;
-            color: #333;
+            color: #1e293b;
+            background-color: #fff;
         }
+
         .container {
             width: 100%;
-            margin: 0 auto;
-            padding: 20px;
+            box-sizing: border-box;
         }
+
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .font-bold { font-weight: bold; }
-        
-        .header {
-            margin-bottom: 25px;
-            border-bottom: 2px solid #222;
-            padding-bottom: 15px;
-        }
-        .header-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #0f172a;
-            margin-bottom: 5px;
-        }
-        
-        .info-table {
+
+        table {
             width: 100%;
-            margin-bottom: 25px;
-        }
-        .info-table td {
-            vertical-align: top;
-        }
-        
-        .section-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #cbd5e1;
-            padding-bottom: 5px;
+            border-collapse: collapse;
         }
 
+        /* Header SPK */
+        .header-table {
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 3px;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 4px;
+            color: #1e3a8a;
+        }
+
+        /* Tabel Item Produk */
         table.items {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
+            margin-bottom: 8px;
         }
         table.items th {
             background-color: #f1f5f9;
             border: 1px solid #94a3b8;
-            padding: 10px;
+            padding: 6px 8px;
             text-align: left;
             font-weight: bold;
+            font-size: 11px;
+            color: #334155;
         }
         table.items td {
             border: 1px solid #94a3b8;
-            padding: 10px;
+            padding: 6px 8px;
             vertical-align: top;
+            font-size: 12px;
         }
 
+        /* Tabel Langkah Produksi */
         table.steps {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 5px;
+            margin-bottom: 20px;
             font-size: 11px;
         }
         table.steps th, table.steps td {
             border: 1px solid #cbd5e1;
-            padding: 6px;
+            padding: 5px 8px;
             text-align: left;
         }
         table.steps th {
             background-color: #f8fafc;
+            color: #334155;
         }
-        
+
+        /* Signature Section */
         .signature-section {
-            clear: both;
-            margin-top: 60px;
+            margin-top: 30px;
             width: 100%;
+            display: table;
+            page-break-inside: avoid; /* Mencegah tanda tangan terpotong halaman */
         }
         .signature-box {
-            float: left;
-            width: 33%;
+            display: table-cell;
+            width: 33.33%;
             text-align: center;
+            font-size: 12px;
         }
         .signature-line {
-            margin-top: 80px;
+            margin-top: 55px;
             border-bottom: 1px solid #000;
-            width: 70%;
+            width: 75%;
             margin-left: auto;
             margin-right: auto;
         }
@@ -104,40 +121,36 @@
 <body>
     <div class="container">
         <!-- Header -->
-        <table class="info-table" style="margin-bottom: 10px; border-bottom: 2px solid #222; padding-bottom: 15px;">
+        <table class="header-table">
             <tr>
-                <td style="width: 50%;">
+                <td style="width: 55%; vertical-align: top;">
                     <div class="header-title">SURAT PERINTAH KERJA (SPK)</div>
-                    <div style="font-size: 15px; font-weight: bold; color: #0d9488;">AZHAR COLLECTION</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #0d9488;">AZHAR COLLECTION</div>
                 </td>
-                <td style="width: 50%; text-align: right;">
+                <td style="width: 45%; text-align: right; vertical-align: top; font-size: 11px; line-height: 1.4;">
                     <div><strong>No SPK:</strong> {{ $invoice->invoice_number }}</div>
                     <div><strong>Tanggal Mulai:</strong> {{ date('d M Y', strtotime($invoice->order_date)) }}</div>
                     <div><strong>Estimasi Selesai:</strong> {{ $invoice->completion_date ? date('d M Y', strtotime($invoice->completion_date)) : '-' }}</div>
                 </td>
             </tr>
         </table>
-        
+
         <!-- Customer Info -->
-        <table class="info-table" style="margin-bottom: 30px;">
-            <tr>
-                <td style="width: 50%;">
-                    <div><strong>Nama Pelanggan / Instansi:</strong></div>
-                    <div style="font-size: 15px; font-weight: bold; margin-top: 5px;">{{ $invoice->customer_name }}</div>
-                </td>
-            </tr>
-        </table>
+        <div style="margin-bottom: 15px; font-size: 12px;">
+            <strong>Nama Pelanggan / Instansi:</strong>
+            <span style="font-size: 14px; font-weight: bold; margin-left: 5px;">{{ $invoice->customer_name }}</span>
+        </div>
 
         <div class="section-title">RINCIAN PEKERJAAN & LANGKAH PRODUKSI</div>
 
         @foreach($invoice->items as $index => $item)
-        <table class="items" style="margin-bottom: 10px;">
+        <table class="items">
             <thead>
                 <tr>
                     <th style="width: 5%; text-align: center;">No</th>
                     <th style="width: 45%;">Nama Produk</th>
-                    <th style="width: 25%;">Rincian Ukuran</th>
-                    <th style="width: 25%; text-align: center;">Total Kuantitas</th>
+                    <th style="width: 30%;">Rincian Ukuran</th>
+                    <th style="width: 20%; text-align: center;">Total Kuantitas</th>
                 </tr>
             </thead>
             <tbody>
@@ -166,22 +179,22 @@
                             -
                         @endif
                     </td>
-                    <td class="text-center font-bold" style="font-size: 15px;">{{ $item->qty }} {{ $item->unit }}</td>
+                    <td class="text-center font-bold" style="font-size: 14px;">{{ $item->qty }} {{ $item->unit ?? 'Pcs' }}</td>
                 </tr>
             </tbody>
         </table>
 
         <!-- Production Steps -->
         @if($item->product && $item->product->productionSteps && $item->product->productionSteps->count() > 0)
-            <div style="margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #475569;">Daftar Langkah Produksi:</div>
-            <table class="steps" style="margin-bottom: 40px;">
+            <div style="margin-bottom: 3px; font-weight: bold; font-size: 11px; color: #475569;">Daftar Langkah Produksi:</div>
+            <table class="steps">
                 <thead>
                     <tr>
-                        <th style="width: 5%; text-align: center;">Urutan</th>
-                        <th style="width: 30%;">Tahapan Kerja</th>
-                        <th style="width: 15%;">Estimasi Waktu</th>
+                        <th style="width: 8%; text-align: center;">Urutan</th>
+                        <th style="width: 35%;">Tahapan Kerja</th>
+                        <th style="width: 17%;">Estimasi Waktu</th>
                         <th style="width: 15%; text-align: center;">Status Target</th>
-                        <th style="width: 35%;">Penanggung Jawab / Keterangan</th>
+                        <th style="width: 25%;">Paraf / Keterangan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -197,14 +210,14 @@
                 </tbody>
             </table>
         @else
-            <div style="margin-bottom: 40px; font-size: 12px; font-style: italic; color: #94a3b8;">
+            <div style="margin-bottom: 15px; font-size: 11px; font-style: italic; color: #94a3b8;">
                 (Tidak ada detail langkah produksi khusus untuk item ini)
             </div>
         @endif
         @endforeach
 
         @if($invoice->notes)
-        <div style="margin-top: 20px; font-size: 12px;">
+        <div style="margin-top: 15px; font-size: 11px; background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 8px; border-radius: 4px;">
             <strong>Catatan Pesanan:</strong><br>
             {{ $invoice->notes }}
         </div>
@@ -215,17 +228,17 @@
             <div class="signature-box">
                 <div>Penanggung Jawab Produksi,</div>
                 <div class="signature-line"></div>
-                <div>( ........................................... )</div>
+                <div style="margin-top: 5px;">( ................................... )</div>
             </div>
             <div class="signature-box">
                 <div>Quality Control,</div>
                 <div class="signature-line"></div>
-                <div>( ........................................... )</div>
+                <div style="margin-top: 5px;">( ................................... )</div>
             </div>
             <div class="signature-box">
                 <div>Mengetahui,</div>
                 <div class="signature-line"></div>
-                <div>( Pimpinan / Admin )</div>
+                <div style="margin-top: 5px;">( Pimpinan / Admin )</div>
             </div>
         </div>
     </div>

@@ -23,7 +23,7 @@ const PageHeaderBar = memo(function PageHeaderBar({
             {/* Left: Page Title Only */}
             <div>
                 {displayTitle && (
-                    <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    <h1 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
                         {displayTitle}
                     </h1>
                 )}
@@ -40,14 +40,14 @@ const PageHeaderBar = memo(function PageHeaderBar({
                             value={searchValue}
                             onChange={(e) => onSearchChange(e.target.value)}
                             placeholder={searchPlaceholder}
-                            className="w-44 sm:w-56 pl-8 pr-7 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs transition-all"
+                            className="w-44 sm:w-56 pl-8 pr-7 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 placeholder:text-slate-400 shadow-soft-2xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 focus:shadow-soft-xs"
                         />
                         {searchValue && (
                             <button
                                 type="button"
                                 onClick={() => onSearchChange("")}
                                 title="Hapus pencarian"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
@@ -61,10 +61,10 @@ const PageHeaderBar = memo(function PageHeaderBar({
                         type="button"
                         onClick={onFilterClick}
                         title="Filter Data"
-                        className={`relative p-1.5 rounded-md border transition-colors cursor-pointer shadow-2xs ${
+                        className={`relative p-2 rounded-lg border transition-all duration-200 cursor-pointer shadow-soft-2xs ${
                             isFilterActive
-                                ? "bg-teal-50 border-teal-500 text-teal-700 font-bold"
-                                : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                                ? "bg-teal-50 border-teal-400 text-teal-700 font-bold shadow-soft-xs"
+                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
                         }`}
                     >
                         <Filter className="w-4 h-4" />
@@ -80,7 +80,7 @@ const PageHeaderBar = memo(function PageHeaderBar({
                         type="button"
                         onClick={onRefresh}
                         title="Segarkan Data"
-                        className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors cursor-pointer shadow-2xs"
+                        className="p-2 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-600 rounded-lg transition-all duration-200 cursor-pointer shadow-soft-2xs"
                     >
                         <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
                     </button>
@@ -95,7 +95,7 @@ const PageHeaderBar = memo(function PageHeaderBar({
                         type="button"
                         onClick={onAdd}
                         title={addTitle}
-                        className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-all shadow-xs hover:shadow-sm cursor-pointer flex items-center justify-center shrink-0"
+                        className="p-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-all duration-200 shadow-soft-xs hover:shadow-soft-sm cursor-pointer flex items-center justify-center shrink-0 active:shadow-soft-2xs active:translate-y-px"
                     >
                         <Plus className="w-4 h-4" />
                     </button>

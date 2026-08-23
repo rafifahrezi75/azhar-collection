@@ -39,12 +39,12 @@ const ItemDetailModal = memo(function ItemDetailModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 overflow-y-auto">
-            <div className="bg-white rounded-md max-w-4xl w-full p-4 sm:p-5 shadow-xl border border-slate-200 animate-in zoom-in-95 duration-150 my-8 max-h-[90vh] flex flex-col">
+            <div className="bg-white rounded-xl max-w-4xl w-full p-4 sm:p-5 shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 my-8 max-h-[90vh] flex flex-col">
                 
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-teal-50 text-teal-700 border border-teal-200/80 flex items-center justify-center font-bold shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 flex items-center justify-center font-bold shrink-0">
                             <Package className="w-5 h-5" />
                         </div>
                         <div>
@@ -65,7 +65,7 @@ const ItemDetailModal = memo(function ItemDetailModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
                         title="Tutup Modal"
                     >
                         <X className="w-4.5 h-4.5" />

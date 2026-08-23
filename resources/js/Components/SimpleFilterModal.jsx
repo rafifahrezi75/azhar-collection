@@ -14,11 +14,11 @@ const SimpleFilterModal = memo(function SimpleFilterModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-            <div className="bg-white rounded-md max-w-xs w-full p-5 sm:p-6 shadow-xl space-y-4 border border-slate-200 animate-in zoom-in-95 duration-150">
+            <div className="bg-white rounded-xl max-w-xs w-full p-5 sm:p-6 shadow-soft-xl space-y-4 border border-slate-100 animate-in zoom-in-95 duration-150">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+                        <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
                             <Filter className="w-4.5 h-4.5" />
                         </div>
                         <div>
@@ -29,7 +29,7 @@ const SimpleFilterModal = memo(function SimpleFilterModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
                     >
                         <X className="w-4.5 h-4.5" />
                     </button>
@@ -57,7 +57,7 @@ const SimpleFilterModal = memo(function SimpleFilterModal({
                                         onClick={() => onStatusFilterChange(item.id)}
                                         className={`px-2 py-1.5 rounded-md border text-xs font-semibold transition-all cursor-pointer text-center ${
                                             statusFilter === item.id
-                                                ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                                                ? "bg-teal-600 text-white border-teal-600 shadow-soft-xs"
                                                 : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                                         }`}
                                     >
@@ -82,7 +82,7 @@ const SimpleFilterModal = memo(function SimpleFilterModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs"
+                        className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer shadow-soft-xs"
                     >
                         Terapkan
                     </button>

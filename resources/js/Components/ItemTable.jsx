@@ -39,7 +39,7 @@ const ItemTable = memo(function ItemTable({
     };
 
     return (
-        <div className="bg-white border border-slate-200/90 rounded-md overflow-hidden shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-soft-sm">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
@@ -96,7 +96,7 @@ const ItemTable = memo(function ItemTable({
                                                     type="button"
                                                     onClick={() => setPreviewImage({ url: item.image_url, name: item.name })}
                                                     title="Lihat Foto"
-                                                    className="w-9 h-9 rounded-md overflow-hidden border border-slate-200 hover:border-teal-500 transition-all shadow-2xs relative cursor-pointer block"
+                                                    className="w-9 h-9 rounded-lg overflow-hidden border border-slate-200 hover:border-teal-500 transition-all shadow-soft-2xs relative cursor-pointer block"
                                                 >
                                                     <img
                                                         src={item.image_url}
@@ -105,7 +105,7 @@ const ItemTable = memo(function ItemTable({
                                                     />
                                                 </button>
                                             ) : (
-                                                <div className="w-9 h-9 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400" title="Tidak ada foto">
+                                                <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400" title="Tidak ada foto">
                                                     <ImageIcon className="w-4 h-4 text-slate-400" />
                                                 </div>
                                             )}
@@ -201,7 +201,7 @@ const ItemTable = memo(function ItemTable({
                                                     type="button"
                                                     onClick={() => onViewDetail(item)}
                                                     title="Lihat Detail Rincian Stok"
-                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
+                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg transition-all duration-200 border border-sky-200/80 cursor-pointer shadow-soft-2xs"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </button>
@@ -212,7 +212,7 @@ const ItemTable = memo(function ItemTable({
                                                         type="button"
                                                         onClick={() => onTakeStock(item)}
                                                         title="Ambil Stok (Keluar)"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md transition-colors border border-amber-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition-all duration-200 border border-amber-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <ArrowUpRight className="w-3.5 h-3.5" />
                                                     </button>
@@ -224,7 +224,7 @@ const ItemTable = memo(function ItemTable({
                                                         type="button"
                                                         onClick={() => onAddStock(item)}
                                                         title="Tambah Stok (Masuk)"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors border border-emerald-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-all duration-200 border border-emerald-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Plus className="w-3.5 h-3.5" />
                                                     </button>
@@ -236,7 +236,7 @@ const ItemTable = memo(function ItemTable({
                                                         type="button"
                                                         onClick={() => onEdit(item)}
                                                         title="Edit Data Barang"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-all duration-200 border border-indigo-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -248,7 +248,7 @@ const ItemTable = memo(function ItemTable({
                                                         type="button"
                                                         onClick={() => onDelete(item.id)}
                                                         title="Hapus Data Barang"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition-all duration-200 border border-rose-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -282,7 +282,7 @@ const ItemTable = memo(function ItemTable({
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white rounded-md max-w-lg w-full overflow-hidden shadow-2xl border border-slate-300 animate-in zoom-in-95"
+                        className="bg-white rounded-xl max-w-lg w-full overflow-hidden shadow-soft-xl border border-slate-200 animate-in zoom-in-95"
                     >
                         <div className="p-3 bg-slate-900 text-white flex items-center justify-between">
                             <span className="font-bold text-xs truncate">{previewImage.name}</span>

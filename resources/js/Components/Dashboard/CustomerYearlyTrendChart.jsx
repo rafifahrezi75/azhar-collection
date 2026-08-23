@@ -1,202 +1,25 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
-import {
-    Users, TrendingUp, CheckCircle2, AlertCircle, Clock,
-    RefreshCw, ChevronDown, ChevronUp, Package, DollarSign
-} from "lucide-react";
+import { TrendingUp, RefreshCw, ChevronDown, Calendar } from "lucide-react";
 
-const fmt = (val) =>
+const fmtRp = (num) =>
     new Intl.NumberFormat("id-ID", {
         style: "currency", currency: "IDR",
         minimumFractionDigits: 0, maximumFractionDigits: 0,
-    }).format(val || 0);
+    }).format(num || 0);
 
-const pct = (num, den) => (den > 0 ? Math.round((num / den) * 100) : 0);
+const fmtNum = (num) => new Intl.NumberFormat("id-ID").format(num || 0);
 
-// Pastel color palette for customers (up to 12)
-const CUSTOMER_COLORS = [
-    { bar: "#6366f1", light: "#eef2ff", text: "#4338ca" },
-    { bar: "#0d9488", light: "#f0fdfa", text: "#0f766e" },
-    { bar: "#f59e0b", light: "#fffbeb", text: "#b45309" },
-    { bar: "#f43f5e", light: "#fff1f2", text: "#be123c" },
-    { bar: "#8b5cf6", light: "#f5f3ff", text: "#6d28d9" },
-    { bar: "#0ea5e9", light: "#f0f9ff", text: "#0369a1" },
-    { bar: "#10b981", light: "#ecfdf5", text: "#047857" },
-    { bar: "#fb923c", light: "#fff7ed", text: "#c2410c" },
-    { bar: "#a855f7", light: "#faf5ff", text: "#7e22ce" },
-    { bar: "#ec4899", light: "#fdf2f8", text: "#9d174d" },
-    { bar: "#14b8a6", light: "#f0fdfa", text: "#0f766e" },
-    { bar: "#64748b", light: "#f8fafc", text: "#334155" },
-];
-
-function MiniBar({ value, max, color }) {
-    const w = max > 0 ? Math.round((value / max) * 100) : 0;
-    return (
-        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden w-full">
-            <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${w}%`, backgroundColor: color }}
-            />
-        </div>
-    );
-}
-
-function StatusDot({ paidRate, fulfillRate }) {
-    if (paidRate >= 100 && fulfillRate >= 100)
-        return <span className="inline-flex items-center gap-1 text-emerald-600 font-bold text-[10px]"><CheckCircle2 className="w-3 h-3" /> Terpenuhi</span>;
-    if (paidRate >= 80 || fulfillRate >= 80)
-        return <span className="inline-flex items-center gap-1 text-amber-600 font-bold text-[10px]"><Clock className="w-3 h-3" /> Sebagian</span>;
-    return <span className="inline-flex items-center gap-1 text-rose-500 font-bold text-[10px]"><AlertCircle className="w-3 h-3" /> Belum</span>;
-}
-
-function CustomerRow({ customer, years, colorObj, maxRevenue }) {
-    const [expanded, setExpanded] = useState(false);
-
-    const totalRevAll = useMemo(() => customer.years.reduce((s, y) => s + y.total_amount, 0), [customer.years]);
-    const totalInvAll = useMemo(() => customer.years.reduce((s, y) => s + y.invoices, 0), [customer.years]);
-    const totalQtyAll = useMemo(() => customer.years.reduce((s, y) => s + y.qty, 0), [customer.years]);
-    const avgFulfill  = useMemo(() => {
-        const active = customer.years.filter(y => y.invoices > 0);
-        return active.length > 0 ? Math.round(active.reduce((s, y) => s + y.fulfill_rate, 0) / active.length) : 0;
-    }, [customer.years]);
-    const avgPaid     = useMemo(() => {
-        const active = customer.years.filter(y => y.invoices > 0);
-        return active.length > 0 ? Math.round(active.reduce((s, y) => s + y.paid_rate, 0) / active.length) : 0;
-    }, [customer.years]);
-
-    const activeYears = customer.years.filter(y => y.invoices > 0);
-
-    return (
-        <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
-            {/* Header row */}
-            <button
-                onClick={() => setExpanded(e => !e)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer text-left"
-            >
-                <div
-                    className="w-8 h-8 rounded-md flex items-center justify-center font-black text-xs shrink-0"
-                    style={{ background: colorObj.light, color: colorObj.text }}
-                >
-                    {(customer.name || "?").charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="font-bold text-slate-800 text-xs truncate">{customer.name}</div>
-                    {customer.institution_name && (
-                        <div className="text-[10px] text-slate-400 truncate">{customer.institution_name}</div>
-                    )}
-                </div>
-                {/* Mini stats */}
-                <div className="hidden sm:flex items-center gap-4 shrink-0">
-                    <div className="text-right">
-                        <div className="text-[10px] text-slate-400 font-medium">Total Omzet</div>
-                        <div className="text-xs font-black text-slate-800">{fmt(totalRevAll)}</div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-[10px] text-slate-400 font-medium">Invoice</div>
-                        <div className="text-xs font-bold text-slate-700">{totalInvAll}</div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-[10px] text-slate-400 font-medium">Qty</div>
-                        <div className="text-xs font-bold text-slate-700">{totalQtyAll.toLocaleString("id-ID")} Pcs</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 min-w-[70px]">
-                        <StatusDot paidRate={avgPaid} fulfillRate={avgFulfill} />
-                        <div className="text-[10px] text-slate-400">
-                            Bayar {avgPaid}% · Prod {avgFulfill}%
-                        </div>
-                    </div>
-                </div>
-                {expanded
-                    ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
-                    : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
-            </button>
-
-            {/* Expanded: per-year breakdown */}
-            {expanded && (
-                <div className="border-t border-slate-100 px-4 py-3 bg-slate-50 space-y-3">
-                    {activeYears.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">Tidak ada invoice di tahun manapun.</p>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {years.map(yr => {
-                                const yd = customer.years.find(y => y.year === yr);
-                                if (!yd || yd.invoices === 0) return (
-                                    <div key={yr} className="rounded-md border border-dashed border-slate-200 p-3 flex flex-col gap-1 bg-white opacity-50">
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{yr}</div>
-                                        <div className="text-xs text-slate-300 italic">Tidak ada pesanan</div>
-                                    </div>
-                                );
-                                return (
-                                    <div key={yr} className="rounded-md border border-slate-200 p-3 flex flex-col gap-2 bg-white">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{yr}</span>
-                                            <StatusDot paidRate={yd.paid_rate} fulfillRate={yd.fulfill_rate} />
-                                        </div>
-                                        <div className="text-sm font-black text-slate-800">{fmt(yd.total_amount)}</div>
-                                        {/* Revenue bar */}
-                                        <MiniBar value={yd.total_amount} max={maxRevenue} color={colorObj.bar} />
-                                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] mt-0.5">
-                                            <div>
-                                                <span className="text-slate-400">Invoice</span>
-                                                <span className="font-bold text-slate-700 ml-1">{yd.invoices}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400">Qty</span>
-                                                <span className="font-bold text-slate-700 ml-1">{yd.qty.toLocaleString("id-ID")} Pcs</span>
-                                            </div>
-                                            <div className="col-span-2 flex gap-1 flex-wrap mt-0.5">
-                                                {yd.lunas > 0 && (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Lunas {yd.lunas}</span>
-                                                )}
-                                                {yd.dp > 0 && (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">DP {yd.dp}</span>
-                                                )}
-                                                {yd.belum_bayar > 0 && (
-                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Belum {yd.belum_bayar}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {/* Paid rate */}
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                                                <span className="flex items-center gap-1"><DollarSign className="w-2.5 h-2.5" /> Pembayaran</span>
-                                                <span className="font-bold text-slate-600">{yd.paid_rate}%</span>
-                                            </div>
-                                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                <div className="h-full rounded-full bg-emerald-400 transition-all duration-500" style={{ width: `${yd.paid_rate}%` }} />
-                                            </div>
-                                        </div>
-                                        {/* Fulfill rate */}
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                                                <span className="flex items-center gap-1"><Package className="w-2.5 h-2.5" /> Prod. Selesai</span>
-                                                <span className="font-bold text-slate-600">{yd.fulfill_rate}%</span>
-                                            </div>
-                                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                <div className="h-full rounded-full bg-indigo-400 transition-all duration-500" style={{ width: `${yd.fulfill_rate}%` }} />
-                                            </div>
-                                        </div>
-                                        {yd.outstanding > 0 && (
-                                            <div className="text-[10px] text-rose-600 font-bold">
-                                                Sisa tagihan: {fmt(yd.outstanding)}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
 export default function CustomerYearlyTrendChart() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [search, setSearch] = useState("");
+    const [selectedCustomerId, setSelectedCustomerId] = useState("ALL");
+    const [yearFrom, setYearFrom] = useState(new Date().getFullYear() - 1);
+    const [yearTo, setYearTo] = useState(new Date().getFullYear());
+    const [hoveredIdx, setHoveredIdx] = useState(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -215,111 +38,249 @@ export default function CustomerYearlyTrendChart() {
     useEffect(() => { load(); }, [load]);
 
     const years = useMemo(() => data?.available_years || [], [data]);
-    const customers = useMemo(() => {
-        const list = data?.customers || [];
-        if (!search.trim()) return list;
-        const q = search.toLowerCase();
-        return list.filter(c =>
-            c.name?.toLowerCase().includes(q) ||
-            c.institution_name?.toLowerCase().includes(q)
-        );
-    }, [data, search]);
+    const customers = useMemo(() => data?.customers || [], [data]);
 
-    // Max revenue across all year-customer combos (for bar scale)
+    // Build year range options
+    const yearOptions = useMemo(() => {
+        if (years.length === 0) return [];
+        const min = Math.min(...years);
+        const max = Math.max(...years);
+        const opts = [];
+        for (let y = max; y >= min; y--) opts.push(y);
+        return opts;
+    }, [years]);
+
+    // Filtered years within range
+    const rangeYears = useMemo(() => {
+        return years.filter((y) => y >= yearFrom && y <= yearTo).sort((a, b) => a - b);
+    }, [years, yearFrom, yearTo]);
+
+    // Selected customer info
+    const selectedCustomer = useMemo(() => {
+        if (selectedCustomerId === "ALL") return null;
+        return customers.find((c) => c.customer_id == selectedCustomerId) || null;
+    }, [customers, selectedCustomerId]);
+
+    // Chart data: revenue per year for selected customer
+    const chartData = useMemo(() => {
+        if (selectedCustomerId === "ALL") {
+            // Aggregate all customers per year
+            return rangeYears.map((yr) => {
+                let totalRevenue = 0;
+                let totalQty = 0;
+                let totalInvoices = 0;
+                customers.forEach((c) => {
+                    const yd = c.years.find((y) => y.year === yr);
+                    if (yd) {
+                        totalRevenue += yd.total_amount || 0;
+                        totalQty += yd.qty || 0;
+                        totalInvoices += yd.invoices || 0;
+                    }
+                });
+                return { year: yr, label: String(yr), revenue: totalRevenue, qty: totalQty, invoices: totalInvoices };
+            });
+        } else {
+            const cust = customers.find((c) => c.customer_id == selectedCustomerId);
+            if (!cust) return [];
+            return rangeYears.map((yr) => {
+                const yd = cust.years.find((y) => y.year === yr);
+                return {
+                    year: yr,
+                    label: String(yr),
+                    revenue: yd?.total_amount || 0,
+                    qty: yd?.qty || 0,
+                    invoices: yd?.invoices || 0,
+                };
+            });
+        }
+    }, [customers, selectedCustomerId, rangeYears]);
+
     const maxRevenue = useMemo(() => {
-        let max = 0;
-        (data?.customers || []).forEach(c => {
-            c.years.forEach(y => { if (y.total_amount > max) max = y.total_amount; });
-        });
-        return max;
-    }, [data]);
+        if (chartData.length === 0) return 1;
+        return Math.max(...chartData.map((d) => d.revenue), 1);
+    }, [chartData]);
+
+    const totalRevenue = useMemo(() => chartData.reduce((s, d) => s + d.revenue, 0), [chartData]);
+    const totalQty = useMemo(() => chartData.reduce((s, d) => s + d.qty, 0), [chartData]);
+    const totalInvoices = useMemo(() => chartData.reduce((s, d) => s + d.invoices, 0), [chartData]);
 
     return (
-        <div className="pt-4 space-y-4">
-            {/* Section header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div className="bg-white rounded-md border border-slate-200 shadow-sm p-4 sm:p-5">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
-                    <div
-                        className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold shadow-sm"
-                        style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", backgroundColor: "#6366f1" }}
-                    >
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
                         <TrendingUp className="w-4 h-4" />
                     </div>
                     <div>
-                        <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-                            Tren Pesanan per Pelanggan
-                        </h2>
-                        <p className="text-xs text-slate-500">
-                            Riwayat omzet tahunan, pembayaran & status produksi per pelanggan
-                        </p>
+                        <h3 className="text-sm font-bold text-slate-800">Tren & Performa Pesanan Pelanggan</h3>
+                        <p className="text-[11px] text-slate-500">Grafik omzet per tahun berdasarkan pelanggan</p>
                     </div>
                 </div>
                 <button
                     onClick={load}
                     disabled={loading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer"
                 >
                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                    <span>{loading ? "Memuat..." : "Refresh"}</span>
                 </button>
             </div>
 
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+                {/* Customer Selector */}
+                <div className="relative">
+                    <select
+                        value={selectedCustomerId}
+                        onChange={(e) => setSelectedCustomerId(e.target.value)}
+                        className="appearance-none pl-3 pr-8 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-white text-slate-700 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 cursor-pointer"
+                    >
+                        <option value="ALL">Semua Pelanggan</option>
+                        {customers.map((c) => (
+                            <option key={c.customer_id} value={c.customer_id}>{c.name}</option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                </div>
+
+                {/* Year Range */}
+                <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <select
+                        value={yearFrom}
+                        onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setYearFrom(v);
+                            if (v > yearTo) setYearTo(v);
+                        }}
+                        className="appearance-none px-2 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-white text-slate-700 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 cursor-pointer"
+                    >
+                        {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <span className="text-xs text-slate-400">s/d</span>
+                    <select
+                        value={yearTo}
+                        onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setYearTo(v);
+                            if (v < yearFrom) setYearFrom(v);
+                        }}
+                        className="appearance-none px-2 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-white text-slate-700 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 cursor-pointer"
+                    >
+                        {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* Loading / Error */}
             {loading && (
-                <div className="flex items-center justify-center py-12 text-slate-400 gap-2 text-sm">
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Memuat data tren pelanggan...
+                <div className="flex items-center justify-center py-10 text-slate-400 gap-2 text-xs">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Memuat data...
                 </div>
             )}
             {error && (
-                <div className="p-4 bg-rose-50 text-rose-700 rounded-lg text-sm font-medium border border-rose-200">
-                    {error}
-                </div>
+                <div className="p-3 bg-rose-50 text-rose-700 rounded-lg text-xs font-medium border border-rose-200">{error}</div>
             )}
-            {!loading && !error && data && (
+
+            {/* Chart */}
+            {!loading && !error && chartData.length > 0 && (
                 <>
-                    {/* Search */}
-                    <div className="flex items-center gap-2">
-                        <div className="relative flex-1 max-w-sm">
-                            <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Cari pelanggan..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-slate-700 placeholder-slate-400"
-                            />
+                    {/* Summary */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="bg-slate-50 rounded-lg p-2.5 text-center">
+                            <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Omzet</div>
+                            <div className="text-sm font-bold text-slate-800 font-mono">{fmtRp(totalRevenue)}</div>
                         </div>
-                        <span className="text-xs text-slate-400 font-medium shrink-0">
-                            {customers.length} pelanggan · {years.slice(0, 4).join(", ")}
-                        </span>
+                        <div className="bg-slate-50 rounded-lg p-2.5 text-center">
+                            <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Qty</div>
+                            <div className="text-sm font-bold text-slate-800 font-mono">{fmtNum(totalQty)} <span className="text-[10px] text-slate-400">pcs</span></div>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-2.5 text-center">
+                            <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Invoice</div>
+                            <div className="text-sm font-bold text-slate-800 font-mono">{fmtNum(totalInvoices)}</div>
+                        </div>
                     </div>
 
-                    {/* Legend */}
-                    <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-500">
-                        <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Terpenuhi (bayar ≥100% & prod ≥100%)</span>
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-amber-500" /> Sebagian (≥80%)</span>
-                        <span className="flex items-center gap-1"><AlertCircle className="w-3 h-3 text-rose-500" /> Belum (&lt;80%)</span>
-                    </div>
-
-                    {/* Customer list */}
-                    {customers.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400 text-sm bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                            Tidak ada pelanggan ditemukan.
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {customers.map((cust, idx) => (
-                                <CustomerRow
-                                    key={cust.customer_id}
-                                    customer={cust}
-                                    years={years}
-                                    colorObj={CUSTOMER_COLORS[idx % CUSTOMER_COLORS.length]}
-                                    maxRevenue={maxRevenue}
-                                />
-                            ))}
+                    {/* Selected Customer Info */}
+                    {selectedCustomer && (
+                        <div className="mb-3 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                                {selectedCustomer.name?.charAt(0)?.toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                                <span className="text-xs font-bold text-teal-800 block truncate">{selectedCustomer.name}</span>
+                                {selectedCustomer.institution_name && (
+                                    <span className="text-[10px] text-teal-600">{selectedCustomer.institution_name}</span>
+                                )}
+                            </div>
                         </div>
                     )}
+
+                    {/* Vertical Bar Chart */}
+                    <div className="relative pt-4 pb-2">
+                        {/* Gridlines */}
+                        <div className="absolute inset-x-0 top-4 bottom-8 flex flex-col justify-between pointer-events-none opacity-40">
+                            <div className="border-b border-dashed border-slate-200" />
+                            <div className="border-b border-dashed border-slate-200" />
+                            <div className="border-b border-dashed border-slate-200" />
+                            <div className="border-b border-slate-300" />
+                        </div>
+
+                        {/* Bars */}
+                        <div className="grid gap-2 sm:gap-3 h-56 relative z-10 px-1 items-end" style={{ gridTemplateColumns: `repeat(${chartData.length}, 1fr)` }}>
+                            {chartData.map((d, idx) => {
+                                const h = maxRevenue > 0 ? Math.max(2, (d.revenue / maxRevenue) * 100) : 2;
+                                const isHovered = hoveredIdx === idx;
+
+                                return (
+                                    <div
+                                        key={d.year}
+                                        className="flex flex-col items-center h-full justify-end cursor-pointer relative"
+                                        onMouseEnter={() => setHoveredIdx(idx)}
+                                        onMouseLeave={() => setHoveredIdx(null)}
+                                    >
+                                        {/* Tooltip */}
+                                        {isHovered && (
+                                            <div className="absolute bottom-full mb-2 bg-slate-900 text-white rounded-lg p-2.5 shadow-xl text-[10px] z-50 pointer-events-none min-w-[160px]">
+                                                <div className="font-bold text-xs mb-1.5 border-b border-slate-700 pb-1">{d.label}</div>
+                                                <div className="space-y-0.5">
+                                                    <div className="flex justify-between"><span className="text-slate-400">Omzet:</span><span className="font-bold text-teal-300 font-mono">{fmtRp(d.revenue)}</span></div>
+                                                    <div className="flex justify-between"><span className="text-slate-400">Qty:</span><span className="font-bold text-white font-mono">{fmtNum(d.qty)} pcs</span></div>
+                                                    <div className="flex justify-between"><span className="text-slate-400">Invoice:</span><span className="font-bold text-white font-mono">{d.invoices}</span></div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Bar */}
+                                        <div
+                                            className={`w-full max-w-[80px] rounded-t-md transition-all duration-300 ${isHovered ? "bg-teal-600" : "bg-teal-500"}`}
+                                            style={{ height: `${h}%` }}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* X-axis labels */}
+                        <div className="grid gap-2 sm:gap-3 px-1 mt-2" style={{ gridTemplateColumns: `repeat(${chartData.length}, 1fr)` }}>
+                            {chartData.map((d) => (
+                                <div key={d.year} className="text-center">
+                                    <span className="text-[10px] font-bold text-slate-500">{d.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Y-axis label */}
+                    <div className="mt-1 text-[10px] text-slate-400 text-center">
+                        Omzet (Rp) per tahun
+                    </div>
                 </>
+            )}
+
+            {!loading && !error && chartData.length === 0 && (
+                <div className="py-10 text-center text-xs text-slate-400">Tidak ada data untuk rentang tahun yang dipilih.</div>
             )}
         </div>
     );

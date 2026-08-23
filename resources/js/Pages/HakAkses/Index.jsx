@@ -211,7 +211,7 @@ export default function Index() {
                                             type="button"
                                             onClick={handleSave}
                                             disabled={saving}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold rounded-md text-xs transition-colors shadow-2xs cursor-pointer"
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-semibold rounded-md text-xs transition-colors shadow-2xs cursor-pointer"
                                         >
                                             <Save className="w-3.5 h-3.5" />
                                             <span>{saving ? "Menyimpan..." : "Simpan"}</span>

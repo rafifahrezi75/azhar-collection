@@ -68,7 +68,7 @@ const CustomerTable = memo(function CustomerTable({
     };
 
     return (
-        <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-soft-sm overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                     <thead>
@@ -194,7 +194,7 @@ const CustomerTable = memo(function CustomerTable({
                                                     type="button"
                                                     onClick={() => onViewDetail?.(item)}
                                                     title="Lihat Detail Pelanggan"
-                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
+                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg transition-all duration-200 border border-sky-200/80 cursor-pointer shadow-soft-2xs"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </button>
@@ -205,7 +205,7 @@ const CustomerTable = memo(function CustomerTable({
                                                         type="button"
                                                         onClick={() => onEdit(item)}
                                                         title="Edit Data Pelanggan"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-all duration-200 border border-indigo-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -217,7 +217,7 @@ const CustomerTable = memo(function CustomerTable({
                                                         type="button"
                                                         onClick={() => onDelete(item)}
                                                         title="Hapus Data Pelanggan"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition-all duration-200 border border-rose-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>

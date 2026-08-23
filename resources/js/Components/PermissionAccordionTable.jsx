@@ -24,7 +24,7 @@ const IndeterminateCheckbox = memo(function IndeterminateCheckbox({
             checked={checked}
             disabled={disabled}
             onChange={onChange}
-            className={`rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed ${className}`}
+            className={`rounded-sm border-slate-300 text-teal-600 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1 w-4 h-4 cursor-pointer disabled:cursor-not-allowed ${className}`}
         />
     );
 });
@@ -53,11 +53,11 @@ const PermissionAccordionTable = memo(function PermissionAccordionTable({
     };
 
     return (
-        <div className="bg-white border border-slate-200/90 rounded-md overflow-hidden shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-soft-sm">
             {/* Control Header Bar */}
             <div className="px-4 py-2.5 bg-slate-50/90 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
+                    <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
                         <Shield className="w-3.5 h-3.5" />
                     </div>
                     <div>
@@ -73,7 +73,7 @@ const PermissionAccordionTable = memo(function PermissionAccordionTable({
                 {/* Target Context Info (non-button indicator) */}
                 <div className="flex items-center gap-2 flex-wrap">
                     {targetTitle && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-800 text-xs font-semibold shadow-2xs">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs font-semibold shadow-soft-2xs">
                             <span className="text-[11px] text-slate-400 font-medium">Target:</span>
                             <span className="font-bold text-slate-900">{targetTitle}</span>
                             {targetBadge}
@@ -149,7 +149,7 @@ const PermissionAccordionTable = memo(function PermissionAccordionTable({
                                                 checked={selectedPermissions.includes(viewPerm.id)}
                                                 disabled={isRowDisabled}
                                                 onChange={() => onTogglePermission(viewPerm.id)}
-                                                className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                                                className="rounded-sm border-slate-300 text-teal-600 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
                                             />
                                         ) : (
                                             <span className="text-slate-300 font-mono text-xs">-</span>
@@ -164,7 +164,7 @@ const PermissionAccordionTable = memo(function PermissionAccordionTable({
                                                 checked={selectedPermissions.includes(createPerm.id)}
                                                 disabled={isRowDisabled}
                                                 onChange={() => onTogglePermission(createPerm.id)}
-                                                className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                                                className="rounded-sm border-slate-300 text-teal-600 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
                                             />
                                         ) : (
                                             <span className="text-slate-300 font-mono text-xs">-</span>
@@ -179,7 +179,7 @@ const PermissionAccordionTable = memo(function PermissionAccordionTable({
                                                 checked={selectedPermissions.includes(updatePerm.id)}
                                                 disabled={isRowDisabled}
                                                 onChange={() => onTogglePermission(updatePerm.id)}
-                                                className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                                                className="rounded-sm border-slate-300 text-teal-600 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
                                             />
                                         ) : (
                                             <span className="text-slate-300 font-mono text-xs">-</span>
@@ -194,7 +194,7 @@ const PermissionAccordionTable = memo(function PermissionAccordionTable({
                                                 checked={selectedPermissions.includes(deletePerm.id)}
                                                 disabled={isRowDisabled}
                                                 onChange={() => onTogglePermission(deletePerm.id)}
-                                                className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                                                className="rounded-sm border-slate-300 text-teal-600 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
                                             />
                                         ) : (
                                             <span className="text-slate-300 font-mono text-xs">-</span>

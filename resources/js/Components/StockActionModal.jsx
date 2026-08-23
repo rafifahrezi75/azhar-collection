@@ -114,7 +114,7 @@ const StockActionModal = memo(function StockActionModal({
 
     return (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200 overflow-y-auto">
-            <div className="bg-white rounded-md max-w-3xl w-full p-4 sm:p-5 shadow-xl border border-slate-200 animate-in zoom-in-95 duration-150 my-auto">
+            <div className="bg-white rounded-xl max-w-3xl w-full p-4 sm:p-5 shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 my-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-3">
@@ -135,7 +135,7 @@ const StockActionModal = memo(function StockActionModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
                     >
                         <X className="w-5 h-5" />
                     </button>

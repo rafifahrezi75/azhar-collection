@@ -89,7 +89,7 @@ export default function DeleteUserForm({ className = '' }) {
                             onChange={(e) =>
                                 setData('password', e.target.value)
                             }
-                            className="mt-1 block w-full text-xs sm:text-sm rounded-md border-slate-300 focus:ring-1 focus:ring-rose-500"
+                            className="mt-1 block w-full text-xs sm:text-sm"
                             isFocused
                             placeholder="Masukkan kata sandi Anda"
                         />
@@ -101,7 +101,7 @@ export default function DeleteUserForm({ className = '' }) {
                     </div>
 
                     <div className="pt-2.5 flex justify-end gap-2 border-t border-slate-100">
-                        <SecondaryButton onClick={closeModal} className="rounded-md text-xs font-bold">
+                        <SecondaryButton onClick={closeModal}                         className="rounded-lg text-xs font-bold">
                             Batal
                         </SecondaryButton>
 

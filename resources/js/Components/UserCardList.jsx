@@ -36,7 +36,7 @@ const UserCardList = memo(function UserCardList({
                             <div
                                 key={user.id}
                                 onClick={() => onSelectUser(user.id)}
-                                className={`p-3 rounded-md border transition-all cursor-pointer select-none flex items-center justify-between shadow-2xs ${
+                                className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer select-none flex items-center justify-between shadow-soft-2xs ${
                                     isSelected
                                         ? "bg-slate-900 text-white border-slate-800 ring-1 ring-emerald-500/30"
                                         : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800"
@@ -44,9 +44,9 @@ const UserCardList = memo(function UserCardList({
                             >
                                 <div className="flex items-center gap-2.5 min-w-0">
                                     <div
-                                        className={`w-7 h-7 rounded-md flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
                                             isSelected
-                                                ? "bg-emerald-600 text-white shadow-xs"
+                                                ? "bg-emerald-600 text-white shadow-soft-xs"
                                                 : "bg-amber-50 text-amber-700 border border-amber-200/60"
                                         }`}
                                     >
@@ -82,7 +82,7 @@ const UserCardList = memo(function UserCardList({
                     })}
                 </div>
             ) : (
-                <div className="p-3 bg-white rounded-md border border-slate-200 text-center space-y-1 shadow-2xs">
+                <div className="p-3 bg-white rounded-lg border border-slate-200 text-center space-y-1 shadow-soft-2xs">
                     <p className="text-xs font-semibold text-slate-700">Belum Ada Pengguna Hak Akses Khusus</p>
                     <p className="text-[11px] text-slate-400">
                         Pilih pengguna di atas untuk menetapkan hak akses khusus.
