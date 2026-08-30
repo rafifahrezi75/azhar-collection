@@ -26,9 +26,9 @@ class ProductionProgressSeeder extends Seeder
             return;
         }
 
-        $tailors = User::orderBy('id')->get();
-        if ($tailors->count() < 1) {
-            $this->command->warn('No users found. Skipping.');
+        $tailors = User::whereHas('roles', fn ($q) => $q->where('name', 'staff'))->get();
+        if ($tailors->isEmpty()) {
+            $this->command->warn('No staff users (tailors) found. Skipping.');
 
             return;
         }

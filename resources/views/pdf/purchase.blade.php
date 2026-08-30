@@ -1,181 +1,328 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <title>Nota Pembelian - {{ $purchase->reference_no }}</title>
     <style>
+        @page {
+            size: 210mm 148mm;
+            margin: 5mm 10mm;
+        }
+
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 14px;
-            color: #333;
-            line-height: 1.5;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-        }
-        .header h1 {
+            font-size: 12px;
+            line-height: 1.15;
             margin: 0;
-            font-size: 24px;
+            padding: 0;
+            color: #1e3a8a;
+            background-color: #fff;
         }
-        .header p {
-            margin: 5px 0 0 0;
-            color: #666;
-        }
-        .info-table {
+
+        .container {
             width: 100%;
-            margin-bottom: 20px;
         }
-        .info-table td {
-            padding: 4px 0;
+
+        .text-center {
+            text-align: center;
         }
-        .info-table td:first-child {
-            width: 120px;
-            font-weight: bold;
-        }
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        .items-table th, .items-table td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-        }
-        .items-table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        .items-table .text-right {
+
+        .text-right {
             text-align: right;
         }
-        .items-table .text-center {
-            text-align: center;
+
+        .text-left {
+            text-align: left;
         }
-        .total-row td {
+
+        .header-table {
+            width: 100%;
+            margin: 0 0 2px;
+            border-collapse: collapse;
+        }
+
+        .logo-title {
+            font-family: 'Arial Black', Impact, sans-serif;
+            font-size: 26px;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: 1px;
+            margin-bottom: -2px;
+        }
+
+        .logo-subtitle {
+            font-size: 11px;
             font-weight: bold;
-            background-color: #f8f9fa;
+            letter-spacing: 0.5px;
         }
-        .notes {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-left: 4px solid #0d9488;
-            margin-bottom: 30px;
+
+        .address-box {
+            display: inline-block;
+            margin-left: 10px;
+            font-size: 10px;
+            line-height: 1.2;
         }
-        .notes p {
-            margin: 0;
+
+        .title-table {
+            width: 100%;
+            margin: 3px 0 2px;
+            border-collapse: collapse;
         }
-        .footer {
-            margin-top: 50px;
+
+        table.master-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        table.master-table thead {
+            display: table-row-group;
+        }
+
+        table.master-table tr {
+            page-break-inside: avoid;
+        }
+
+        table.master-table th {
+            height: 22px;
+            border: 1px solid #1e3a8a;
+            padding: 2px 4px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1.15;
+        }
+
+        table.master-table td.cell {
+            height: 22px;
+            border: 1px solid #1e3a8a;
+            padding: 2px 4px;
+            vertical-align: middle;
+            font-size: 12px;
+            line-height: 1.15;
+        }
+
+        .footer-table {
+            width: 100%;
+            margin-top: -1px;
+            border-collapse: collapse;
+            table-layout: fixed;
+            page-break-inside: avoid;
+        }
+
+        .signature-cell {
+            width: 60%;
+            height: 70px;
+            padding: 4px 8px 2px;
+            border-top: 1px solid #1e3a8a;
+            vertical-align: top;
+        }
+
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
             text-align: center;
             font-size: 12px;
-            color: #777;
-            border-top: 1px solid #ddd;
-            padding-top: 15px;
         }
-        .signatures {
+
+        .signature-space {
+            height: 28px;
+        }
+
+        .summary-wrapper {
+            width: 40%;
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .summary-table {
             width: 100%;
-            margin-top: 50px;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
-        .signatures td {
-            text-align: center;
-            width: 50%;
+
+        .total-cell {
+            height: 22px;
+            border: 1px solid #1e3a8a;
+            padding: 2px 4px;
+            vertical-align: middle;
+            font-size: 12px;
+            line-height: 1.15;
+            font-weight: bold;
         }
-        .sig-line {
-            display: inline-block;
-            width: 200px;
-            border-top: 1px solid #333;
-            margin-top: 70px;
+
+        .notes-cell {
+            height: 48px;
+            border: 1px solid #1e3a8a;
+            padding: 6px 5px 3px;
+            vertical-align: top;
+            text-align: left;
+            font-size: 12px;
+            line-height: 1.2;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <h1>Azhar Collection</h1>
-        <p>Grosir & Eceran Seragam Sekolah</p>
-        <p style="font-size: 16px; font-weight: bold; margin-top: 10px; color: #000;">NOTA PEMBELIAN (KULAAN)</p>
-    </div>
-
-    <table class="info-table">
-        <tr>
-            <td>No. Referensi</td>
-            <td>: {{ $purchase->reference_no }}</td>
-            <td>Tanggal</td>
-            <td>: {{ \Carbon\Carbon::parse($purchase->date)->translatedFormat('d F Y') }}</td>
-        </tr>
-        <tr>
-            <td>Supplier / Toko</td>
-            <td>: {{ $purchase->supplier_name ?: '-' }}</td>
-            <td>Admin</td>
-            <td>: {{ $purchase->creator ? $purchase->creator->name : '-' }}</td>
-        </tr>
-    </table>
-
-    <table class="items-table">
-        <thead>
+    <div class="container">
+        <table class="header-table">
             <tr>
-                <th class="text-center" width="5%">No</th>
-                <th width="32%">Nama Barang</th>
-                <th class="text-right" width="12%">Kuantitas</th>
-                <th width="16%">Satuan</th>
-                <th class="text-right" width="17%">Harga Satuan</th>
-                <th class="text-right" width="18%">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($purchase->items as $index => $item)
-            @php
-                $unitName = optional($item->unit)->name ?? optional(optional($item->item)->unit)->name ?? '-';
-                $unitSymbol = optional($item->unit)->symbol ?? optional(optional($item->item)->unit)->symbol ?? '';
-            @endphp
-            <tr>
-                <td class="text-center">{{ $index + 1 }}</td>
-                <td>
-                    {{ $item->item->name }}<br>
-                    <small style="color: #666;">Kode: {{ $item->item->code }}</small>
+                <td style="width: 55%; vertical-align: top;">
+                    <table style="width: auto; border-collapse: collapse;">
+                        <tr>
+                            <td class="text-center" style="padding-right: 10px;">
+                                <div class="logo-title">AZHAR</div>
+                                <div class="logo-subtitle">AZHAR COLLECTION</div>
+                            </td>
+                            <td style="border-left: 1px solid #1e3a8a; padding-left: 10px;">
+                                <div class="address-box">
+                                    a : Damarsi Rt.03 Rw.01 Buduran-Sidoarjo<br>
+                                    e : email: azharcollection@gmail.com<br>
+                                    p : Telp/Hp: 081330666807 (Ach. Haris)<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;087855476538 (Lazuardi)
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td class="text-right">{{ $item->quantity }}</td>
-                <td>{{ $unitName }}@if($unitSymbol) ({{ $unitSymbol }})@endif</td>
-                <td class="text-right">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                <td class="text-right">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                <td style="width: 45%; text-align: right; vertical-align: top;">
+                    <div style="display: inline-block; text-align: left; font-size: 12px; line-height: 1.25;">
+                        <div style="margin-bottom: 2px;">
+                            Sidoarjo, {{ \Carbon\Carbon::parse($purchase->date)->translatedFormat('d F Y') }}
+                        </div>
+                        Supplier / Toko:<br>
+                        <span style="font-size: 14px; font-weight: bold;">
+                            {{ $purchase->supplier_name ?: '-' }}
+                        </span><br>
+                        Admin:
+                        <span>
+                            {{ $purchase->creator ? $purchase->creator->name : '-' }}
+                        </span>
+                    </div>
+                </td>
             </tr>
-            @endforeach
-            <tr class="total-row">
-                <td colspan="5" class="text-right">TOTAL PEMBELIAN:</td>
-                <td class="text-right">Rp {{ number_format($purchase->total_amount, 0, ',', '.') }}</td>
+        </table>
+
+        <table class="title-table">
+            <tr>
+                <td style="width: 33%; vertical-align: bottom; font-size: 12px; font-weight: bold;">
+                    Ref : {{ $purchase->reference_no }}
+                </td>
+                <td style="width: 34%; text-align: center; vertical-align: bottom; font-size: 15px; font-weight: bold; letter-spacing: 1px;">
+                    NOTA PEMBELIAN (KULAAN)
+                </td>
+                <td style="width: 33%;"></td>
             </tr>
-        </tbody>
-    </table>
+        </table>
 
-    @if($purchase->notes)
-    <div class="notes">
-        <strong>Catatan:</strong><br>
-        <p>{{ $purchase->notes }}</p>
+        <table class="master-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Banyak</th>
+                    <th style="width: 45%;">Nama Barang</th>
+                    <th style="width: 20%;">Harga Satuan</th>
+                    <th style="width: 20%;">Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php
+                    $totalRows = 10;
+                    $items = $purchase->items;
+                    $notes = trim((string) $purchase->notes);
+                @endphp
+
+                @for($i = 0; $i < $totalRows; $i++)
+                    <tr>
+                        @if(isset($items[$i]))
+                            @php
+                                $item = $items[$i];
+                                $unitName = optional($item->unit)->name
+                                    ?? optional(optional($item->item)->unit)->name
+                                    ?? '-';
+                            @endphp
+
+                            <td class="cell text-center">
+                                {{ $item->quantity }} {{ $unitName }}
+                            </td>
+                            <td class="cell">
+                                {{ $item->item->name }}
+                                <span style="font-size: 11px; margin-left: 5px;">
+                                    (Kode: {{ $item->item->code }})
+                                </span>
+                            </td>
+                            <td class="cell text-right">
+                                {{ number_format($item->unit_price, 0, ',', '.') }}
+                            </td>
+                            <td class="cell text-right">
+                                {{ number_format($item->subtotal, 0, ',', '.') }}
+                            </td>
+                        @else
+                            <td class="cell">&nbsp;</td>
+                            <td class="cell">&nbsp;</td>
+                            <td class="cell">&nbsp;</td>
+                            <td class="cell">&nbsp;</td>
+                        @endif
+                    </tr>
+                @endfor
+            </tbody>
+        </table>
+
+        <table class="footer-table">
+            <tr>
+                <td class="signature-cell">
+                    <table class="signature-table">
+                        <tr>
+                            <td style="width: 50%; font-weight: bold;">
+                                Mengetahui
+                            </td>
+                            <td style="width: 50%; font-weight: bold;">
+                                Dibuat Oleh
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="signature-space"></td>
+                            <td class="signature-space"></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                ( ___________________ )<br>
+                                <span style="font-size: 11px;">
+                                    Pemilik
+                                </span>
+                            </td>
+                            <td>
+                                ( ___________________ )<br>
+                                <span style="font-size: 11px;">
+                                    {{ $purchase->creator ? $purchase->creator->name : 'Admin' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+
+                <td class="summary-wrapper">
+                    <table class="summary-table">
+                        <tr>
+                            <td class="total-cell text-center" style="width: 50%;">
+                                TOTAL
+                            </td>
+                            <td class="total-cell text-right" style="width: 50%;">
+                                {{ number_format($purchase->total_amount, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="notes-cell">
+                                <strong>Catatan :</strong>
+                                {{ $notes !== '' ? $notes : '-' }}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
-    @endif
-
-    <table class="signatures">
-        <tr>
-            <td>
-                Mengetahui,<br>
-                <span class="sig-line"></span>
-                <br>Pemilik
-            </td>
-            <td>
-                Dibuat Oleh,<br>
-                <span class="sig-line"></span>
-                <br>{{ $purchase->creator ? $purchase->creator->name : 'Admin' }}
-            </td>
-        </tr>
-    </table>
-
-    <div class="footer">
-        Dicetak pada: {{ \Carbon\Carbon::now()->translatedFormat('d F Y H:i') }} oleh {{ auth()->user()->name ?? 'Sistem' }}
-    </div>
-
 </body>
 </html>

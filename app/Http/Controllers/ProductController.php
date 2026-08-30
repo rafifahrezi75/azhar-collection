@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Item;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductMaterial;
+use App\Models\ProductProductionStep;
 use App\Models\ProductSize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +19,43 @@ class ProductController extends Controller
     public function page(): Response
     {
         return Inertia::render('Produk/Index');
+    }
+
+    public function createPage(): Response
+    {
+        return Inertia::render('Produk/Create');
+    }
+
+    public function editPage(Product $product): Response
+    {
+        $product->load([
+            'images',
+            'sizes.size',
+            'materials.item.unit',
+            'materials.item.category',
+            'materials.size',
+            'productionSteps.productionStep',
+        ]);
+
+        return Inertia::render('Produk/Edit', [
+            'product' => $product,
+        ]);
+    }
+
+    public function showPage(Product $product): Response
+    {
+        $product->load([
+            'images',
+            'sizes.size',
+            'materials.item.unit',
+            'materials.item.category',
+            'materials.size',
+            'productionSteps.productionStep',
+        ]);
+
+        return Inertia::render('Produk/Show', [
+            'product' => $product,
+        ]);
     }
 
     public function index(Request $request): JsonResponse
@@ -35,8 +72,8 @@ class ProductController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('category', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%");
             });
         }
 
@@ -62,14 +99,14 @@ class ProductController extends Controller
 
         foreach ($codes as $code) {
             if (preg_match('/PRD-(\d+)/', $code, $matches)) {
-                $num = (int)$matches[1];
+                $num = (int) $matches[1];
                 if ($num > $maxNum) {
                     $maxNum = $num;
                 }
             }
         }
 
-        $nextCode = 'PRD-' . str_pad($maxNum + 1, 3, '0', STR_PAD_LEFT);
+        $nextCode = 'PRD-'.str_pad($maxNum + 1, 3, '0', STR_PAD_LEFT);
 
         return response()->json([
             'code' => $nextCode,
@@ -102,7 +139,8 @@ class ProductController extends Controller
             'materials.*.unit_name' => 'nullable|string|max:50',
             'materials.*.notes' => 'nullable|string|max:255',
             'production_steps' => 'nullable|array',
-            'production_steps.*.production_step_id' => 'required_with:production_steps|exists:production_steps,id',
+            'production_steps.*.production_step_id' => 'nullable|exists:production_steps,id',
+            'production_steps.*.custom_name' => 'nullable|string|max:255',
             'production_steps.*.wage' => 'nullable|numeric|min:0',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
@@ -121,9 +159,9 @@ class ProductController extends Controller
             ]);
 
             // Save Sizes
-            if (!empty($validated['sizes'])) {
+            if (! empty($validated['sizes'])) {
                 foreach ($validated['sizes'] as $idx => $s) {
-                    if (!empty($s['size_id'])) {
+                    if (! empty($s['size_id'])) {
                         ProductSize::create([
                             'product_id' => $product->id,
                             'size_id' => $s['size_id'],
@@ -136,16 +174,16 @@ class ProductController extends Controller
             }
 
             // Save Materials (BOM)
-            if (!empty($validated['materials'])) {
+            if (! empty($validated['materials'])) {
                 foreach ($validated['materials'] as $mat) {
-                    if (!empty($mat['item_id'])) {
+                    if (! empty($mat['item_id'])) {
                         ProductMaterial::create([
                             'product_id' => $product->id,
                             'item_id' => $mat['item_id'],
-                            'size_id' => !empty($mat['size_id']) ? $mat['size_id'] : null,
+                            'size_id' => ! empty($mat['size_id']) ? $mat['size_id'] : null,
                             'required_qty' => $mat['required_qty'],
-                            'yield_qty' => !empty($mat['yield_qty']) ? (float)$mat['yield_qty'] : 1.0,
-                            'conversion_rate' => !empty($mat['conversion_rate']) ? (float)$mat['conversion_rate'] : 1.0,
+                            'yield_qty' => ! empty($mat['yield_qty']) ? (float) $mat['yield_qty'] : 1.0,
+                            'conversion_rate' => ! empty($mat['conversion_rate']) ? (float) $mat['conversion_rate'] : 1.0,
                             'unit_name' => $mat['unit_name'] ?? null,
                             'notes' => $mat['notes'] ?? null,
                         ]);
@@ -154,12 +192,12 @@ class ProductController extends Controller
             }
 
             // Save Production Steps
-            if (!empty($validated['production_steps'])) {
+            if (! empty($validated['production_steps'])) {
                 foreach ($validated['production_steps'] as $idx => $step) {
-                    if (!empty($step['production_step_id']) || !empty($step['custom_name'])) {
-                        \App\Models\ProductProductionStep::create([
+                    if (! empty($step['production_step_id']) || ! empty($step['custom_name'])) {
+                        ProductProductionStep::create([
                             'product_id' => $product->id,
-                            'production_step_id' => !empty($step['production_step_id']) ? $step['production_step_id'] : null,
+                            'production_step_id' => ! empty($step['production_step_id']) ? $step['production_step_id'] : null,
                             'custom_name' => $step['custom_name'] ?? null,
                             'wage' => $step['wage'] ?? 0,
                             'sort_order' => $idx,
@@ -170,7 +208,7 @@ class ProductController extends Controller
 
             // Save Uploaded Images
             if ($request->hasFile('images')) {
-                $primaryIndex = (int)$request->input('primary_image_index', 0);
+                $primaryIndex = (int) $request->input('primary_image_index', 0);
                 $files = $request->file('images');
                 if (is_array($files)) {
                     foreach ($files as $idx => $file) {
@@ -209,6 +247,7 @@ class ProductController extends Controller
             'sizes.size',
             'materials.item.unit',
             'materials.item.category',
+            'materials.size',
             'productionSteps.productionStep',
         ]);
 
@@ -223,7 +262,7 @@ class ProductController extends Controller
         $this->parseJsonInputs($request);
 
         $validated = $request->validate([
-            'code' => 'required|string|max:50|unique:products,code,' . $product->id,
+            'code' => 'required|string|max:50|unique:products,code,'.$product->id,
             'name' => 'required|string|max:255',
             'category' => 'nullable|string|max:100',
             'default_unit' => 'required|string|max:50',
@@ -267,9 +306,9 @@ class ProductController extends Controller
 
             // Sync sizes
             $product->sizes()->delete();
-            if (!empty($validated['sizes'])) {
+            if (! empty($validated['sizes'])) {
                 foreach ($validated['sizes'] as $idx => $s) {
-                    if (!empty($s['size_id'])) {
+                    if (! empty($s['size_id'])) {
                         ProductSize::create([
                             'product_id' => $product->id,
                             'size_id' => $s['size_id'],
@@ -283,16 +322,16 @@ class ProductController extends Controller
 
             // Sync materials (BOM)
             $product->materials()->delete();
-            if (!empty($validated['materials'])) {
+            if (! empty($validated['materials'])) {
                 foreach ($validated['materials'] as $mat) {
-                    if (!empty($mat['item_id'])) {
+                    if (! empty($mat['item_id'])) {
                         ProductMaterial::create([
                             'product_id' => $product->id,
                             'item_id' => $mat['item_id'],
-                            'size_id' => !empty($mat['size_id']) ? $mat['size_id'] : null,
+                            'size_id' => ! empty($mat['size_id']) ? $mat['size_id'] : null,
                             'required_qty' => $mat['required_qty'],
-                            'yield_qty' => !empty($mat['yield_qty']) ? (float)$mat['yield_qty'] : 1.0,
-                            'conversion_rate' => !empty($mat['conversion_rate']) ? (float)$mat['conversion_rate'] : 1.0,
+                            'yield_qty' => ! empty($mat['yield_qty']) ? (float) $mat['yield_qty'] : 1.0,
+                            'conversion_rate' => ! empty($mat['conversion_rate']) ? (float) $mat['conversion_rate'] : 1.0,
                             'unit_name' => $mat['unit_name'] ?? null,
                             'notes' => $mat['notes'] ?? null,
                         ]);
@@ -302,12 +341,12 @@ class ProductController extends Controller
 
             // Sync Production Steps
             $product->productionSteps()->delete();
-            if (!empty($validated['production_steps'])) {
+            if (! empty($validated['production_steps'])) {
                 foreach ($validated['production_steps'] as $idx => $step) {
-                    if (!empty($step['production_step_id']) || !empty($step['custom_name'])) {
-                        \App\Models\ProductProductionStep::create([
+                    if (! empty($step['production_step_id']) || ! empty($step['custom_name'])) {
+                        ProductProductionStep::create([
                             'product_id' => $product->id,
-                            'production_step_id' => !empty($step['production_step_id']) ? $step['production_step_id'] : null,
+                            'production_step_id' => ! empty($step['production_step_id']) ? $step['production_step_id'] : null,
                             'custom_name' => $step['custom_name'] ?? null,
                             'wage' => $step['wage'] ?? 0,
                             'sort_order' => $idx,
@@ -317,7 +356,7 @@ class ProductController extends Controller
             }
 
             // Delete removed images
-            if (!empty($validated['deleted_image_ids'])) {
+            if (! empty($validated['deleted_image_ids'])) {
                 $imagesToDelete = ProductImage::where('product_id', $product->id)
                     ->whereIn('id', $validated['deleted_image_ids'])
                     ->get();
@@ -346,8 +385,8 @@ class ProductController extends Controller
                     foreach ($files as $idx => $file) {
                         if ($file->isValid()) {
                             $path = $file->store('products', 'public');
-                            $isPrimary = ($primaryIndex !== null && (int)$primaryIndex === $idx);
-                            
+                            $isPrimary = ($primaryIndex !== null && (int) $primaryIndex === $idx);
+
                             // If marked primary or if there's no primary yet
                             if ($isPrimary) {
                                 ProductImage::where('product_id', $product->id)->update(['is_primary' => false]);
@@ -366,7 +405,7 @@ class ProductController extends Controller
 
             // Ensure at least one image is primary if images exist
             $hasPrimary = ProductImage::where('product_id', $product->id)->where('is_primary', true)->exists();
-            if (!$hasPrimary) {
+            if (! $hasPrimary) {
                 ProductImage::where('product_id', $product->id)->orderBy('sort_order')->limit(1)->update(['is_primary' => true]);
             }
 

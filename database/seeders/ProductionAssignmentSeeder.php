@@ -2,13 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\User;
 use App\Models\ProductionAssignment;
 use App\Models\ProductionAssignmentStep;
-use App\Models\ProductProductionStep;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class ProductionAssignmentSeeder extends Seeder
 {
@@ -18,20 +16,22 @@ class ProductionAssignmentSeeder extends Seeder
     public function run(): void
     {
         $invoice = Invoice::with('items.product.productionSteps')->where('invoice_number', 'INV-20260810-BZZB')->first();
-        if (!$invoice) {
+        if (! $invoice) {
             $invoice = Invoice::with('items.product.productionSteps')->first();
         }
 
-        if (!$invoice) {
+        if (! $invoice) {
             $this->command->info('No invoices found. Skip SPK Seeder.');
+
             return;
         }
 
-        // Ambil sembarang user (admin/karyawan)
-        $user = User::first();
+        // Ambil user dengan role staff (penjahit)
+        $user = User::whereHas('roles', fn ($q) => $q->where('name', 'staff'))->first()
+            ?? User::first(); // fallback ke admin jika belum ada staff
 
         foreach ($invoice->items as $item) {
-            if (!$item->product || $item->product->productionSteps->isEmpty()) {
+            if (! $item->product || $item->product->productionSteps->isEmpty()) {
                 continue;
             }
 
@@ -55,7 +55,7 @@ class ProductionAssignmentSeeder extends Seeder
                 ]);
             }
         }
-        
+
         $this->command->info('Production Assignment (SPK) seeded successfully.');
     }
 }

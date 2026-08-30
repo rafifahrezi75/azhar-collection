@@ -260,10 +260,11 @@ const ProductModal = memo(function ProductModal({
     };
 
     // BOM MATERIAL HANDLERS (SIZE-BASED CARDS)
-    const handleAddMaterialToSize = (sizeName) => {
+    const handleAddMaterialToSize = (sizeName, sizeId) => {
         const defaultItem = rawItems[0];
         const newRow = {
             item_id: defaultItem ? defaultItem.id : "",
+            size_id: sizeId || null,
             size_name: sizeName || "ALL",
             required_qty: 1,
             yield_qty: 1,
@@ -297,24 +298,32 @@ const ProductModal = memo(function ProductModal({
         onMaterialsChange(updated);
     };
 
+    // Helper: lookup size_id from masterSizes using size_name
+    const getSizeId = (sizeName) => {
+        if (!sizeName || sizeName === "ALL") return null;
+        const found = masterSizes.find((ms) => ms.size_name === sizeName);
+        return found ? found.id : null;
+    };
+
     // Apply this specific material row to ALL defined sizes
     const handleApplyMaterialToAllSizes = (materialIndex) => {
         const mat = form.materials?.[materialIndex];
         if (!mat || !mat.item_id) return;
 
-        const definedSizes = (form.sizes || []).map((s) => s.size_name).filter(Boolean);
-        const targetSizes = definedSizes.length > 0 ? definedSizes : ["ALL"];
+        const definedSizes = (form.sizes || []).map((s) => ({ name: s.size_name, id: s.size_id })).filter((s) => s.name);
+        const targetSizes = definedSizes.length > 0 ? definedSizes : [{ name: "ALL", id: null }];
         const currentMaterials = [...(form.materials || [])];
 
         // Remove existing instances of this item_id in other sizes to prevent duplicates
         const filtered = currentMaterials.filter(
-            (m) => String(m.item_id) !== String(mat.item_id) || !targetSizes.includes(m.size_name)
+            (m) => String(m.item_id) !== String(mat.item_id) || !targetSizes.some((ts) => ts.name === m.size_name)
         );
 
         // Add this material for every defined size
         const newRows = targetSizes.map((sz) => ({
             item_id: mat.item_id,
-            size_name: sz,
+            size_id: sz.id,
+            size_name: sz.name,
             required_qty: mat.required_qty,
             yield_qty: mat.yield_qty || 1,
             conversion_rate: mat.conversion_rate || 1,
@@ -336,8 +345,11 @@ const ProductModal = memo(function ProductModal({
         // Keep all materials except the target size's current materials
         const keptMaterials = currentMaterials.filter((m) => (m.size_name || "ALL") !== targetSize);
 
+        const targetSizeId = getSizeId(targetSize);
+
         const newTargetMaterials = sourceMaterials.map((m) => ({
             ...m,
+            size_id: targetSizeId,
             size_name: targetSize,
         }));
 
@@ -347,13 +359,14 @@ const ProductModal = memo(function ProductModal({
     // Quick Add 1 Material to ALL sizes simultaneously
     const handleQuickAddMaterialToAll = () => {
         if (!quickItemSelect) return;
-        const definedSizes = (form.sizes || []).map((s) => s.size_name).filter(Boolean);
-        const targetSizes = definedSizes.length > 0 ? definedSizes : ["ALL"];
+        const definedSizes = (form.sizes || []).map((s) => ({ name: s.size_name, id: s.size_id })).filter((s) => s.name);
+        const targetSizes = definedSizes.length > 0 ? definedSizes : [{ name: "ALL", id: null }];
         const currentMaterials = [...(form.materials || [])];
 
         const newRows = targetSizes.map((sz) => ({
             item_id: quickItemSelect,
-            size_name: sz,
+            size_id: sz.id,
+            size_name: sz.name,
             required_qty: Number(quickQty) || 1,
             yield_qty: Number(quickYieldQty) || 1,
             conversion_rate: Number(quickConversionRate) || 1,
@@ -1126,7 +1139,7 @@ const ProductModal = memo(function ProductModal({
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => handleAddMaterialToSize("ALL")}
+                                            onClick={() => handleAddMaterialToSize("ALL", null)}
                                             className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded shadow-2xs transition-colors cursor-pointer"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
@@ -1330,7 +1343,7 @@ const ProductModal = memo(function ProductModal({
 
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleAddMaterialToSize(sizeName)}
+                                                            onClick={() => handleAddMaterialToSize(sizeName, sz.size_id)}
                                                             className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded shadow-2xs transition-colors cursor-pointer"
                                                         >
                                                             <Plus className="w-3.5 h-3.5" />

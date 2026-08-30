@@ -82,7 +82,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
         const lineQty = Number(line.qty) || 0;
         const breakdownMap = {};
         const materialsList = [];
-        
+
         if (line.size_breakdown) {
             let parsed = line.size_breakdown;
             if (typeof parsed === 'string') {
@@ -105,12 +105,12 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                 // Calculate per size
                 Object.entries(breakdownMap).forEach(([sizeName, sizeQty]) => {
                     if (sizeQty <= 0) return;
-                    
+
                     let sizeMaterials = prod.materials.filter(m => m.size_name === sizeName);
                     if (sizeMaterials.length === 0) {
                         sizeMaterials = prod.materials.filter(m => !m.size_name || m.size_name === 'ALL');
                     }
-                    
+
                     sizeMaterials.forEach(mat => {
                         const itemName = mat.item?.name || "Bahan Baku";
                         const itemCode = mat.item?.code || "-";
@@ -118,7 +118,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                         const required = Number(mat.required_qty) || 0;
                         const yieldQty = Math.max(0.0001, Number(mat.yield_qty) || 1);
                         const usageQty = (sizeQty / yieldQty) * required;
-                        
+
                         materialsList.push({
                             forSize: sizeName,
                             name: itemName,
@@ -139,7 +139,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                     const required = Number(mat.required_qty) || 0;
                     const yieldQty = Math.max(0.0001, Number(mat.yield_qty) || 1);
                     const usageQty = (lineQty / yieldQty) * required;
-                    
+
                     materialsList.push({
                         forSize: 'ALL',
                         name: itemName,
@@ -151,7 +151,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                 });
             }
         }
-        
+
         return {
             id: line.id,
             itemName: line.item_name,
@@ -412,43 +412,94 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
 
                         {/* Tab Content */}
                         <div className="flex-1 p-4">
-                            
+
                             {/* Rincian Pesanan Tab */}
                             {activeTab === "items" && (
                                 <div className="space-y-3 animate-in fade-in duration-300">
-                                    {items.map((item) => (
-                                        <div key={item.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-soft-2xs">
-                                            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
-                                                <div>
-                                                    <h4 className="font-bold text-slate-800 text-xs">{item.item_name}</h4>
-                                                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 font-medium">
-                                                        <span className="inline-flex items-center bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
-                                                            {item.qty} {item.unit}
-                                                        </span>
-                                                        <span className="text-slate-300">&bull;</span>
-                                                        <span>{formatCurrency(item.unit_price)} / {item.unit}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Subtotal</div>
-                                                    <div className="font-bold text-teal-600 text-xs">{formatCurrency(item.subtotal)}</div>
-                                                </div>
-                                            </div>
-                                            {item.size_breakdown && Object.keys(item.size_breakdown).length > 0 && (
-                                                <div className="p-4 bg-slate-50/50 flex flex-wrap gap-2">
-                                                    <div className="w-full text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5 mb-1">
-                                                        <Layers className="w-3 h-3" /> Rincian Ukuran
-                                                    </div>
-                                                    {Object.entries(item.size_breakdown).map(([size, qty]) => (
-                                                        <div key={size} className="bg-white border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-2 shadow-2xs">
-                                                            <span className="font-bold text-slate-700 text-xs">{size}</span>
-                                                            <span className="text-[11px] font-medium text-slate-500">{qty} Pcs</span>
+                                    {items.map((item) => {
+                                        // Normalize size_breakdown to handle both old format {size: qty} and new {size: {qty, price}}
+                                        const getSizeBreakdown = (breakdown) => {
+                                            if (!breakdown) return {};
+                                            const normalized = {};
+                                            Object.entries(breakdown).forEach(([size, data]) => {
+                                                if (typeof data === 'object' && data !== null && 'qty' in data) {
+                                                    // New format: {size: {qty: X, price: Y}}
+                                                    normalized[size] = {
+                                                        qty: Number(data.qty) || 0,
+                                                        price: Number(data.price) || 0,
+                                                    };
+                                                } else {
+                                                    // Old format: {size: qty}
+                                                    normalized[size] = {
+                                                        qty: Number(data) || 0,
+                                                        price: Number(item.unit_price) || 0,
+                                                    };
+                                                }
+                                            });
+                                            return normalized;
+                                        };
+
+                                        const sizeBreakdown = getSizeBreakdown(item.size_breakdown);
+                                        const hasSizeBreakdown = Object.keys(sizeBreakdown).length > 0;
+
+                                        return (
+                                            <div key={item.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-soft-2xs">
+                                                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-800 text-xs">{item.item_name}</h4>
+                                                        <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 font-medium">
+                                                            <span className="inline-flex items-center bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
+                                                                {item.qty} {item.unit}
+                                                            </span>
+                                                            <span className="text-slate-300">&bull;</span>
+                                                            <span>{formatCurrency(item.unit_price)} / {item.unit}</span>
                                                         </div>
-                                                    ))}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Subtotal</div>
+                                                        <div className="font-bold text-teal-600 text-xs">{formatCurrency(item.subtotal)}</div>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                                {hasSizeBreakdown && (
+                                                    <div className="p-4 bg-slate-50/50">
+                                                        <div className="w-full text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5 mb-3">
+                                                            <Layers className="w-3 h-3" /> Rincian Ukuran & Harga
+                                                        </div>
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-left border-collapse text-xs">
+                                                                <thead>
+                                                                    <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                                                                        <th className="p-3">Ukuran</th>
+                                                                        <th className="p-3 text-center">Qty</th>
+                                                                        <th className="p-3 text-right">Harga Satuan</th>
+                                                                        <th className="p-3 text-right">Subtotal</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-slate-100">
+                                                                    {Object.entries(sizeBreakdown).map(([size, data]) => {
+                                                                        const subtotal = data.qty * data.price;
+                                                                        return (
+                                                                            <tr key={size} className="hover:bg-slate-50/50">
+                                                                                <td className="p-3 font-semibold text-slate-700">{size}</td>
+                                                                                <td className="p-3 text-center font-mono text-slate-600">{data.qty} Pcs</td>
+                                                                                <td className="p-3 text-right font-mono text-slate-600">{formatCurrency(data.price)}</td>
+                                                                                <td className="p-3 text-right font-bold text-teal-600 font-mono">{formatCurrency(subtotal)}</td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
+                                                                    <tr className="bg-slate-50 font-bold text-slate-700">
+                                                                        <td className="p-3" colSpan="2">Total</td>
+                                                                        <td className="p-3 text-right">{sizeBreakdown ? Object.values(sizeBreakdown).reduce((sum, d) => sum + d.qty, 0) : 0} Pcs</td>
+                                                                        <td className="p-3 text-right">{formatCurrency(sizeBreakdown ? Object.values(sizeBreakdown).reduce((sum, d) => sum + d.qty * d.price, 0) : 0)}</td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
 
@@ -468,7 +519,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                     (acc[mat.forSize] = acc[mat.forSize] || []).push(mat);
                                                     return acc;
                                                 }, {}) : {};
-                                                
+
                                                 return (
                                                     <details key={index} className="group bg-white rounded-lg border border-slate-200 overflow-hidden shadow-soft-2xs">
                                                         <summary className="bg-slate-50/80 border-b border-slate-200 p-3 cursor-pointer flex items-center justify-between hover:bg-slate-100/60 transition-colors">
@@ -568,7 +619,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                             </h4>
                                             <p className="text-[11px] text-slate-500 mt-1">Buat dan kelola surat perintah kerja ke karyawan.</p>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => setShowSPKForm(!showSPKForm)}
                                             className={`px-3 py-1.5 rounded-lg font-bold text-xs shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer ${showSPKForm ? 'bg-slate-100 text-slate-600 border border-slate-300 hover:bg-slate-200' : 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm'}`}
                                         >
@@ -584,7 +635,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Item Baju</label>
-                                                        <select 
+                                                        <select
                                                             className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             value={spkForm.invoice_item_id}
                                                             onChange={e => {
@@ -600,7 +651,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Karyawan</label>
-                                                        <select 
+                                                        <select
                                                             className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             value={spkForm.user_id}
                                                             onChange={e => setSpkForm({...spkForm, user_id: e.target.value})}
@@ -612,8 +663,8 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Jumlah (Qty)</label>
-                                                        <input 
-                                                            type="number" 
+                                                        <input
+                                                            type="number"
                                                             className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             placeholder="Berapa pcs?"
                                                             value={spkForm.qty}
@@ -624,8 +675,8 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Target Waktu (Opsional)</label>
-                                                        <input 
-                                                            type="date" 
+                                                        <input
+                                                            type="date"
                                                             className="w-full rounded-lg border-slate-300 shadow-2xs focus:border-teal-500 focus:ring-teal-500 text-xs px-3 py-2 bg-white"
                                                             value={spkForm.target_date}
                                                             onChange={e => setSpkForm({...spkForm, target_date: e.target.value})}
@@ -645,19 +696,19 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                                 return (
                                                                     <div key={ps.id} className={`p-2.5 rounded-lg border transition-all ${isChecked ? 'bg-teal-50/60 border-teal-300 shadow-2xs' : 'bg-slate-50 border-slate-200'}`}>
                                                                         <label className="flex items-center gap-2 cursor-pointer">
-                                                                            <input 
-                                                                                type="checkbox" 
+                                                                            <input
+                                                                                type="checkbox"
                                                                                 className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                                                                                 checked={isChecked}
                                                                                 onChange={e => {
                                                                                     if (e.target.checked) {
                                                                                         setSpkForm({
-                                                                                            ...spkForm, 
+                                                                                            ...spkForm,
                                                                                             steps: [...spkForm.steps.filter(s => (typeof s === 'object' ? s.id : s) !== ps.id), { id: ps.id, qty: spkForm.qty || selectedItemForSPK.qty || 1 }]
                                                                                         });
                                                                                     } else {
                                                                                         setSpkForm({
-                                                                                            ...spkForm, 
+                                                                                            ...spkForm,
                                                                                             steps: spkForm.steps.filter(s => (typeof s === 'object' ? s.id : s) !== ps.id)
                                                                                         });
                                                                                     }
@@ -668,7 +719,7 @@ export default function Show({ invoice: initialInvoice, users: initialUsers = []
                                                                         {isChecked && (
                                                                             <div className="flex items-center gap-1.5 mt-2 pl-6">
                                                                                 <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">Qty:</span>
-                                                                                <input 
+                                                                                <input
                                                                                     type="number"
                                                                                     min="1"
                                                                                     className="w-20 rounded-lg border-slate-300 text-xs px-2 py-1 bg-white focus:ring-teal-500 focus:border-teal-500 font-semibold text-slate-700"

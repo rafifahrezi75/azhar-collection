@@ -9,6 +9,12 @@ import SimpleFilterModal from "@/Components/SimpleFilterModal";
 import { hasPermission } from "@/utils/permissions";
 import { Toast, confirmDialog } from "@/utils/sweetalert";
 
+const INITIAL_FORM_STATE = {
+    name: "",
+    description: "",
+    is_active: true,
+};
+
 export default function Index() {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
@@ -16,41 +22,61 @@ export default function Index() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Search and filter states
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
-    const initialFormState = {
-        name: "",
-        description: "",
-        is_active: true,
-    };
+    const [form, setForm] = useState({
+        ...INITIAL_FORM_STATE,
+    });
 
-    const [form, setForm] = useState(initialFormState);
+    const canCreate = useMemo(
+        () =>
+            hasPermission(
+                permissions,
+                "kategori-produk.create",
+            ),
+        [permissions],
+    );
 
-    const canCreate = useMemo(() => hasPermission(permissions, "kategori-produk.create"), [permissions]);
-    const canUpdate = useMemo(() => hasPermission(permissions, "kategori-produk.update"), [permissions]);
-    const canDelete = useMemo(() => hasPermission(permissions, "kategori-produk.delete"), [permissions]);
+    const canUpdate = useMemo(
+        () =>
+            hasPermission(
+                permissions,
+                "kategori-produk.update",
+            ),
+        [permissions],
+    );
+
+    const canDelete = useMemo(
+        () =>
+            hasPermission(
+                permissions,
+                "kategori-produk.delete",
+            ),
+        [permissions],
+    );
 
     const loadData = useCallback(() => {
         setLoading(true);
+
         axios
             .get("/api/product-categories")
             .then((response) => {
                 setItems(response.data.data || []);
             })
-            .catch(() => {
-                Toast.error("Gagal memuat data kategori produk.");
+            .catch((err) => {
+                Toast.error(
+                    err.response?.data?.message ||
+                        "Gagal memuat data kategori produk.",
+                );
             })
             .finally(() => {
                 setLoading(false);
@@ -61,172 +87,399 @@ export default function Index() {
         loadData();
     }, [loadData]);
 
-    const isFilterActive = useMemo(() => statusFilter !== "all", [statusFilter]);
+    const isFilterActive = useMemo(
+        () => statusFilter !== "all",
+        [statusFilter],
+    );
 
     const handleResetFilters = useCallback(() => {
         setStatusFilter("all");
         setCurrentPage(1);
     }, []);
 
-    // Filter items
     const filteredItems = useMemo(() => {
         return items.filter((item) => {
+            const search =
+                searchTerm.toLowerCase();
+
             const matchesSearch =
                 !searchTerm ||
-                item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.slug?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                item.name
+                    ?.toLowerCase()
+                    .includes(search) ||
+                item.slug
+                    ?.toLowerCase()
+                    .includes(search) ||
+                item.description
+                    ?.toLowerCase()
+                    .includes(search);
 
             let matchesStatus = true;
+
             if (statusFilter === "active") {
-                matchesStatus = Boolean(item.is_active);
-            } else if (statusFilter === "inactive") {
-                matchesStatus = !Boolean(item.is_active);
+                matchesStatus = Boolean(
+                    item.is_active,
+                );
+            } else if (
+                statusFilter === "inactive"
+            ) {
+                matchesStatus = !Boolean(
+                    item.is_active,
+                );
             }
 
-            return matchesSearch && matchesStatus;
+            return (
+                matchesSearch &&
+                matchesStatus
+            );
         });
-    }, [items, searchTerm, statusFilter]);
+    }, [
+        items,
+        searchTerm,
+        statusFilter,
+    ]);
 
-    // Paginated items
-    const totalFiltered = filteredItems.length;
-    const totalPages = Math.max(1, Math.ceil(totalFiltered / itemsPerPage));
+    const totalFiltered =
+        filteredItems.length;
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(
+            totalFiltered /
+                itemsPerPage,
+        ),
+    );
+
     const paginatedItems = useMemo(() => {
-        const start = (currentPage - 1) * itemsPerPage;
-        return filteredItems.slice(start, start + itemsPerPage);
-    }, [filteredItems, currentPage, itemsPerPage]);
+        const start =
+            (currentPage - 1) *
+            itemsPerPage;
 
-    const handleOpenCreateModal = () => {
-        setEditingId(null);
-        setForm(initialFormState);
-        setIsModalOpen(true);
-    };
+        return filteredItems.slice(
+            start,
+            start + itemsPerPage,
+        );
+    }, [
+        filteredItems,
+        currentPage,
+        itemsPerPage,
+    ]);
 
-    const handleOpenEditModal = (category) => {
-        setEditingId(category.id);
-        setForm({
-            name: category.name || "",
-            description: category.description || "",
-            is_active: Boolean(category.is_active),
-        });
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-        setForm(initialFormState);
-    };
-
-    const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-
-        const url = editingId ? `/api/product-categories/${editingId}` : "/api/product-categories";
-        const method = editingId ? "put" : "post";
-
-        try {
-            const response = await axios[method](url, form);
-            Toast.success(response.data.message || (editingId ? "Kategori diperbarui" : "Kategori ditambahkan"));
-            handleCloseModal();
-            loadData();
-        } catch (err) {
-            const message = err.response?.data?.message || "Terjadi kesalahan saat menyimpan data.";
-            Toast.error(message);
-        } finally {
-            setSubmitting(false);
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(1);
         }
-    };
+    }, [currentPage, totalPages]);
 
-    const handleDelete = async (category) => {
-        const confirmed = await confirmDialog(
-            `Hapus Kategori '${category.name}'?`,
-            "Pastikan kategori tidak sedang digunakan oleh produk pakaian aktif."
+    const handleSearchChange =
+        useCallback((val) => {
+            setSearchTerm(val);
+            setCurrentPage(1);
+        }, []);
+
+    const handleFilterClick =
+        useCallback(() => {
+            setIsFilterModalOpen(
+                (prev) => !prev,
+            );
+        }, []);
+
+    const closeFilter =
+        useCallback(() => {
+            setIsFilterModalOpen(false);
+        }, []);
+
+    const handleRefresh =
+        useCallback(() => {
+            closeFilter();
+            loadData();
+        }, [closeFilter, loadData]);
+
+    const handleOpenCreateModal =
+        useCallback(() => {
+            closeFilter();
+
+            setEditingId(null);
+
+            setForm({
+                ...INITIAL_FORM_STATE,
+            });
+
+            setIsModalOpen(true);
+        }, [closeFilter]);
+
+    const handleOpenEditModal =
+        useCallback(
+            (category) => {
+                closeFilter();
+
+                setEditingId(category.id);
+
+                setForm({
+                    name:
+                        category.name || "",
+                    description:
+                        category.description ||
+                        "",
+                    is_active: Boolean(
+                        category.is_active,
+                    ),
+                });
+
+                setIsModalOpen(true);
+            },
+            [closeFilter],
         );
 
-        if (confirmed) {
-            try {
-                const response = await axios.delete(`/api/product-categories/${category.id}`);
-                Toast.success(response.data.message || "Kategori berhasil dihapus");
-                loadData();
-            } catch (err) {
-                const message = err.response?.data?.message || "Gagal menghapus kategori produk.";
-                Toast.error(message);
-            }
-        }
-    };
+    const handleCloseModal =
+        useCallback(() => {
+            setIsModalOpen(false);
+            setEditingId(null);
+
+            setForm({
+                ...INITIAL_FORM_STATE,
+            });
+        }, []);
+
+    const handleFormChange =
+        useCallback((e) => {
+            const {
+                name,
+                value,
+                type,
+                checked,
+            } = e.target;
+
+            setForm((prev) => ({
+                ...prev,
+                [name]:
+                    type === "checkbox"
+                        ? checked
+                        : value,
+            }));
+        }, []);
+
+    const handleSubmit =
+        useCallback(
+            async (e) => {
+                e.preventDefault();
+
+                setSubmitting(true);
+
+                const url = editingId
+                    ? `/api/product-categories/${editingId}`
+                    : "/api/product-categories";
+
+                const method = editingId
+                    ? "put"
+                    : "post";
+
+                try {
+                    const response =
+                        await axios[
+                            method
+                        ](url, form);
+
+                    Toast.success(
+                        response.data
+                            .message ||
+                            (editingId
+                                ? "Kategori berhasil diperbarui."
+                                : "Kategori berhasil ditambahkan."),
+                    );
+
+                    handleCloseModal();
+                    loadData();
+                } catch (err) {
+                    Toast.error(
+                        err.response?.data
+                            ?.message ||
+                            "Terjadi kesalahan saat menyimpan data.",
+                    );
+                } finally {
+                    setSubmitting(false);
+                }
+            },
+            [
+                editingId,
+                form,
+                handleCloseModal,
+                loadData,
+            ],
+        );
+
+    const handleDelete =
+        useCallback(
+            async (category) => {
+                closeFilter();
+
+                const confirmed =
+                    await confirmDialog({
+                        title: `Hapus Kategori '${category.name}'?`,
+                        text: "Pastikan kategori tidak sedang digunakan oleh produk pakaian aktif.",
+                        confirmButtonText:
+                            "Ya, Hapus Kategori",
+                    });
+
+                if (!confirmed) return;
+
+                try {
+                    const response =
+                        await axios.delete(
+                            `/api/product-categories/${category.id}`,
+                        );
+
+                    Toast.success(
+                        response.data
+                            .message ||
+                            "Kategori berhasil dihapus.",
+                    );
+
+                    loadData();
+                } catch (err) {
+                    Toast.error(
+                        err.response?.data
+                            ?.message ||
+                            "Gagal menghapus kategori produk.",
+                    );
+                }
+            },
+            [closeFilter, loadData],
+        );
 
     return (
         <DashboardLayout>
             <Head title="Master Kategori Produk - Azhar Collection" />
 
             <div className="space-y-4">
-                {/* Unified PageHeaderBar */}
                 <PageHeaderBar
                     breadcrumbs={[
-                        { label: "Master Data" },
-                        { label: "Kategori Produk Pakaian" },
+                        {
+                            label: "Master Data",
+                        },
+                        {
+                            label: "Kategori Produk",
+                        },
                     ]}
-                    searchValue={searchTerm}
-                    onSearchChange={(val) => {
-                        setSearchTerm(val);
-                        setCurrentPage(1);
-                    }}
+                    searchValue={
+                        searchTerm
+                    }
+                    onSearchChange={
+                        handleSearchChange
+                    }
                     searchPlaceholder="Cari kategori produk..."
-                    onFilterClick={() => setIsFilterModalOpen(true)}
-                    isFilterActive={isFilterActive}
-                    onRefresh={loadData}
+                    onFilterClick={
+                        handleFilterClick
+                    }
+                    isFilterActive={
+                        isFilterActive
+                    }
+                    filterContent={
+                        <SimpleFilterModal
+                            isOpen={
+                                isFilterModalOpen
+                            }
+                            title="Filter Produk"
+                            statusFilter={
+                                statusFilter
+                            }
+                            onStatusFilterChange={(
+                                value,
+                            ) => {
+                                setStatusFilter(
+                                    value,
+                                );
+                                setCurrentPage(1);
+                            }}
+                            onReset={
+                                handleResetFilters
+                            }
+                            onClose={
+                                closeFilter
+                            }
+                        />
+                    }
+                    onRefresh={
+                        handleRefresh
+                    }
                     refreshing={loading}
-                    onAdd={handleOpenCreateModal}
-                    addTitle="Tambah Kategori Produk"
-                    canCreate={canCreate}
+                    onAdd={
+                        handleOpenCreateModal
+                    }
+                    addTitle="Tambah"
+                    canCreate={
+                        canCreate
+                    }
                 />
 
-                {/* Main Table */}
                 <ProductCategoryTable
-                    items={paginatedItems}
+                    items={
+                        paginatedItems
+                    }
                     loading={loading}
-                    canUpdate={canUpdate}
-                    canDelete={canDelete}
-                    onEdit={handleOpenEditModal}
-                    onDelete={handleDelete}
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalFiltered}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={(page) => setCurrentPage(page)}
-                    onItemsPerPageChange={(limit) => {
-                        setItemsPerPage(limit);
+                    canUpdate={
+                        canUpdate
+                    }
+                    canDelete={
+                        canDelete
+                    }
+                    onEdit={
+                        handleOpenEditModal
+                    }
+                    onDelete={
+                        handleDelete
+                    }
+                    currentPage={
+                        currentPage
+                    }
+                    totalPages={
+                        totalPages
+                    }
+                    totalItems={
+                        totalFiltered
+                    }
+                    itemsPerPage={
+                        itemsPerPage
+                    }
+                    onPageChange={(
+                        page,
+                    ) =>
+                        setCurrentPage(
+                            page,
+                        )
+                    }
+                    onItemsPerPageChange={(
+                        limit,
+                    ) => {
+                        setItemsPerPage(
+                            limit,
+                        );
                         setCurrentPage(1);
                     }}
+                />
+
+                <ProductCategoryModal
+                    isOpen={
+                        isModalOpen
+                    }
+                    isEditing={Boolean(
+                        editingId,
+                    )}
+                    form={form}
+                    submitting={
+                        submitting
+                    }
+                    onClose={
+                        handleCloseModal
+                    }
+                    onChange={
+                        handleFormChange
+                    }
+                    onSubmit={
+                        handleSubmit
+                    }
                 />
             </div>
-
-            {/* Filter Modal */}
-            <SimpleFilterModal
-                isOpen={isFilterModalOpen}
-                title="Filter Kategori Produk"
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                onReset={handleResetFilters}
-                onClose={() => setIsFilterModalOpen(false)}
-            />
-
-            {/* Create/Edit Modal */}
-            <ProductCategoryModal
-                isOpen={isModalOpen}
-                isEditing={Boolean(editingId)}
-                form={form}
-                submitting={submitting}
-                onClose={handleCloseModal}
-                onChange={handleFormChange}
-                onSubmit={handleSubmit}
-            />
         </DashboardLayout>
     );
 }

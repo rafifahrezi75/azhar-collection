@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Tags, X, Save } from "lucide-react";
+import { Tags, Save, X } from "lucide-react";
 
 const ProductCategoryModal = memo(function ProductCategoryModal({
     isOpen,
@@ -13,107 +13,102 @@ const ProductCategoryModal = memo(function ProductCategoryModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl max-w-md w-full p-4 sm:p-5 shadow-soft-xl space-y-4 border border-slate-100 animate-in zoom-in-95 duration-150">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
-                            <Tags className="w-4 h-4" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                                {isEditing ? "Edit Kategori Produk" : "Tambah Kategori Produk"}
-                            </h3>
-                            <p className="text-xs text-slate-500">
-                                {isEditing
-                                    ? "Perbarui informasi kategori pakaian jadi."
-                                    : "Tambahkan klasifikasi kategori produk pakaian baru."}
-                            </p>
-                        </div>
+        <div className="fixed inset-0 z-[200] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl w-full max-w-xl p-4 sm:p-5 shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 my-auto max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-32px)] overflow-y-auto">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
+                        <Tags className="w-4.5 h-4.5" />
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+
+                    <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                            {isEditing
+                                ? "Edit Kategori Produk"
+                                : "Tambah Kategori Produk"}
+                        </h3>
+
+                        <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed">
+                            Isi informasi data kategori produk di bawah ini.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Form */}
-                <form onSubmit={onSubmit} className="space-y-3.5">
-                    {/* Nama Kategori */}
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                            Nama Kategori <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            name="name"
-                            required
-                            value={form.name}
-                            onChange={onChange}
-                            placeholder="Contoh: Seragam Olahraga, Jas Almamater..."
-                            className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 bg-white shadow-soft-2xs"
-                        />
+                <form onSubmit={onSubmit} className="space-y-3 pt-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-center">
+                        <div className="sm:col-span-8">
+                            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                Nama Kategori{" "}
+                                <span className="text-rose-500">*</span>
+                            </label>
+
+                            <input
+                                type="text"
+                                name="name"
+                                value={form.name}
+                                onChange={onChange}
+                                className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 placeholder-slate-400 font-medium shadow-soft-2xs"
+                                placeholder="Contoh: Seragam Olahraga"
+                                required
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="sm:col-span-4 sm:pt-5">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    name="is_active"
+                                    id="modal_product_category_is_active"
+                                    checked={form.is_active}
+                                    onChange={onChange}
+                                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1 w-4 h-4 cursor-pointer shrink-0"
+                                />
+
+                                <span className="text-xs font-semibold text-slate-700">
+                                    Status Aktif
+                                </span>
+                            </label>
+                        </div>
                     </div>
 
-                    {/* Deskripsi */}
                     <div>
                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                            Deskripsi (Opsional)
+                            Deskripsi Singkat
                         </label>
+
                         <textarea
                             name="description"
-                            rows={3}
                             value={form.description}
                             onChange={onChange}
-                            placeholder="Keterangan singkat mengenai kategori pakaian ini..."
-                            className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 bg-white shadow-soft-2xs"
+                            rows={3}
+                            className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 placeholder-slate-400 resize-none font-medium shadow-soft-2xs"
+                            placeholder="Penjelasan ringkas mengenai kategori produk ini..."
                         />
                     </div>
 
-                    {/* Status Aktif Switch */}
-                    <div className="pt-1">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                name="is_active"
-                                checked={form.is_active}
-                                onChange={(e) =>
-                                    onChange({
-                                        target: {
-                                            name: "is_active",
-                                            value: e.target.checked,
-                                        },
-                                    })
-                                }
-                                className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1"
-                            />
-                            <span className="text-xs font-semibold text-slate-700">
-                                Kategori Aktif (Dapat digunakan pada produk)
-                            </span>
-                        </label>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            disabled={submitting}
-                            className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200 cursor-pointer"
+                            title="Kembali"
+                            className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                         >
-                            Batal
+                            <X className="w-4 h-4" />
                         </button>
+
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer disabled:opacity-50 shadow-soft-xs"
+                            title={
+                                submitting
+                                    ? "Memproses..."
+                                    : isEditing
+                                      ? "Simpan"
+                                      : "Simpan"
+                            }
+                            className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
-                            <Save className="w-3.5 h-3.5" />
-                            <span>{submitting ? "Menyimpan..." : isEditing ? "Perbarui" : "Simpan"}</span>
+                            <Save className="w-4 h-4" />
                         </button>
                     </div>
                 </form>

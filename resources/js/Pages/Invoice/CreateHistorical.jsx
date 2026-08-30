@@ -730,9 +730,20 @@ export default function CreateHistorical() {
                                                             min="1"
                                                             value={item.qty}
                                                             onChange={(e) => handleItemFieldChange(index, "qty", parseInt(e.target.value) || 0)}
+                                                            readOnly={hasBreakdown}
+                                                            className={`w-20 px-2.5 py-1.5 text-xs font-bold border rounded-md text-center font-mono ${
+                                                                hasBreakdown
+                                                                    ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                                                                    : "border-slate-300 bg-white focus:border-teal-500"
+                                                            }`}
+                                                            title={hasBreakdown ? "Kuantitas dikontrol oleh Rincian Ukuran. Edit lewat tombol 'Atur Size'" : undefined}
                                                             required
-                                                            className="w-20 px-2.5 py-1.5 text-xs font-bold border border-slate-300 rounded-md focus:border-teal-500 bg-white text-center font-mono"
                                                         />
+                                                        {hasBreakdown && (
+                                                            <span className="text-slate-400 cursor-not-allowed" title="Kuantitas dikontrol oleh Rincian Ukuran">
+                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                            </span>
+                                                        )}
                                                         <button
                                                             type="button"
                                                             onClick={() => handleOpenSizeModal(index)}
@@ -785,17 +796,17 @@ export default function CreateHistorical() {
                                                         <Ruler className="w-3 h-3 text-teal-600" />
                                                         <span>Rincian Size ({breakdownEntries.reduce((s, [, q]) => s + (parseInt(q) || 0), 0)} Qty):</span>
                                                     </div>
-                                                    <div className="flex flex-wrap items-center gap-1">
-                                                        {breakdownEntries.map(([sz, count]) => (
-                                                            <span
-                                                                key={sz}
-                                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50/80 text-teal-950 border border-teal-200 shadow-2xs"
-                                                            >
-                                                                <strong className="font-bold text-teal-800">{sz}:</strong>
-                                                                <span className="font-mono font-semibold">{count}</span>
-                                                            </span>
-                                                        ))}
-                                                    </div>
+<div className="flex flex-wrap items-center gap-1">
+                                                            {breakdownEntries.map(([sz, count]) => (
+                                                                <span
+                                                                    key={sz}
+                                                                    className="inline-flex items-baseline gap-0.5 px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50/80 text-teal-950 border border-teal-200 shadow-2xs"
+                                                                >
+                                                                    <span className="font-semibold text-teal-800">{sz}:</span>
+                                                                    <span className="font-mono font-semibold text-teal-700">{count}</span>
+                                                                </span>
+                                                            ))}
+                                                        </div>
                                                 </div>
                                             )}
 

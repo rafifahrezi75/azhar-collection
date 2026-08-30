@@ -48,12 +48,12 @@ class HandleInertiaRequests extends Middleware
                 }])
                 ->get()
                 ->filter(function ($menu) use ($permissions) {
-                    return !$menu->permission_name || $permissions->contains($menu->permission_name);
+                    return ! $menu->permission_name || $permissions->contains($menu->permission_name);
                 })
                 ->map(function ($menu) use ($permissions) {
                     $children = $menu->children
                         ->filter(function ($child) use ($permissions) {
-                            return !$child->permission_name || $permissions->contains($child->permission_name);
+                            return ! $child->permission_name || $permissions->contains($child->permission_name);
                         })
                         ->values();
 
@@ -73,6 +73,9 @@ class HandleInertiaRequests extends Middleware
                             ];
                         }),
                     ];
+                })
+                ->filter(function ($menu) {
+                    return $menu['path'] !== null || ! $menu['children']->isEmpty();
                 })
                 ->values();
         }

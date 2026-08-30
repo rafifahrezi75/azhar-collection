@@ -16,16 +16,13 @@ export default function Index() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Search and filter states
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
@@ -37,12 +34,24 @@ export default function Index() {
         is_active: true,
     });
 
-    const canCreate = useMemo(() => hasPermission(permissions, "satuan.create"), [permissions]);
-    const canUpdate = useMemo(() => hasPermission(permissions, "satuan.update"), [permissions]);
-    const canDelete = useMemo(() => hasPermission(permissions, "satuan.delete"), [permissions]);
+    const canCreate = useMemo(
+        () => hasPermission(permissions, "satuan.create"),
+        [permissions],
+    );
+
+    const canUpdate = useMemo(
+        () => hasPermission(permissions, "satuan.update"),
+        [permissions],
+    );
+
+    const canDelete = useMemo(
+        () => hasPermission(permissions, "satuan.delete"),
+        [permissions],
+    );
 
     const loadData = useCallback(() => {
         setLoading(true);
+
         axios
             .get("/api/units")
             .then((response) => {
@@ -50,7 +59,10 @@ export default function Index() {
                 setLoading(false);
             })
             .catch((err) => {
-                Toast.error(err.response?.data?.message || "Gagal memuat data satuan.");
+                Toast.error(
+                    err.response?.data?.message || "Gagal memuat data satuan.",
+                );
+
                 setLoading(false);
             });
     }, []);
@@ -59,23 +71,28 @@ export default function Index() {
         loadData();
     }, [loadData]);
 
-    const isFilterActive = useMemo(() => statusFilter !== "all", [statusFilter]);
+    const isFilterActive = useMemo(
+        () => statusFilter !== "all",
+        [statusFilter],
+    );
 
     const handleResetFilters = useCallback(() => {
         setStatusFilter("all");
         setCurrentPage(1);
     }, []);
 
-    // Filter items
     const filteredItems = useMemo(() => {
         return items.filter((item) => {
+            const search = searchTerm.toLowerCase();
+
             const matchesSearch =
                 !searchTerm ||
-                item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                item.name?.toLowerCase().includes(search) ||
+                item.symbol?.toLowerCase().includes(search) ||
+                item.description?.toLowerCase().includes(search);
 
             let matchesStatus = true;
+
             if (statusFilter === "active") {
                 matchesStatus = Boolean(item.is_active);
             } else if (statusFilter === "inactive") {
@@ -86,15 +103,15 @@ export default function Index() {
         });
     }, [items, searchTerm, statusFilter]);
 
-    // Paginated items
     const paginatedItems = useMemo(() => {
         const start = (currentPage - 1) * itemsPerPage;
+
         return filteredItems.slice(start, start + itemsPerPage);
     }, [filteredItems, currentPage, itemsPerPage]);
 
-    // Adjust page if out of bounds
     useEffect(() => {
         const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
+
         if (currentPage > totalPages) {
             setCurrentPage(1);
         }
@@ -105,8 +122,17 @@ export default function Index() {
         setCurrentPage(1);
     }, []);
 
+    const handleFilterClick = useCallback(() => {
+        setIsFilterModalOpen((prev) => !prev);
+    }, []);
+
+    const closeFilter = useCallback(() => {
+        setIsFilterModalOpen(false);
+    }, []);
+
     const handleFormChange = useCallback((e) => {
         const { name, value, type, checked } = e.target;
+
         setForm((prev) => ({
             ...prev,
             [name]: type === "checkbox" ? checked : value,
@@ -114,30 +140,36 @@ export default function Index() {
     }, []);
 
     const openCreateModal = useCallback(() => {
+        setIsFilterModalOpen(false);
         setEditingId(null);
+
         setForm({
             name: "",
             symbol: "",
             description: "",
             is_active: true,
         });
+
         setIsModalOpen(true);
     }, []);
 
     const openEditModal = useCallback((item) => {
+        setIsFilterModalOpen(false);
         setEditingId(item.id);
+
         setForm({
             name: item.name,
             symbol: item.symbol || "",
             description: item.description || "",
             is_active: Boolean(item.is_active),
         });
+
         setIsModalOpen(true);
     }, []);
-
     const closeModal = useCallback(() => {
         setIsModalOpen(false);
         setEditingId(null);
+
         setForm({
             name: "",
             symbol: "",
@@ -149,29 +181,45 @@ export default function Index() {
     const handleSubmit = useCallback(
         async (event) => {
             event.preventDefault();
+
             setSubmitting(true);
 
             try {
                 if (editingId) {
-                    const res = await axios.put(`/api/units/${editingId}`, form);
-                    Toast.success(res.data.message || "Satuan berhasil diperbarui.");
+                    const res = await axios.put(
+                        `/api/units/${editingId}`,
+                        form,
+                    );
+
+                    Toast.success(
+                        res.data.message || "Satuan berhasil diperbarui.",
+                    );
                 } else {
                     const res = await axios.post("/api/units", form);
-                    Toast.success(res.data.message || "Satuan berhasil ditambahkan.");
+
+                    Toast.success(
+                        res.data.message || "Satuan berhasil ditambahkan.",
+                    );
                 }
+
                 closeModal();
                 loadData();
             } catch (err) {
-                Toast.error(err.response?.data?.message || "Terjadi kesalahan saat menyimpan data.");
+                Toast.error(
+                    err.response?.data?.message ||
+                        "Terjadi kesalahan saat menyimpan data.",
+                );
             } finally {
                 setSubmitting(false);
             }
         },
-        [editingId, form, closeModal, loadData]
+        [editingId, form, closeModal, loadData],
     );
 
     const handleDelete = useCallback(
         async (id) => {
+            setIsFilterModalOpen(false);
+
             const confirmed = await confirmDialog({
                 title: "Hapus Satuan?",
                 text: "Apakah Anda yakin ingin menghapus data satuan ukuran ini?",
@@ -182,38 +230,59 @@ export default function Index() {
 
             try {
                 const res = await axios.delete(`/api/units/${id}`);
+
                 Toast.success(res.data.message || "Satuan berhasil dihapus.");
+
                 loadData();
             } catch (err) {
-                Toast.error(err.response?.data?.message || "Gagal menghapus data satuan.");
+                Toast.error(
+                    err.response?.data?.message ||
+                        "Gagal menghapus data satuan.",
+                );
             }
         },
-        [loadData]
+        [loadData],
     );
 
     return (
         <DashboardLayout>
             <Head title="Satuan Barang" />
+
             <div className="space-y-4">
-                {/* Header Bar */}
                 <PageHeaderBar
                     breadcrumbs={[
-                        { label: "Master Data" },
-                        { label: "Satuan Barang" },
+                        {
+                            label: "Master Data",
+                        },
+                        {
+                            label: "Satuan Barang",
+                        },
                     ]}
                     searchValue={searchTerm}
                     onSearchChange={handleSearchChange}
                     searchPlaceholder="Cari satuan / simbol..."
-                    onFilterClick={() => setIsFilterModalOpen(true)}
+                    onFilterClick={handleFilterClick}
                     isFilterActive={isFilterActive}
+                    filterContent={
+                        <SimpleFilterModal
+                            isOpen={isFilterModalOpen}
+                            title="Filter Satuan"
+                            statusFilter={statusFilter}
+                            onStatusFilterChange={(val) => {
+                                setStatusFilter(val);
+                                setCurrentPage(1);
+                            }}
+                            onReset={handleResetFilters}
+                            onClose={closeFilter}
+                        />
+                    }
                     onRefresh={loadData}
                     refreshing={loading}
                     onAdd={openCreateModal}
-                    addTitle="Tambah Satuan Baru"
+                    addTitle="Tambah"
                     canCreate={canCreate}
                 />
 
-                {/* Unit Table */}
                 <UnitTable
                     units={paginatedItems}
                     items={paginatedItems}
@@ -232,20 +301,6 @@ export default function Index() {
                     }}
                 />
 
-                {/* Filter Modal */}
-                <SimpleFilterModal
-                    isOpen={isFilterModalOpen}
-                    title="Filter Satuan"
-                    statusFilter={statusFilter}
-                    onStatusFilterChange={(val) => {
-                        setStatusFilter(val);
-                        setCurrentPage(1);
-                    }}
-                    onReset={handleResetFilters}
-                    onClose={() => setIsFilterModalOpen(false)}
-                />
-
-                {/* Unit Modal */}
                 <UnitModal
                     isOpen={isModalOpen}
                     isEditing={Boolean(editingId)}

@@ -145,17 +145,18 @@
                                 $breakdown = is_string($item->size_breakdown) ? json_decode($item->size_breakdown, true) : $item->size_breakdown;
                                 if(is_array($breakdown)) {
                                     foreach($breakdown as $k => $v) {
-                                        if(is_array($v) && isset($v['size']) && isset($v['qty']) && $v['qty'] > 0) {
-                                            $sizes[] = $v['size'] . '('.$v['qty'].')';
+                                        if(is_array($v) && isset($v['qty']) && $v['qty'] > 0) {
+                                            $price = isset($v['price']) ? $v['price'] : $item->unit_price;
+                                            $sizes[] = $k . '('.$v['qty'].' x '.number_format($price, 0, ',', '.').')';
                                         } else if (is_numeric($v) && $v > 0) {
-                                            $sizes[] = $k . '('.$v.')';
+                                            $sizes[] = $k . '('.$v.' x '.number_format($item->unit_price, 0, ',', '.').')';
                                         }
                                     }
                                 }
                             }
                         @endphp
                         @if(!empty($sizes))
-                            <span style="font-size: 11px; margin-left: 5px;">({{ implode(', ', $sizes) }})</span>
+                            <span style="font-size: 10px; margin-left: 5px; display: block; margin-top: 2px;">({{ implode(', ', $sizes) }})</span>
                         @endif
                     </td>
                     <td class="cell text-right">{{ number_format($item->unit_price, 0, ',', '.') }}</td>

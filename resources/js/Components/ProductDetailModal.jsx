@@ -273,17 +273,35 @@ const ProductDetailModal = memo(function ProductDetailModal({
                                                 <tr className="bg-slate-100/80 border-b border-slate-200 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                                                     <th className="py-2 px-3 w-10 text-center">No</th>
                                                     <th className="py-2 px-3">Ukuran</th>
+                                                    <th className="py-2 px-3">Kategori</th>
                                                     <th className="py-2 px-3 text-right">Harga Jual</th>
+                                                    <th className="py-2 px-3 w-24 text-center">Bahan</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
-                                                {sizes.map((s, sIdx) => (
-                                                    <tr key={s.id || sIdx} className="hover:bg-slate-50/60">
-                                                        <td className="py-2 px-3 text-center text-slate-400 font-mono">{sIdx + 1}</td>
-                                                        <td className="py-2 px-3 font-bold text-slate-900">{s.size?.size_name || s.size_name} {s.notes ? <span className="text-slate-400 font-normal ml-1">({s.notes})</span> : ""}</td>
-                                                        <td className="py-2 px-3 text-right font-bold text-teal-700 font-mono">{formatCurrency(s.price)}</td>
-                                                    </tr>
-                                                ))}
+                                                {sizes.map((s, sIdx) => {
+                                                    const sizeMaterials = materials.filter((m) => m.size_id === s.size_id);
+                                                    return (
+                                                        <tr key={s.id || sIdx} className="hover:bg-slate-50/60">
+                                                            <td className="py-2 px-3 text-center text-slate-400 font-mono">{sIdx + 1}</td>
+                                                            <td className="py-2 px-3 font-bold text-slate-900">{s.size?.size_name || s.size_name} {s.notes ? <span className="text-slate-400 font-normal ml-1">({s.notes})</span> : ""}</td>
+                                                            <td className="py-2 px-3 text-xs text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
+                                                                {s.size?.category || "-"}
+                                                            </td>
+                                                            <td className="py-2 px-3 text-right font-bold text-teal-700 font-mono">{formatCurrency(s.price)}</td>
+                                                            <td className="py-2 px-3 text-center">
+                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                                                    sizeMaterials.length > 0 
+                                                                        ? "bg-teal-50 text-teal-700 border-teal-200" 
+                                                                        : "bg-slate-50 text-slate-500 border-slate-200"
+                                                                }`}>
+                                                                    <Layers className="w-2.5 h-2.5" />
+                                                                    <span>{sizeMaterials.length} Bahan</span>
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>

@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\InvoiceItemMaterial;
+use App\Models\InvoiceItemProductionStep;
 use App\Models\Item;
 use App\Models\Product;
+use App\Models\Size;
 use App\Models\StockMutation;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -50,7 +54,7 @@ class InvoiceController extends Controller
             'creator',
         ]);
 
-        $users = \App\Models\User::select('id', 'name', 'email')->orderBy('name')->get();
+        $users = User::select('id', 'name', 'email')->orderBy('name')->get();
 
         return Inertia::render('Invoice/Show', [
             'invoice' => $invoice,
@@ -66,11 +70,11 @@ class InvoiceController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhere('customer_name', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function ($c) use ($search) {
-                      $c->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                  });
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($c) use ($search) {
+                        $c->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -120,14 +124,14 @@ class InvoiceController extends Controller
         foreach ($invoices as $invNum) {
             $clean = str_replace($prefix, '', $invNum);
             if (is_numeric($clean)) {
-                $num = (int)$clean;
+                $num = (int) $clean;
                 if ($num > $maxNum) {
                     $maxNum = $num;
                 }
             }
         }
 
-        $nextNumber = $prefix . str_pad($maxNum + 1, 3, '0', STR_PAD_LEFT);
+        $nextNumber = $prefix.str_pad($maxNum + 1, 3, '0', STR_PAD_LEFT);
 
         return response()->json([
             'invoice_number' => $nextNumber,
@@ -182,6 +186,33 @@ class InvoiceController extends Controller
             ]);
 
             foreach ($validated['items'] as $itemData) {
+                // Normalize size_breakdown: support both old format {size: qty} and new {size: {qty, price}}
+                $sizeBreakdown = $itemData['size_breakdown'] ?? null;
+                $normalizedBreakdown = null;
+                if (! empty($sizeBreakdown)) {
+                    if (is_string($sizeBreakdown)) {
+                        $sizeBreakdown = json_decode($sizeBreakdown, true);
+                    }
+                    if (is_array($sizeBreakdown)) {
+                        $normalizedBreakdown = [];
+                        foreach ($sizeBreakdown as $sizeKey => $sizeData) {
+                            if (is_array($sizeData) && isset($sizeData['qty'])) {
+                                // New format: {size: {qty: X, price: Y}}
+                                $normalizedBreakdown[$sizeKey] = [
+                                    'qty' => (int) $sizeData['qty'],
+                                    'price' => isset($sizeData['price']) ? (float) $sizeData['price'] : (float) $itemData['unit_price'],
+                                ];
+                            } elseif (is_numeric($sizeData)) {
+                                // Old format: {size: qty}
+                                $normalizedBreakdown[$sizeKey] = [
+                                    'qty' => (int) $sizeData,
+                                    'price' => (float) $itemData['unit_price'],
+                                ];
+                            }
+                        }
+                    }
+                }
+
                 $invoiceItem = InvoiceItem::create([
                     'invoice_id' => $invoice->id,
                     'product_id' => $itemData['product_id'] ?? null,
@@ -190,29 +221,34 @@ class InvoiceController extends Controller
                     'qty' => $itemData['qty'],
                     'unit_price' => $itemData['unit_price'],
                     'subtotal' => $itemData['subtotal'],
-                    'size_breakdown' => $itemData['size_breakdown'] ?? null,
+                    'size_breakdown' => $normalizedBreakdown,
                     'description' => $itemData['description'] ?? null,
                 ]);
 
                 $this->syncProductionSteps($invoiceItem);
 
                 // If cut_stock is active and item is linked to a Product, deduct raw materials
-                if ($invoice->cut_stock && !empty($itemData['product_id'])) {
+                if ($invoice->cut_stock && ! empty($itemData['product_id'])) {
                     $product = Product::with('materials.item')->find($itemData['product_id']);
                     if ($product && $product->materials->isNotEmpty()) {
-                        // Parse size breakdown
+                        // Parse size breakdown (extract qty only for BOM calculation)
                         $breakdownMap = [];
                         $rawBreakdown = $itemData['size_breakdown'] ?? null;
-                        if (!empty($rawBreakdown)) {
+                        if (! empty($rawBreakdown)) {
                             if (is_string($rawBreakdown)) {
                                 $rawBreakdown = json_decode($rawBreakdown, true);
                             }
                             if (is_array($rawBreakdown)) {
                                 foreach ($rawBreakdown as $k => $v) {
-                                    if (is_array($v) && isset($v['size']) && isset($v['qty'])) {
-                                        $breakdownMap[trim($v['size'])] = (float)$v['qty'];
+                                    if (is_array($v) && isset($v['qty'])) {
+                                        // New format: {size: {qty, price}}
+                                        $breakdownMap[trim($k)] = (float) $v['qty'];
+                                    } elseif (is_array($v) && isset($v['size']) && isset($v['qty'])) {
+                                        // Alternative format: {size: {size: "M", qty: 10}}
+                                        $breakdownMap[trim($v['size'])] = (float) $v['qty'];
                                     } elseif (is_numeric($v)) {
-                                        $breakdownMap[trim($k)] = (float)$v;
+                                        // Old format: {size: qty}
+                                        $breakdownMap[trim($k)] = (float) $v;
                                     }
                                 }
                             }
@@ -223,10 +259,12 @@ class InvoiceController extends Controller
                         // Stage 2: Warehouse Qty (Kg) = Usage Qty / Conversion Rate
                         $deductions = []; // [item_id => ['item' => Item, 'total_usage_qty' => float, 'total_warehouse_qty' => float, 'usage_unit' => string, 'warehouse_unit' => string]]
 
-                        if (!empty($breakdownMap)) {
+                        if (! empty($breakdownMap)) {
                             // Calculate per size
                             foreach ($breakdownMap as $sizeName => $sizeQty) {
-                                if ($sizeQty <= 0) continue;
+                                if ($sizeQty <= 0) {
+                                    continue;
+                                }
 
                                 // Get materials specifically configured for this size
                                 $sizeMaterials = $product->materials->filter(function ($m) use ($sizeName) {
@@ -244,16 +282,16 @@ class InvoiceController extends Controller
                                     if ($sizeRule && $sizeRule->item) {
                                         $rawItem = $sizeRule->item;
                                         $matItemId = $sizeRule->item_id;
-                                        $requiredQty = (float)($sizeRule->required_qty ?: 0);
-                                        $yieldQty = max(0.0001, (float)($sizeRule->yield_qty ?: 1.0));
-                                        $conversionRate = max(0.0001, (float)($sizeRule->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
+                                        $requiredQty = (float) ($sizeRule->required_qty ?: 0);
+                                        $yieldQty = max(0.0001, (float) ($sizeRule->yield_qty ?: 1.0));
+                                        $conversionRate = max(0.0001, (float) ($sizeRule->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
 
                                         // Stage 1: Kebutuhan pola pakai
                                         $usageQty = ($sizeQty / $yieldQty) * $requiredQty;
                                         // Stage 2: Potongan stok gudang
                                         $warehouseQty = $usageQty / $conversionRate;
 
-                                        if (!isset($deductions[$matItemId])) {
+                                        if (! isset($deductions[$matItemId])) {
                                             $deductions[$matItemId] = [
                                                 'item' => $rawItem,
                                                 'total_usage_qty' => 0,
@@ -264,12 +302,33 @@ class InvoiceController extends Controller
                                         }
                                         $deductions[$matItemId]['total_usage_qty'] += $usageQty;
                                         $deductions[$matItemId]['total_warehouse_qty'] += $warehouseQty;
+
+                                        // Snapshot parameter BOM per item+size ke invoice_item_materials
+                                        $sizeId = null;
+                                        if (! empty($sizeName)) {
+                                            $matchedSize = Size::where('size_name', $sizeName)->first();
+                                            if ($matchedSize) {
+                                                $sizeId = $matchedSize->id;
+                                            }
+                                        }
+
+                                        $materialSnapshot = new InvoiceItemMaterial;
+                                        $materialSnapshot->invoice_item_id = $invoiceItem->id;
+                                        $materialSnapshot->item_id = $rawItem->id;
+                                        $materialSnapshot->item_name = $rawItem->name;
+                                        $materialSnapshot->required_qty = $requiredQty;
+                                        $materialSnapshot->yield_qty = $yieldQty;
+                                        $materialSnapshot->conversion_rate = $conversionRate;
+                                        $materialSnapshot->unit_name = $sizeRule->unit_name ?: ($rawItem->unit?->name ?: 'Meter');
+                                        $materialSnapshot->qty_used = $warehouseQty;
+                                        $materialSnapshot->size_id = $sizeId;
+                                        $materialSnapshot->save();
                                     }
                                 }
                             }
                         } else {
                             // Fallback if no size breakdown: use default recipes with total line qty
-                            $totalLineQty = (float)($itemData['qty'] ?? 0);
+                            $totalLineQty = (float) ($itemData['qty'] ?? 0);
                             $defaultMaterials = $product->materials->filter(function ($m) {
                                 return empty($m->size_name) || $m->size_name === 'ALL';
                             });
@@ -278,16 +337,16 @@ class InvoiceController extends Controller
                                 if ($mat->item) {
                                     $rawItem = $mat->item;
                                     $matItemId = $mat->item_id;
-                                    $requiredQty = (float)($mat->required_qty ?: 0);
-                                    $yieldQty = max(0.0001, (float)($mat->yield_qty ?: 1.0));
-                                    $conversionRate = max(0.0001, (float)($mat->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
+                                    $requiredQty = (float) ($mat->required_qty ?: 0);
+                                    $yieldQty = max(0.0001, (float) ($mat->yield_qty ?: 1.0));
+                                    $conversionRate = max(0.0001, (float) ($mat->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
 
                                     // Stage 1: Kebutuhan pola pakai
                                     $usageQty = ($totalLineQty / $yieldQty) * $requiredQty;
                                     // Stage 2: Potongan stok gudang
                                     $warehouseQty = $usageQty / $conversionRate;
 
-                                    if (!isset($deductions[$matItemId])) {
+                                    if (! isset($deductions[$matItemId])) {
                                         $deductions[$matItemId] = [
                                             'item' => $rawItem,
                                             'total_usage_qty' => 0,
@@ -298,6 +357,19 @@ class InvoiceController extends Controller
                                     }
                                     $deductions[$matItemId]['total_usage_qty'] += $usageQty;
                                     $deductions[$matItemId]['total_warehouse_qty'] += $warehouseQty;
+
+                                    // Snapshot parameter BOM per item (tanpa size spesifik) ke invoice_item_materials
+                                    $materialSnapshot = new InvoiceItemMaterial;
+                                    $materialSnapshot->invoice_item_id = $invoiceItem->id;
+                                    $materialSnapshot->item_id = $rawItem->id;
+                                    $materialSnapshot->item_name = $rawItem->name;
+                                    $materialSnapshot->required_qty = $requiredQty;
+                                    $materialSnapshot->yield_qty = $yieldQty;
+                                    $materialSnapshot->conversion_rate = $conversionRate;
+                                    $materialSnapshot->unit_name = $mat->unit_name ?: ($rawItem->unit?->name ?: 'Meter');
+                                    $materialSnapshot->qty_used = $warehouseQty;
+                                    $materialSnapshot->size_id = null;
+                                    $materialSnapshot->save();
                                 }
                             }
                         }
@@ -311,7 +383,7 @@ class InvoiceController extends Controller
                             $warehouseUnit = $d['warehouse_unit'] ?? 'Pcs';
 
                             if ($rawItem && $warehouseDeduction > 0) {
-                                $stockBefore = (float)($rawItem->real_stock ?? 0);
+                                $stockBefore = (float) ($rawItem->real_stock ?? 0);
                                 $stockAfter = max(0, $stockBefore - $warehouseDeduction);
 
                                 $rawItem->update([
@@ -389,7 +461,7 @@ class InvoiceController extends Controller
         // F4 landscape is roughly 215.9mm x 330.2mm (or we can just use standard a4 landscape)
         // dompdf accepts standard named sizes like 'a4', 'legal', 'letter', or array of points.
         // F4 is often (0,0, 609.448, 935.433).
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('invoice-pdf', compact('invoice'))
+        $pdf = Pdf::loadView('invoice-pdf', compact('invoice'))
             ->setPaper('a5', 'landscape');
 
         return $pdf->stream('Struk-'.$invoice->invoice_number.'.pdf');
@@ -407,7 +479,7 @@ class InvoiceController extends Controller
             'creator',
         ]);
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('production-pdf', compact('invoice'))
+        $pdf = Pdf::loadView('production-pdf', compact('invoice'))
             ->setPaper('a4', 'portrait');
 
         return $pdf->stream('SPK-'.$invoice->invoice_number.'.pdf');
@@ -415,15 +487,15 @@ class InvoiceController extends Controller
 
     private function syncProductionSteps(InvoiceItem $invoiceItem)
     {
-        // Check if steps already exist. If we are updating and product hasn't changed, we might not want to wipe them 
+        // Check if steps already exist. If we are updating and product hasn't changed, we might not want to wipe them
         // to preserve assigned workers and status. Let's only create if they don't exist, or if product changed.
         // For simplicity, let's say if count == 0, we create them. If product changed, we wipe and recreate.
         $existingCount = $invoiceItem->productionSteps()->count();
         if ($existingCount === 0 && $invoiceItem->product_id) {
-            $product = \App\Models\Product::with('productionSteps.productionStep')->find($invoiceItem->product_id);
+            $product = Product::with('productionSteps.productionStep')->find($invoiceItem->product_id);
             if ($product) {
                 foreach ($product->productionSteps as $step) {
-                    \App\Models\InvoiceItemProductionStep::create([
+                    InvoiceItemProductionStep::create([
                         'invoice_item_id' => $invoiceItem->id,
                         'production_step_id' => $step->production_step_id,
                         'step_name' => $step->custom_name ?: ($step->productionStep->name ?? 'Tahap Produksi'),

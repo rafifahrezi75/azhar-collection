@@ -200,12 +200,19 @@ export default function Create({ initialType = "REGULAR" }) {
     };
 
     // Update size breakdown from modal
-    const handleSaveSizeBreakdown = (breakdownData, totalQty, calculatedSubtotal, effectiveUnitPrice) => {
+    const handleSaveSizeBreakdown = (breakdownData, totalQty, calculatedSubtotal, effectiveUnitPrice, customPrices) => {
         if (activeItemIndexForSize !== null) {
             setItems((prev) => {
                 const copy = [...prev];
                 const current = { ...copy[activeItemIndexForSize] };
-                current.size_breakdown = breakdownData;
+                // Merge qty from breakdownData with price from customPrices
+                // breakdownData = {size: qty}, customPrices = {size: price}
+                const mergedBreakdown = {};
+                Object.entries(breakdownData || {}).forEach(([size, qty]) => {
+                    const price = customPrices?.[size] !== undefined ? customPrices[size] : (current.unit_price || 0);
+                    mergedBreakdown[size] = { qty, price };
+                });
+                current.size_breakdown = mergedBreakdown;
                 if (totalQty > 0) {
                     current.qty = totalQty;
                     if (calculatedSubtotal && calculatedSubtotal > 0) {
@@ -274,7 +281,8 @@ export default function Create({ initialType = "REGULAR" }) {
 
                 let lineUsageQty = 0;
                 if (hasBreakdown && mat.size_name && mat.size_name !== "ALL") {
-                    const sizeQty = Number(breakdown[mat.size_name]) || 0;
+                    const sizeData = breakdown[mat.size_name];
+                    const sizeQty = typeof sizeData === 'object' ? (Number(sizeData.qty) || 0) : (Number(sizeData) || 0);
                     lineUsageQty = (sizeQty / yieldQty) * reqPerYield;
                 } else if (!hasBreakdown || mat.size_name === "ALL" || !mat.size_name) {
                     lineUsageQty = (totalLineQty / yieldQty) * reqPerYield;
@@ -303,6 +311,93 @@ export default function Create({ initialType = "REGULAR" }) {
         });
         return Object.values(bomMap);
     }, [items, products]);
+
+    // Helper: Render filtered BOM for an item - grouped by size as cards
+    const renderFilteredBOM = (item, matchedProduct) => {
+        if (!matchedProduct?.materials?.length) return null;
+        const breakdown = item.size_breakdown || {};
+        const hasBreakdown = Object.keys(breakdown).length > 0;
+        
+        // Helper to extract qty from breakdown value (supports both formats)
+        const getBreakdownQty = (v) => typeof v === 'object' ? (Number(v.qty) || 0) : (Number(v) || 0);
+        
+        const selectedSizes = hasBreakdown ? Object.keys(breakdown).filter(k => getBreakdownQty(breakdown[k]) > 0) : [];
+
+        // Group materials by size
+        const materialsBySize = matchedProduct.materials.reduce((acc, mat) => {
+            const sizeKey = mat.size_name || 'ALL';
+            if (hasBreakdown && sizeKey !== 'ALL' && !selectedSizes.includes(sizeKey)) return acc;
+            if (!acc[sizeKey]) acc[sizeKey] = [];
+            acc[sizeKey].push(mat);
+            return acc;
+        }, {});
+
+        const sizeOrder = hasBreakdown ? selectedSizes : ['ALL', ...Object.keys(materialsBySize).filter(k => k !== 'ALL')];
+
+        return (
+            <div key="bom-per-size">
+                <div className="text-[10px] text-slate-500 font-mono mb-2">
+                    Kebutuhan Bahan untuk {hasBreakdown ? selectedSizes.map(s => `${s}:${getBreakdownQty(breakdown[s])}`).join(', ') : item.qty} {item.unit}:
+                </div>
+                <div className="space-y-3">
+                    {sizeOrder.map((sizeKey) => {
+                        const sizeMaterials = materialsBySize[sizeKey];
+                        if (!sizeMaterials || sizeMaterials.length === 0) return null;
+                        const sizeQty = hasBreakdown && sizeKey !== 'ALL' ? getBreakdownQty(breakdown[sizeKey]) : (Number(item.qty) || 0);
+                        if (sizeQty <= 0) return null;
+
+                        return (
+                            <details key={sizeKey} open className="group bg-white rounded-lg border border-slate-200 overflow-hidden shadow-2xs">
+                                <summary className="bg-slate-50/80 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-slate-100/60 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-6 h-6 rounded bg-teal-600 text-white font-bold text-xs flex items-center justify-center shadow-xs group-open:bg-teal-700 transition-colors">
+                                            {sizeKey === 'ALL' ? 'U' : sizeKey}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-900">{sizeKey === 'ALL' ? 'Bahan Baku Umum (Semua Ukuran)' : `Bahan Ukuran ${sizeKey} (x${sizeQty})`}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] text-slate-500 font-medium bg-slate-200/50 px-1.5 py-0.5 rounded">{sizeMaterials.length} Bahan</span>
+                                        <svg className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </summary>
+                                <div className="p-3 space-y-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                        {sizeMaterials.map((mat, mIdx) => {
+                                            const reqPerUnit = Number(mat.required_qty) || 0;
+                                            const totalReqForThisItem = reqPerUnit * sizeQty;
+                                            const currentStock = Number(mat.item?.real_stock) || 0;
+                                            const unit = mat.unit_name || mat.item?.unit?.name || "Unit";
+                                            const isSufficient = currentStock >= totalReqForThisItem;
+                                            return (
+                                                <div key={mat.id || mIdx} className="p-2 rounded-md bg-white border border-slate-200 text-xs space-y-1 shadow-2xs">
+                                                    <div className="flex items-start justify-between gap-1">
+                                                        <span className="font-bold text-slate-800 truncate" title={mat.item?.name}>{mat.item?.name || "Bahan Baku"}</span>
+                                                        <span className="text-[10px] text-slate-500 shrink-0 font-mono">@{reqPerUnit} {unit}/{item.unit}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+                                                        <div>
+                                                            <span className="text-slate-400 text-[10px]">Stok: </span>
+                                                            <span className={`font-mono font-semibold ${isSufficient ? "text-slate-700" : "text-amber-600 font-bold"}`}>{currentStock.toLocaleString("id-ID")} {unit}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-slate-400 text-[10px]">Perlu: </span>
+                                                            <span className="font-bold text-teal-700 font-mono">{totalReqForThisItem.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {unit}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </details>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
 
     // Quick Add Customer Handler
     const handleQuickCreateCustomer = async (e) => {
@@ -705,9 +800,20 @@ export default function Create({ initialType = "REGULAR" }) {
                                                             min="1"
                                                             value={item.qty}
                                                             onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
-                                                            className="w-20 px-2.5 py-1.5 text-xs border border-slate-300 rounded-md font-bold font-mono focus:border-teal-500 text-center"
+                                                            readOnly={breakdownEntries.length > 0}
+                                                            className={`w-20 px-2.5 py-1.5 text-xs border rounded-md font-bold font-mono text-center ${
+                                                                breakdownEntries.length > 0
+                                                                    ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                                                                    : "border-slate-300 bg-white focus:border-teal-500"
+                                                            }`}
+                                                            title={breakdownEntries.length > 0 ? "Kuantitas dikontrol oleh Rincian Ukuran. Edit lewat tombol 'Atur Size'" : undefined}
                                                             required
                                                         />
+                                                        {breakdownEntries.length > 0 && (
+                                                            <span className="text-slate-400 cursor-not-allowed" title="Kuantitas dikontrol oleh Rincian Ukuran">
+                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                            </span>
+                                                        )}
                                                         <button
                                                             type="button"
                                                             onClick={() => setActiveItemIndexForSize(idx)}
@@ -758,19 +864,22 @@ export default function Create({ initialType = "REGULAR" }) {
                                                 <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/70 text-xs">
                                                     <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                                         <Ruler className="w-3 h-3 text-teal-600" />
-                                                        <span>Rincian Size ({breakdownEntries.reduce((s, [, q]) => s + (parseInt(q) || 0), 0)} Qty):</span>
+                                                        <span>Rincian Size ({breakdownEntries.reduce((s, [, v]) => s + (typeof v === 'object' ? (parseInt(v.qty) || 0) : (parseInt(v) || 0)), 0)} Qty):</span>
                                                     </div>
-                                                    <div className="flex flex-wrap items-center gap-1">
-                                                        {breakdownEntries.map(([sz, q]) => (
-                                                            <span
-                                                                key={sz}
-                                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50/80 text-teal-950 border border-teal-200 shadow-2xs"
-                                                            >
-                                                                <strong className="font-bold text-teal-800">{sz}:</strong>
-                                                                <span className="font-mono font-semibold">{q}</span>
-                                                            </span>
-                                                        ))}
-                                                    </div>
+<div className="flex flex-wrap items-center gap-1">
+                                                            {breakdownEntries.map(([sz, v]) => {
+                                                                const qty = typeof v === 'object' ? (v.qty || 0) : v;
+                                                                return (
+                                                                    <span
+                                                                        key={sz}
+                                                                        className="inline-flex items-baseline gap-0.5 px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50/80 text-teal-950 border border-teal-200 shadow-2xs"
+                                                                    >
+                                                                        <span className="font-semibold text-teal-800">{sz}:</span>
+                                                                        <span className="font-mono font-semibold text-teal-700">{qty}</span>
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
                                                 </div>
                                             )}
 
@@ -780,44 +889,13 @@ export default function Create({ initialType = "REGULAR" }) {
                                                     <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold text-slate-700 hover:text-teal-700 transition-colors">
                                                         <div className="flex items-center gap-1.5">
                                                             <Layers className="w-3.5 h-3.5 text-teal-600" />
-                                                            <span>Detail BOM & Produksi ({matchedProduct.materials?.length || 0} Bahan)</span>
+                                                            <span>Detail BOM & Produksi</span>
                                                         </div>
                                                         <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
                                                     </summary>
                                                     <div className="mt-3 space-y-3">
-                                                        {/* BOM Table/Grid */}
-                                                        {matchedProduct.materials && matchedProduct.materials.length > 0 && (
-                                                            <div>
-                                                                <div className="text-[10px] text-slate-500 font-mono mb-1">Kebutuhan Bahan untuk {item.qty} {item.unit}:</div>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                                                    {matchedProduct.materials.map((mat, mIdx) => {
-                                                                        const reqPerUnit = Number(mat.required_qty) || 0;
-                                                                        const totalReqForThisItem = reqPerUnit * (Number(item.qty) || 0);
-                                                                        const currentStock = Number(mat.item?.real_stock) || 0;
-                                                                        const unit = mat.unit_name || mat.item?.unit?.name || "Unit";
-                                                                        const isSufficient = currentStock >= totalReqForThisItem;
-                                                                        return (
-                                                                            <div key={mat.id || mIdx} className="p-2 rounded-md bg-white border border-slate-200 text-xs space-y-1 shadow-2xs">
-                                                                                <div className="flex items-start justify-between gap-1">
-                                                                                    <span className="font-bold text-slate-800 truncate" title={mat.item?.name}>{mat.item?.name || "Bahan Baku"}</span>
-                                                                                    <span className="text-[10px] text-slate-500 shrink-0 font-mono">@{reqPerUnit} {unit}/{item.unit}</span>
-                                                                                </div>
-                                                                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
-                                                                                    <div>
-                                                                                        <span className="text-slate-400 text-[10px]">Stok: </span>
-                                                                                        <span className={`font-mono font-semibold ${isSufficient ? "text-slate-700" : "text-amber-600 font-bold"}`}>{currentStock.toLocaleString("id-ID")} {unit}</span>
-                                                                                    </div>
-                                                                                    <div className="text-right">
-                                                                                        <span className="text-slate-400 text-[10px]">Perlu: </span>
-                                                                                        <span className="font-bold text-teal-700 font-mono">{totalReqForThisItem.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {unit}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        )}
+                                                        {/* BOM Table/Grid - Filter by selected sizes */}
+                                                        {renderFilteredBOM(item, matchedProduct)}
 
                                                         {/* Production Steps */}
                                                         {matchedProduct.production_steps && matchedProduct.production_steps.length > 0 && (
@@ -1128,6 +1206,20 @@ export default function Create({ initialType = "REGULAR" }) {
             {activeItemIndexForSize !== null && (() => {
                 const activeLine = items[activeItemIndexForSize];
                 const activeProd = products.find((p) => String(p.id) === String(activeLine?.product_id));
+                if (!activeProd) {
+                    return (
+                        <SizeBreakdownModal
+                            isOpen={true}
+                            itemName={activeLine?.item_name || "Item Pesanan"}
+                            productSizes={[]}
+                            defaultUnitPrice={Number(activeLine?.unit_price) || 0}
+                            initialBreakdown={{}}
+                            currentBreakdown={{}}
+                            onClose={() => setActiveItemIndexForSize(null)}
+                            onSave={() => {}}
+                        />
+                    );
+                }
                 return (
                     <SizeBreakdownModal
                         isOpen={true}

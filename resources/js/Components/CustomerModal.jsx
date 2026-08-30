@@ -1,6 +1,16 @@
 import React, { memo, useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { Users, X, RefreshCw, Phone, Mail, MapPin, Tag, UserCheck } from "lucide-react";
+import {
+    Users,
+    X,
+    RefreshCw,
+    Phone,
+    Mail,
+    MapPin,
+    Tag,
+    UserCheck,
+    Save,
+} from "lucide-react";
 
 const CustomerModal = memo(function CustomerModal({
     isOpen,
@@ -58,11 +68,26 @@ const CustomerModal = memo(function CustomerModal({
     if (!isOpen) return null;
 
     const customerTypes = [
-        { label: "Perorangan / Individu (Pribadi / Custom Jahit)", value: "Perorangan" },
-        { label: "Sekolah / Lembaga Pendidikan (TK/SD/SMP/SMA/Pesantren)", value: "Sekolah" },
-        { label: "Instansi / Pemerintah (Dinas/Kementerian/BUMN)", value: "Instansi / Pemerintah" },
-        { label: "Perusahaan / Swasta (PT/CV/Pabrik/Korporasi)", value: "Perusahaan / Swasta" },
-        { label: "Komunitas / Organisasi (Karang Taruna/Klub/EO)", value: "Komunitas / Organisasi" },
+        {
+            label: "Perorangan / Individu (Pribadi / Custom Jahit)",
+            value: "Perorangan",
+        },
+        {
+            label: "Sekolah / Lembaga Pendidikan (TK/SD/SMP/SMA/Pesantren)",
+            value: "Sekolah",
+        },
+        {
+            label: "Instansi / Pemerintah (Dinas/Kementerian/BUMN)",
+            value: "Instansi / Pemerintah",
+        },
+        {
+            label: "Perusahaan / Swasta (PT/CV/Pabrik/Korporasi)",
+            value: "Perusahaan / Swasta",
+        },
+        {
+            label: "Komunitas / Organisasi (Karang Taruna/Klub/EO)",
+            value: "Komunitas / Organisasi",
+        },
         { label: "Lainnya", value: "Lainnya" },
     ];
 
@@ -77,26 +102,22 @@ const CustomerModal = memo(function CustomerModal({
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                                {isEditing ? "Edit Data Pelanggan" : "Tambah Pelanggan Baru"}
+                                {isEditing
+                                    ? "Edit Data Pelanggan"
+                                    : "Tambah Pelanggan Baru"}
                             </h3>
                             <p className="text-xs text-slate-500">
-                                Lengkapi data master pemesan (Perorangan, Sekolah, Instansi Pemerintah, Perusahaan, atau Komunitas).
+                                Lengkapi data pemesan (Perorangan,
+                                Sekolah, Instansi Pemerintah, Perusahaan, atau
+                                Komunitas).
                             </p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
                 </div>
 
                 {/* Form - 2 Columns Side-by-Side */}
                 <form onSubmit={onSubmit} className="flex-1 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                        
                         {/* LEFT COLUMN: Identitas & Tipe Pelanggan */}
                         <div className="space-y-3.5">
                             <div className="p-3.5 bg-slate-50/80 rounded-md border border-slate-200 space-y-3 shadow-2xs">
@@ -109,16 +130,25 @@ const CustomerModal = memo(function CustomerModal({
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
                                         <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                                            Kode Pelanggan <span className="text-rose-500">*</span>
+                                            Kode Pelanggan{" "}
+                                            <span className="text-rose-500">
+                                                *
+                                            </span>
                                         </label>
                                         <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
                                             <input
                                                 type="checkbox"
                                                 checked={isAutoCode}
-                                                onChange={(e) => handleToggleAutoCode(e.target.checked)}
+                                                onChange={(e) =>
+                                                    handleToggleAutoCode(
+                                                        e.target.checked,
+                                                    )
+                                                }
                                                 className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 w-3.5 h-3.5 cursor-pointer"
                                             />
-                                            <span className="text-[11px] font-medium text-slate-600">Otomatis</span>
+                                            <span className="text-[11px] font-medium text-slate-600">
+                                                Otomatis
+                                            </span>
                                         </label>
                                     </div>
                                     <div className="relative">
@@ -144,7 +174,9 @@ const CustomerModal = memo(function CustomerModal({
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-teal-600 hover:bg-slate-200 rounded transition-colors cursor-pointer disabled:opacity-50"
                                                 title="Ambil Kode Urut Terakhir (+1)"
                                             >
-                                                <RefreshCw className={`w-3 h-3 ${fetchingCode ? "animate-spin text-teal-600" : ""}`} />
+                                                <RefreshCw
+                                                    className={`w-3 h-3 ${fetchingCode ? "animate-spin text-teal-600" : ""}`}
+                                                />
                                             </button>
                                         )}
                                     </div>
@@ -153,7 +185,8 @@ const CustomerModal = memo(function CustomerModal({
                                 {/* Customer Type */}
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        Tipe / Kategori Pelanggan <span className="text-rose-500">*</span>
+                                        Tipe / Kategori Pelanggan{" "}
+                                        <span className="text-rose-500">*</span>
                                     </label>
                                     <select
                                         name="type"
@@ -163,7 +196,10 @@ const CustomerModal = memo(function CustomerModal({
                                         required
                                     >
                                         {customerTypes.map((t) => (
-                                            <option key={t.value} value={t.value}>
+                                            <option
+                                                key={t.value}
+                                                value={t.value}
+                                            >
                                                 {t.label}
                                             </option>
                                         ))}
@@ -173,7 +209,8 @@ const CustomerModal = memo(function CustomerModal({
                                 {/* Customer Name */}
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        Nama Pelanggan / Lembaga <span className="text-rose-500">*</span>
+                                        Nama Pelanggan / Lembaga{" "}
+                                        <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -189,7 +226,8 @@ const CustomerModal = memo(function CustomerModal({
                                 {/* Institution / Sub-Org Name (Optional) */}
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                        Nama Instansi / Afiliasi / Divisi (Opsional)
+                                        Nama Instansi / Afiliasi / Divisi
+                                        (Opsional)
                                     </label>
                                     <input
                                         type="text"
@@ -306,24 +344,37 @@ const CustomerModal = memo(function CustomerModal({
                                 </div>
                             </div>
                         </div>
-
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="flex justify-end gap-2 border-t border-slate-100 pt-3 mt-4 shrink-0">
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-4 shrink-0">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors cursor-pointer"
+                            disabled={submitting}
+                            title="Batal"
+                            className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Batal
+                            <X className="w-4 h-4" />
                         </button>
+
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-all duration-200 shadow-soft-xs disabled:opacity-50 cursor-pointer"
+                            title={
+                                submitting
+                                    ? "Memproses..."
+                                    : isEditing
+                                      ? "Simpan"
+                                      : "Simpan"
+                            }
+                            className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
-                            {submitting ? "Memproses..." : isEditing ? "Simpan Perubahan" : "Simpan Data Pelanggan"}
+                            <Save
+                                className={`w-4 h-4 ${
+                                    submitting ? "animate-pulse" : ""
+                                }`}
+                            />
                         </button>
                     </div>
                 </form>

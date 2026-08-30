@@ -16,6 +16,7 @@ class AccessSeeder extends Seeder
     {
         $permissions = [
             ['name' => 'dashboard.view', 'label' => 'Lihat Dashboard', 'group_name' => 'Dashboard'],
+            ['name' => 'dashboard.analytics.view', 'label' => 'Lihat Analitik Penjualan', 'group_name' => 'Dashboard'],
 
             ['name' => 'kategori.view', 'label' => 'Lihat Kategori', 'group_name' => 'Kategori Produk'],
             ['name' => 'kategori.create', 'label' => 'Tambah Kategori', 'group_name' => 'Kategori Produk'],
@@ -104,6 +105,7 @@ class AccessSeeder extends Seeder
         $staffRole->permissions()->sync(
             Permission::whereIn('name', [
                 'dashboard.view',
+                'dashboard.analytics.view',
                 'kategori.view',
                 'kategori.create',
                 'kategori.update',

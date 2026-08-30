@@ -81,6 +81,18 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:produk.view')
         ->name('produk.index');
 
+    Route::get('/dashboard/produk/create', [ProductController::class, 'createPage'])
+        ->middleware('permission:produk.create')
+        ->name('produk.create');
+
+    Route::get('/dashboard/produk/{product}/edit', [ProductController::class, 'editPage'])
+        ->middleware('permission:produk.update')
+        ->name('produk.edit');
+
+    Route::get('/dashboard/produk/{product}', [ProductController::class, 'showPage'])
+        ->middleware('permission:produk.view')
+        ->name('produk.show');
+
     Route::get('/dashboard/kategori-produk', [ProductCategoryController::class, 'indexPage'])
         ->middleware('permission:kategori-produk.view')
         ->name('kategori-produk.index');
@@ -123,9 +135,11 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::get('/dashboard/summary', [DashboardController::class, 'summaryApi'])
         ->middleware('permission:dashboard.view');
     Route::get('/dashboard/order-analytics', [DashboardController::class, 'orderAnalyticsApi'])
-        ->middleware('permission:dashboard.view');
+        ->middleware('permission:dashboard.analytics.view');
     Route::get('/dashboard/customer-yearly-trend', [DashboardController::class, 'customerYearlyTrendApi'])
-        ->middleware('permission:dashboard.view');
+        ->middleware('permission:dashboard.analytics.view');
+    Route::get('/dashboard/customer-orders', [DashboardController::class, 'customerOrdersApi'])
+        ->middleware('permission:dashboard.analytics.view');
 
     // Generic Reorder
     Route::post('/master/reorder', function (Request $request) {

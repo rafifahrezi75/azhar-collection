@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InvoiceItemProductionStep;
 use App\Models\ProductionAssignment;
 use App\Models\ProductionAssignmentStep;
-use App\Models\ProductionStep;
-use Illuminate\Http\Request;
+use App\Models\ProductProductionStep;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProductionAssignmentController extends Controller
 {
@@ -20,7 +21,7 @@ class ProductionAssignmentController extends Controller
             'steps' => 'required|array|min:1',
         ]);
 
-        $defaultQty = (int)($validated['qty'] ?? 1);
+        $defaultQty = (int) ($validated['qty'] ?? 1);
 
         $assignment = ProductionAssignment::create([
             'invoice_item_id' => $validated['invoice_item_id'],
@@ -30,17 +31,36 @@ class ProductionAssignmentController extends Controller
             'status' => 'PENDING',
         ]);
 
+        // Ambil snapshot wage/step_name dari invoice_item_production_steps jika ada
+        // Ini memastikan SPK menggunakan upah yang berlaku saat invoice dibuat,
+        // bukan upah master yang berubah-berpotong retroaktyf.
+        $invoiceItemProdSteps = InvoiceItemProductionStep::where('invoice_item_id', $validated['invoice_item_id'])
+            ->pluck('wage', 'production_step_id')
+            ->toArray();
+
         foreach ($validated['steps'] as $stepItem) {
             $stepId = is_array($stepItem) ? ($stepItem['id'] ?? null) : $stepItem;
-            $stepQty = (is_array($stepItem) && !empty($stepItem['qty'])) ? (int)$stepItem['qty'] : $defaultQty;
+            $stepQty = (is_array($stepItem) && ! empty($stepItem['qty'])) ? (int) $stepItem['qty'] : $defaultQty;
 
-            $productStep = \App\Models\ProductProductionStep::with('productionStep')->find($stepId);
+            $productStep = ProductProductionStep::with('productionStep')->find($stepId);
             if ($productStep) {
+                // Coba ambil wage dari snapshot invoice dulu
+                $snapshotWage = $invoiceItemProdSteps[$productStep->production_step_id] ?? null;
+                $stepName = null;
+
+                // Cari step_name yang cocok juga (bisa berdasarkan custom_name atau nama produksi)
+                $matchedISS = InvoiceItemProductionStep::where('invoice_item_id', $validated['invoice_item_id'])
+                    ->where('production_step_id', $productStep->production_step_id)
+                    ->first();
+                if ($matchedISS) {
+                    $stepName = $matchedISS->step_name;
+                }
+
                 ProductionAssignmentStep::create([
                     'production_assignment_id' => $assignment->id,
                     'production_step_id' => $productStep->production_step_id,
-                    'step_name' => $productStep->custom_name ?? $productStep->productionStep?->name ?? 'Langkah Produksi',
-                    'wage' => $productStep->wage ?? $productStep->productionStep?->default_wage ?? 0,
+                    'step_name' => $stepName ?? ($productStep->custom_name ?? $productStep->productionStep?->name ?? 'Langkah Produksi'),
+                    'wage' => $snapshotWage ?? ($productStep->wage ?? $productStep->productionStep?->default_wage ?? 0),
                     'qty' => $stepQty,
                     'status' => 'PENDING',
                 ]);
@@ -90,6 +110,7 @@ class ProductionAssignmentController extends Controller
     public function destroy(ProductionAssignment $assignment): JsonResponse
     {
         $assignment->delete();
+
         return response()->json([
             'message' => 'Surat Perintah Kerja (SPK) berhasil dihapus.',
         ]);

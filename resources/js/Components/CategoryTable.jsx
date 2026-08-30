@@ -86,7 +86,7 @@ const CategoryTable = memo(function CategoryTable({
                                                     <button
                                                         type="button"
                                                         onClick={() => onEdit(item)}
-                                                        title="Edit Kategori"
+                                                        title="Edit"
                                                         className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-all duration-200 border border-indigo-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
@@ -97,7 +97,7 @@ const CategoryTable = memo(function CategoryTable({
                                                     <button
                                                         type="button"
                                                         onClick={() => onDelete(item.id)}
-                                                        title="Hapus Kategori"
+                                                        title="Hapus"
                                                         className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition-all duration-200 border border-rose-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />

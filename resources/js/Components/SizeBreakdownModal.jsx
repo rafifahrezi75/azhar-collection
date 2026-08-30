@@ -1,26 +1,27 @@
-import React, { memo, useState, useEffect, useMemo } from "react";
-import { Ruler, X, Check, Plus, Trash2, RotateCcw, Sparkles, Tag, DollarSign, RefreshCw, Layers } from "lucide-react";
+import React, { memo, useEffect, useMemo, useState } from "react";
+import { Ruler, X, Check, Trash2, RefreshCw } from "lucide-react";
 
-const adultSizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
-const numberSizes = ["No. 1", "No. 2", "No. 3", "No. 4", "No. 5", "No. 6", "No. 7", "No. 8", "No. 9", "No. 10", "No. 11", "No. 12"];
+const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
 
 const SizeBreakdownModal = memo(function SizeBreakdownModal({
     isOpen,
     itemName = "",
-    productSizes = [],
+    productSizes = EMPTY_ARRAY,
     defaultUnitPrice = 0,
-    initialBreakdown = {},
-    currentBreakdown = {},
+    initialBreakdown = EMPTY_OBJECT,
+    currentBreakdown = EMPTY_OBJECT,
     onClose,
     onSave,
 }) {
     const [sizes, setSizes] = useState({});
     const [customPrices, setCustomPrices] = useState({});
-    const [activeTab, setActiveTab] = useState("product"); // 'product' | 'adult' | 'number' | 'custom'
-    const [customSizeName, setCustomSizeName] = useState("");
-    const [customSizeQty, setCustomSizeQty] = useState("");
-    const [customSizePrice, setCustomSizePrice] = useState("");
+    const [customSizeCategories, setCustomSizeCategories] = useState({});
+    const [newSizeName, setNewSizeName] = useState("");
+    const [newSizePrice, setNewSizePrice] = useState("");
+    const [newSizeQuantity, setNewSizeQuantity] = useState("1");
     const [bulkPriceInput, setBulkPriceInput] = useState("");
+    const [showCustomForm, setShowCustomForm] = useState(false);
 
     const formatCurrency = (val) => {
         return new Intl.NumberFormat("id-ID", {
@@ -31,571 +32,793 @@ const SizeBreakdownModal = memo(function SizeBreakdownModal({
         }).format(val || 0);
     };
 
-    // Build default price map from product catalog
+    const productPresetList = useMemo(() => {
+        return (Array.isArray(productSizes) ? productSizes : [])
+            .map((ps) => ps?.size?.size_name || ps?.size_name)
+            .filter(Boolean);
+    }, [productSizes]);
+
     const productPriceMap = useMemo(() => {
         const map = {};
-        (productSizes || []).forEach((ps) => {
-            if (ps.size_name) {
-                map[ps.size_name] = parseFloat(ps.price) || defaultUnitPrice || 0;
+
+        (Array.isArray(productSizes) ? productSizes : []).forEach((ps) => {
+            const sizeName = ps?.size?.size_name || ps?.size_name;
+            const price = ps?.price;
+
+            if (sizeName) {
+                map[sizeName] = parseFloat(price) || defaultUnitPrice || 0;
             }
         });
+
         return map;
     }, [productSizes, defaultUnitPrice]);
 
-    // Initialize state on open
+    const productCategoryMap = useMemo(() => {
+        const map = {};
+
+        (Array.isArray(productSizes) ? productSizes : []).forEach((ps) => {
+            const sizeName = ps?.size?.size_name || ps?.size_name;
+            const category = ps?.size?.category;
+
+            if (sizeName && category) {
+                map[sizeName] = category;
+            }
+        });
+
+        return map;
+    }, [productSizes]);
+
     useEffect(() => {
-        if (isOpen) {
-            const incoming = initialBreakdown && Object.keys(initialBreakdown).length > 0
+        if (!isOpen) return;
+
+        const incoming =
+            initialBreakdown && Object.keys(initialBreakdown).length > 0
                 ? initialBreakdown
-                : (currentBreakdown || {});
-            
-            const normalizedSizes = {};
-            const initialPrices = {};
+                : currentBreakdown || {};
 
-            Object.entries(incoming).forEach(([k, v]) => {
-                const num = parseInt(v, 10);
-                if (!isNaN(num) && num > 0) {
-                    normalizedSizes[k] = num;
-                    initialPrices[k] = productPriceMap[k] !== undefined ? productPriceMap[k] : (defaultUnitPrice || 0);
-                }
-            });
+        const normalizedSizes = {};
+        const initialPrices = {};
+        const existingCategories = {};
 
-            // Also preload product sizes into price map
-            (productSizes || []).forEach((ps) => {
-                if (ps.size_name && initialPrices[ps.size_name] === undefined) {
-                    initialPrices[ps.size_name] = parseFloat(ps.price) || defaultUnitPrice || 0;
-                }
-            });
+        Object.entries(incoming).forEach(([key, value]) => {
+            const quantity = parseInt(value, 10);
 
-            setSizes(normalizedSizes);
-            setCustomPrices(initialPrices);
-            setCustomSizeName("");
-            setCustomSizeQty("");
-            setCustomSizePrice("");
-            setBulkPriceInput("");
+            if (!isNaN(quantity) && quantity > 0) {
+                normalizedSizes[key] = quantity;
+                initialPrices[key] =
+                    productPriceMap[key] !== undefined
+                        ? productPriceMap[key]
+                        : defaultUnitPrice || 0;
 
-            if (productSizes && productSizes.length > 0) {
-                setActiveTab("product");
-            } else {
-                const hasNumbers = Object.keys(normalizedSizes).some((k) => k.startsWith("No."));
-                if (hasNumbers) {
-                    setActiveTab("number");
-                } else {
-                    setActiveTab("adult");
+                if (!productPresetList.includes(key)) {
+                    existingCategories[key] = "Custom";
                 }
             }
+        });
+
+        (Array.isArray(productSizes) ? productSizes : []).forEach((ps) => {
+            const sizeName = ps?.size?.size_name || ps?.size_name;
+            const price = ps?.price;
+
+            if (sizeName && initialPrices[sizeName] === undefined) {
+                initialPrices[sizeName] =
+                    parseFloat(price) || defaultUnitPrice || 0;
+            }
+        });
+
+        if (
+            productSizes &&
+            productSizes.length > 0 &&
+            Object.keys(normalizedSizes).length === 0
+        ) {
+            productPresetList.forEach((sizeName) => {
+                normalizedSizes[sizeName] = 1;
+            });
         }
-    }, [isOpen, initialBreakdown, currentBreakdown, productSizes, productPriceMap, defaultUnitPrice]);
 
-    if (!isOpen) return null;
+        setSizes(normalizedSizes);
+        setCustomPrices(initialPrices);
+        setCustomSizeCategories(existingCategories);
+        setNewSizeName("");
+        setNewSizePrice("");
+        setNewSizeQuantity("1");
+        setBulkPriceInput("");
+        setShowCustomForm(false);
+    }, [
+        isOpen,
+        initialBreakdown,
+        currentBreakdown,
+        productSizes,
+        productPresetList,
+        productPriceMap,
+        defaultUnitPrice,
+    ]);
 
-    // Get effective price for a size
     const getSizePrice = (sizeKey) => {
-        if (customPrices[sizeKey] !== undefined && customPrices[sizeKey] !== null) {
+        if (
+            customPrices[sizeKey] !== undefined &&
+            customPrices[sizeKey] !== null
+        ) {
             return Number(customPrices[sizeKey]);
         }
+
         if (productPriceMap[sizeKey] !== undefined) {
             return Number(productPriceMap[sizeKey]);
         }
+
         return Number(defaultUnitPrice) || 0;
     };
 
-    const handleSizeChange = (sizeKey, val) => {
-        if (val === "" || val === null) {
-            setSizes((prev) => {
-                const next = { ...prev };
-                delete next[sizeKey];
-                return next;
-            });
-            return;
-        }
+    const otherActiveSizes = useMemo(() => {
+        return Object.entries(sizes).filter(
+            ([key, value]) => !productPresetList.includes(key) && Number(value) > 0,
+        );
+    }, [sizes, productPresetList]);
 
-        const numVal = parseInt(val, 10);
-        if (isNaN(numVal) || numVal < 0) return;
-
-        setSizes((prev) => ({
-            ...prev,
-            [sizeKey]: numVal,
-        }));
-
-        // Ensure price is initialized for this size
-        if (customPrices[sizeKey] === undefined) {
-            setCustomPrices((prev) => ({
-                ...prev,
-                [sizeKey]: productPriceMap[sizeKey] !== undefined ? productPriceMap[sizeKey] : (defaultUnitPrice || 0),
-            }));
-        }
-    };
-
-    const handlePriceChange = (sizeKey, priceVal) => {
-        const p = parseFloat(priceVal);
-        setCustomPrices((prev) => ({
-            ...prev,
-            [sizeKey]: isNaN(p) ? 0 : p,
-        }));
-    };
-
-    const handleStep = (sizeKey, delta) => {
-        const current = sizes[sizeKey] || 0;
-        const next = Math.max(0, current + delta);
-        if (next === 0) {
-            handleSizeChange(sizeKey, "");
-        } else {
-            handleSizeChange(sizeKey, next);
-        }
-    };
-
-    const handleAddCustomSize = (e) => {
-        e?.preventDefault();
-        const trimmed = customSizeName.trim();
-        const qty = parseInt(customSizeQty, 10) || 1;
-        const price = parseFloat(customSizePrice) || defaultUnitPrice || 0;
-        if (!trimmed) return;
-
-        setSizes((prev) => ({
-            ...prev,
-            [trimmed]: qty,
-        }));
-        setCustomPrices((prev) => ({
-            ...prev,
-            [trimmed]: price,
-        }));
-
-        setCustomSizeName("");
-        setCustomSizeQty("");
-        setCustomSizePrice("");
-    };
-
-    const handleRemoveSize = (sizeKey) => {
-        setSizes((prev) => {
-            const next = { ...prev };
-            delete next[sizeKey];
-            return next;
-        });
-    };
-
-    const handleResetAll = () => {
-        setSizes({});
-    };
-
-    // Reset all prices to Product Catalog prices
-    const handleResetToProductPrices = () => {
-        const resetPrices = {};
-        Object.keys(sizes).forEach((k) => {
-            resetPrices[k] = productPriceMap[k] !== undefined ? productPriceMap[k] : (defaultUnitPrice || 0);
-        });
-        (productSizes || []).forEach((ps) => {
-            if (ps.size_name) {
-                resetPrices[ps.size_name] = parseFloat(ps.price) || defaultUnitPrice || 0;
-            }
-        });
-        setCustomPrices(resetPrices);
-    };
-
-    // Apply uniform price to all active sizes
-    const handleApplyBulkPrice = () => {
-        const p = parseFloat(bulkPriceInput);
-        if (isNaN(p) || p < 0) return;
-
-        setCustomPrices((prev) => {
-            const next = { ...prev };
-            Object.keys(sizes).forEach((k) => {
-                next[k] = p;
-            });
-            activePresetList.forEach((sz) => {
-                next[sz] = p;
-            });
-            return next;
-        });
-        setBulkPriceInput("");
-    };
-
-    // Calculate total quantity, total variants, and total subtotal
-    const { totalQuantity, totalVariants, calculatedSubtotal, hasDifferentPrices } = useMemo(() => {
+    const { totalQuantity, calculatedSubtotal, hasDifferentPrices } = useMemo(() => {
         let qtySum = 0;
-        let count = 0;
         let subtotalSum = 0;
         const pricesEncountered = new Set();
 
-        Object.entries(sizes).forEach(([sizeKey, val]) => {
-            const num = parseInt(val, 10);
-            if (!isNaN(num) && num > 0) {
-                qtySum += num;
-                count++;
-                const unitPrice = getSizePrice(sizeKey);
-                subtotalSum += num * unitPrice;
+        Object.entries(sizes).forEach(([sizeKey, value]) => {
+            const quantity = parseInt(value, 10);
+
+            if (!isNaN(quantity) && quantity > 0) {
+                const unitPrice =
+                    customPrices[sizeKey] !== undefined &&
+                    customPrices[sizeKey] !== null
+                        ? Number(customPrices[sizeKey])
+                        : productPriceMap[sizeKey] !== undefined
+                          ? Number(productPriceMap[sizeKey])
+                          : Number(defaultUnitPrice) || 0;
+
+                qtySum += quantity;
+                subtotalSum += quantity * unitPrice;
                 pricesEncountered.add(unitPrice);
             }
         });
 
         return {
             totalQuantity: qtySum,
-            totalVariants: count,
             calculatedSubtotal: subtotalSum,
             hasDifferentPrices: pricesEncountered.size > 1,
         };
     }, [sizes, customPrices, productPriceMap, defaultUnitPrice]);
 
+    const handleSizeChange = (sizeKey, value) => {
+        if (value === "" || value === null) {
+            setSizes((prev) => ({
+                ...prev,
+                [sizeKey]: 0,
+            }));
+            return;
+        }
+
+        const quantity = parseInt(value, 10);
+
+        if (isNaN(quantity) || quantity < 0) return;
+
+        setSizes((prev) => ({
+            ...prev,
+            [sizeKey]: quantity,
+        }));
+
+        if (customPrices[sizeKey] === undefined) {
+            setCustomPrices((prev) => ({
+                ...prev,
+                [sizeKey]:
+                    productPriceMap[sizeKey] !== undefined
+                        ? productPriceMap[sizeKey]
+                        : defaultUnitPrice || 0,
+            }));
+        }
+    };
+
+    const handlePriceChange = (sizeKey, priceValue) => {
+        if (priceValue === "") {
+            setCustomPrices((prev) => ({
+                ...prev,
+                [sizeKey]: "",
+            }));
+            return;
+        }
+
+        const price = parseFloat(priceValue);
+
+        setCustomPrices((prev) => ({
+            ...prev,
+            [sizeKey]: isNaN(price) ? 0 : price,
+        }));
+    };
+
+    const handleRemoveSize = (sizeKey) => {
+        setSizes((prev) => {
+            const next = { ...prev };
+
+            if (productPresetList.includes(sizeKey)) {
+                next[sizeKey] = 0;
+            } else {
+                delete next[sizeKey];
+            }
+
+            return next;
+        });
+
+        if (!productPresetList.includes(sizeKey)) {
+            setCustomPrices((prev) => {
+                const next = { ...prev };
+                delete next[sizeKey];
+                return next;
+            });
+
+            setCustomSizeCategories((prev) => {
+                const next = { ...prev };
+                delete next[sizeKey];
+                return next;
+            });
+        }
+    };
+
+    const getNextCustomName = () => {
+        const existingNames = new Set([
+            ...productPresetList,
+            ...Object.keys(sizes),
+        ]);
+
+        if (!existingNames.has("Custom")) {
+            return "Custom";
+        }
+
+        let index = 2;
+
+        while (existingNames.has(`Custom ${index}`)) {
+            index += 1;
+        }
+
+        return `Custom ${index}`;
+    };
+
+    const handleOpenCustomForm = () => {
+        setNewSizeName("");
+        setNewSizePrice("");
+        setNewSizeQuantity("1");
+        setShowCustomForm(true);
+    };
+
+    const handleAddCustomInline = () => {
+        const quantity = parseInt(newSizeQuantity, 10);
+
+        if (isNaN(quantity) || quantity < 1) return;
+
+        const trimmedName = newSizeName.trim();
+        const sizeName = trimmedName || getNextCustomName();
+        const price =
+            newSizePrice === ""
+                ? Number(defaultUnitPrice) || 0
+                : parseFloat(newSizePrice) || 0;
+
+        setSizes((prev) => ({
+            ...prev,
+            [sizeName]: quantity,
+        }));
+
+        setCustomPrices((prev) => ({
+            ...prev,
+            [sizeName]: price,
+        }));
+
+        setCustomSizeCategories((prev) => ({
+            ...prev,
+            [sizeName]: "Custom",
+        }));
+
+        setNewSizeName("");
+        setNewSizePrice("");
+        setNewSizeQuantity("1");
+        setShowCustomForm(false);
+    };
+
+    const handleResetToProductPrices = () => {
+        const resetPrices = {};
+
+        Object.keys(sizes).forEach((key) => {
+            resetPrices[key] =
+                productPriceMap[key] !== undefined
+                    ? productPriceMap[key]
+                    : customPrices[key] !== undefined
+                      ? customPrices[key]
+                      : defaultUnitPrice || 0;
+        });
+
+        productPresetList.forEach((sizeName) => {
+            resetPrices[sizeName] =
+                productPriceMap[sizeName] !== undefined
+                    ? productPriceMap[sizeName]
+                    : defaultUnitPrice || 0;
+        });
+
+        setCustomPrices(resetPrices);
+    };
+
+    const handleApplyBulkPrice = () => {
+        const price = parseFloat(bulkPriceInput);
+
+        if (isNaN(price) || price < 0) return;
+
+        setCustomPrices((prev) => {
+            const next = { ...prev };
+
+            Object.entries(sizes).forEach(([key, value]) => {
+                if (Number(value) > 0) {
+                    next[key] = price;
+                }
+            });
+
+            return next;
+        });
+
+        setBulkPriceInput("");
+    };
+
     const handleApply = () => {
         const cleaned = {};
-        Object.entries(sizes).forEach(([k, v]) => {
-            const num = parseInt(v, 10);
-            if (!isNaN(num) && num > 0) {
-                cleaned[k] = num;
+
+        Object.entries(sizes).forEach(([key, value]) => {
+            const quantity = parseInt(value, 10);
+
+            if (!isNaN(quantity) && quantity > 0) {
+                cleaned[key] = quantity;
             }
         });
 
-        const effectiveUnitPrice = totalQuantity > 0 ? Math.round(calculatedSubtotal / totalQuantity) : (defaultUnitPrice || 0);
-        onSave(cleaned, totalQuantity, calculatedSubtotal, effectiveUnitPrice, customPrices);
+        const effectiveUnitPrice =
+            totalQuantity > 0
+                ? Math.round(calculatedSubtotal / totalQuantity)
+                : defaultUnitPrice || 0;
+
+        onSave(
+            cleaned,
+            totalQuantity,
+            calculatedSubtotal,
+            effectiveUnitPrice,
+            customPrices,
+        );
         onClose();
     };
 
-    const productPresetList = (productSizes || []).map((ps) => ps.size_name).filter(Boolean);
-    const activePresetList = activeTab === "product"
-        ? productPresetList
-        : activeTab === "adult"
-        ? adultSizes
-        : activeTab === "number"
-        ? numberSizes
-        : [];
+    if (!isOpen) return null;
 
-    const otherActiveSizes = Object.entries(sizes).filter(([k, v]) => !activePresetList.includes(k) && v > 0);
+    const newCustomSubtotal =
+        (newSizePrice === ""
+            ? Number(defaultUnitPrice) || 0
+            : parseFloat(newSizePrice) || 0) *
+        (parseInt(newSizeQuantity, 10) || 0);
 
     return (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl max-w-2xl w-full shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh] overflow-hidden">
-                
-                {/* Header */}
-                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-teal-500/10 text-teal-700 flex items-center justify-center border border-teal-500/20 shadow-2xs">
-                            <Ruler className="w-4.5 h-4.5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-xs sm:p-4">
+            <div className="flex max-h-[92vh] w-full max-w-[960px] flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-soft-xl">
+                <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-700 shadow-2xs">
+                            <Ruler className="h-4.5 w-4.5" />
                         </div>
-                        <div>
-                            <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
+
+                        <div className="min-w-0">
+                            <h3 className="text-sm font-bold leading-tight text-slate-900 sm:text-base">
                                 Rincian Ukuran & Harga Satuan Pesanan
                             </h3>
-                            <p className="text-xs text-slate-500 font-medium truncate max-w-sm mt-0.5">
-                                {itemName || "Item Pesanan"} &bull; Harga bisa kustom per ukuran atau tiru dari master produk.
+                            <p className="mt-0.5 max-w-sm truncate text-xs font-medium text-slate-500">
+                                {itemName || "Item Pesanan"} &bull; Harga bisa custom per ukuran atau tiru dari master produk.
                             </p>
                         </div>
                     </div>
+
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all duration-200 cursor-pointer"
+                        className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-all duration-200 hover:bg-slate-200/60 hover:text-slate-700"
                     >
-                        <X className="w-4.5 h-4.5" />
+                        <X className="h-4.5 w-4.5" />
                     </button>
                 </div>
 
-                {/* Quick Price Actions Toolbar */}
-                <div className="px-4 py-2 bg-teal-50/60 border-b border-teal-100 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-teal-100 bg-teal-50/60 px-4 py-2 text-xs">
                     <div className="flex items-center gap-2">
                         {productPresetList.length > 0 && (
                             <button
                                 type="button"
                                 onClick={handleResetToProductPrices}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-teal-100 text-teal-900 font-semibold rounded border border-teal-300 shadow-2xs transition-colors cursor-pointer"
-                                title="Reset semua harga mengikuti harga dari katalog produk"
+                                className="inline-flex cursor-pointer items-center gap-1 rounded border border-teal-300 bg-white px-2.5 py-1 font-semibold text-teal-900 shadow-2xs transition-colors hover:bg-teal-100"
+                                title="Reset harga mengikuti katalog produk"
                             >
-                                <RefreshCw className="w-3 h-3 text-teal-600" />
+                                <RefreshCw className="h-3 w-3 text-teal-600" />
                                 <span>Niru Harga Produk</span>
                             </button>
                         )}
-                        <span className="text-[11px] text-teal-700 hidden sm:inline">
-                            Harga dasar standar: <strong>{formatCurrency(defaultUnitPrice)}</strong>
+
+                        <span className="hidden text-[11px] text-teal-700 sm:inline">
+                            Harga dasar standar:{" "}
+                            <strong>{formatCurrency(defaultUnitPrice)}</strong>
                         </span>
                     </div>
 
-                    {/* Bulk Set Price Input */}
                     <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-semibold text-slate-600">Samakan Semua:</span>
+                        <span className="text-[11px] font-semibold text-slate-600">
+                            Samakan Semua:
+                        </span>
+
                         <div className="relative w-28">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-semibold">Rp</span>
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-400">
+                                Rp
+                            </span>
                             <input
                                 type="number"
                                 placeholder="85.000"
                                 value={bulkPriceInput}
                                 onChange={(e) => setBulkPriceInput(e.target.value)}
-                                className="w-full pl-6 pr-2 py-0.5 text-xs font-mono font-bold border border-slate-300 rounded bg-white focus:border-teal-500"
+                                className="w-full rounded border border-slate-300 bg-white py-0.5 pl-6 pr-2 text-xs font-bold font-mono focus:border-teal-500 focus:outline-none"
                             />
                         </div>
+
                         <button
                             type="button"
                             onClick={handleApplyBulkPrice}
                             disabled={!bulkPriceInput}
-                            className="px-2 py-1 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-semibold rounded text-[11px] shadow-2xs transition-colors cursor-pointer"
+                            className="cursor-pointer rounded bg-teal-600 px-2 py-1 text-[11px] font-semibold text-white shadow-2xs transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Terapkan
                         </button>
                     </div>
                 </div>
 
-                {/* Body Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
-                    
-                    {/* Category Tab Buttons */}
-                    <div className="flex items-center p-1 bg-slate-100/90 rounded-lg text-xs font-semibold border border-slate-200/60">
-                        {productPresetList.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab("product")}
-                                className={`flex-1 py-1.5 px-2 rounded-md text-center transition-all cursor-pointer ${
-                                    activeTab === "product"
-                                        ? "bg-white text-teal-900 shadow-xs font-bold border border-slate-200/50"
-                                        : "text-slate-600 hover:text-slate-900"
-                                }`}
-                            >
-                                Ukuran Produk ({productPresetList.length})
-                            </button>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab("adult")}
-                            className={`flex-1 py-1.5 px-2 rounded-md text-center transition-all cursor-pointer ${
-                                activeTab === "adult"
-                                    ? "bg-white text-teal-900 shadow-xs font-bold border border-slate-200/50"
-                                    : "text-slate-600 hover:text-slate-900"
-                            }`}
-                        >
-                            Dewasa (S-5XL)
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab("number")}
-                            className={`flex-1 py-1.5 px-2 rounded-md text-center transition-all cursor-pointer ${
-                                activeTab === "number"
-                                    ? "bg-white text-teal-900 shadow-xs font-bold border border-slate-200/50"
-                                    : "text-slate-600 hover:text-slate-900"
-                            }`}
-                        >
-                            Nomor (1-12)
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab("custom")}
-                            className={`flex-1 py-1.5 px-2 rounded-md text-center transition-all cursor-pointer ${
-                                activeTab === "custom"
-                                    ? "bg-white text-teal-900 shadow-xs font-bold border border-slate-200/50"
-                                    : "text-slate-600 hover:text-slate-900"
-                            }`}
-                        >
-                            Kustom
-                        </button>
-                    </div>
+                <div className="custom-scrollbar flex-1 overflow-y-auto p-4 sm:p-5">
+                    <div className="overflow-hidden rounded-lg border border-slate-300 shadow-2xs">
+                        <table className="w-full table-fixed border-collapse text-left text-xs [&_th]:!border-l-0 [&_th]:!border-r-0 [&_td]:!border-l-0 [&_td]:!border-r-0">
+                            <colgroup>
+                                <col className="w-[6%]" />
+                                <col className="w-[19%]" />
+                                <col className="w-[16%]" />
+                                <col className="w-[19%]" />
+                                <col className="w-[14%]" />
+                                <col className="w-[19%]" />
+                                <col className="w-[7%]" />
+                            </colgroup>
 
-                    {activeTab !== "custom" && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            {activePresetList.map((size) => {
-                                const val = sizes[size] ?? "";
-                                const hasValue = val !== "" && Number(val) > 0;
-                                const sizePrice = getSizePrice(size);
-                                const itemSubtotal = hasValue ? Number(val) * sizePrice : 0;
+                            <thead>
+                                <tr className="border-b border-slate-200 bg-slate-100/80 text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                                    <th className="px-2 py-2 text-center">
+                                        No
+                                    </th>
+                                    <th className="px-3 py-2">
+                                        Ukuran
+                                    </th>
+                                    <th className="px-3 py-2 text-center">
+                                        Kategori
+                                    </th>
+                                    <th className="px-3 py-2 text-right">
+                                        Harga Satuan
+                                    </th>
+                                    <th className="px-3 py-2 text-center">
+                                        Kuantitas
+                                    </th>
+                                    <th className="px-3 py-2 text-right">
+                                        Subtotal
+                                    </th>
+                                    <th className="px-2 py-2 text-center">
+                                        Aksi
+                                    </th>
+                                </tr>
+                            </thead>
 
-                                return (
-                                    <div
-                                        key={size}
-                                        className={`rounded-xl p-3 transition-all border ${
-                                            hasValue
-                                                ? "border-teal-500 bg-teal-50/30 ring-1 ring-teal-500/20 shadow-sm"
-                                                : "border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300"
-                                        }`}
-                                    >
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <div>
-                                                <span className="text-sm font-bold text-slate-800">
-                                                    Ukuran {size}
-                                                </span>
-                                                {hasValue && (
-                                                    <div className="text-[11px] font-bold text-teal-700 mt-0.5">
-                                                        Subtotal: {formatCurrency(itemSubtotal)}
-                                                    </div>
-                                                )}
-                                            </div>
+                            <tbody className="divide-y divide-slate-200">
+                                {productPresetList.map((size, sizeIdx) => {
+                                    const value = sizes[size] ?? 0;
+                                    const sizePrice = getSizePrice(size);
+                                    const itemSubtotal = Number(value) * sizePrice;
 
-                                            <div className="flex items-center gap-4">
-                                                {/* Editable Price */}
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-semibold text-slate-500 mb-1">Harga Satuan</span>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="100"
-                                                        value={customPrices[size] !== undefined ? customPrices[size] : sizePrice}
-                                                        onChange={(e) => handlePriceChange(size, e.target.value)}
-                                                        placeholder={String(defaultUnitPrice || 0)}
-                                                        className="w-24 px-2 py-1.5 text-xs font-mono font-bold border border-slate-200 rounded-md bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-right shadow-sm"
-                                                    />
-                                                </div>
-
-                                                {/* Qty Stepper */}
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-semibold text-slate-500 mb-1">Kuantitas</span>
-                                                    <div className="flex items-center gap-1">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleStep(size, -1)}
-                                                            className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-sm transition-colors cursor-pointer border border-slate-200 shadow-sm"
-                                                        >
-                                                            -
-                                                        </button>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            placeholder="0"
-                                                            value={val}
-                                                            onChange={(e) => handleSizeChange(size, e.target.value)}
-                                                            className={`w-12 h-7 text-center font-bold text-sm rounded-md border transition-colors shadow-sm ${
-                                                                hasValue
-                                                                    ? "border-teal-500 bg-white text-teal-900 ring-1 ring-teal-500/30"
-                                                                    : "border-slate-200 bg-white text-slate-700"
-                                                            }`}
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleStep(size, 1)}
-                                                            className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-sm transition-colors cursor-pointer border border-slate-200 shadow-sm"
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Custom Size Tab */}
-                    {activeTab === "custom" && (
-                        <div className="space-y-4">
-                            <div className="bg-slate-50/80 p-3.5 rounded-lg border border-slate-200 space-y-3">
-                                <h4 className="text-xs font-bold text-slate-800">
-                                    Tambah Ukuran Kustom Baru
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                                    <div className="sm:col-span-4">
-                                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
-                                            Nama Ukuran (misal: Jumbo, 6XL, Khusus)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={customSizeName}
-                                            onChange={(e) => setCustomSizeName(e.target.value)}
-                                            placeholder="Contoh: Jumbo LD 130"
-                                            className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded focus:border-teal-500 bg-white"
-                                        />
-                                    </div>
-                                    <div className="sm:col-span-3">
-                                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
-                                            Jumlah (Qty)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={customSizeQty}
-                                            onChange={(e) => setCustomSizeQty(e.target.value)}
-                                            placeholder="1"
-                                            className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded focus:border-teal-500 bg-white text-center font-mono"
-                                        />
-                                    </div>
-                                    <div className="sm:col-span-3">
-                                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
-                                            Harga Satuan (Rp)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={customSizePrice}
-                                            onChange={(e) => setCustomSizePrice(e.target.value)}
-                                            placeholder={String(defaultUnitPrice || 0)}
-                                            className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded focus:border-teal-500 bg-white font-mono text-right"
-                                        />
-                                    </div>
-                                    <div className="sm:col-span-2 flex items-end">
-                                        <button
-                                            type="button"
-                                            onClick={handleAddCustomSize}
-                                            disabled={!customSizeName.trim()}
-                                            className="w-full py-1.5 px-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold rounded shadow-2xs transition-colors cursor-pointer flex items-center justify-center gap-1"
+                                    return (
+                                        <tr
+                                            key={size}
+                                            className={`transition-colors hover:bg-slate-50/60 ${
+                                                Number(value) > 0
+                                                    ? "bg-teal-50/30"
+                                                    : "bg-white"
+                                            }`}
                                         >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>Tambah</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                                            <td className="px-2 py-2 text-center font-mono text-slate-400">
+                                                {sizeIdx + 1}
+                                            </td>
 
-                    {/* Active Selected Sizes List Overview */}
-                    {Object.entries(sizes).some(([_, v]) => v > 0) && (
-                        <div className="border-t border-slate-100 pt-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                    <Tag className="w-3.5 h-3.5 text-teal-600" />
-                                    <span>Ringkasan Ukuran Terpilih:</span>
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={handleResetAll}
-                                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1 cursor-pointer"
-                                >
-                                    <RotateCcw className="w-3 h-3" />
-                                    <span>Reset Semua</span>
-                                </button>
-                            </div>
+                                            <td className="px-3 py-2 font-bold text-slate-800">
+                                                Ukuran {size}
+                                            </td>
 
-                            <div className="flex flex-wrap gap-1.5">
-                                {Object.entries(sizes)
-                                    .filter(([_, v]) => v > 0)
-                                    .map(([szKey, qty]) => {
-                                        const pr = getSizePrice(szKey);
-                                        return (
-                                            <div
-                                                key={szKey}
-                                                className="inline-flex items-center gap-1.5 bg-teal-50 text-teal-900 border border-teal-200/80 px-2 py-1 rounded-md text-xs font-semibold shadow-2xs"
-                                            >
-                                                <span>{szKey}:</span>
-                                                <span className="font-bold font-mono">{qty} pcs</span>
-                                                <span className="text-[10px] text-teal-700 font-mono">(@ {formatCurrency(pr)})</span>
+                                            <td className="px-3 py-2 text-center text-xs text-slate-500">
+                                                <span className="block w-full break-words">
+                                                    {productCategoryMap[size] || "-"}
+                                                </span>
+                                            </td>
+
+                                            <td className="p-1.5">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="100"
+                                                    value={
+                                                        customPrices[size] !== undefined
+                                                            ? customPrices[size]
+                                                            : sizePrice
+                                                    }
+                                                    onChange={(e) =>
+                                                        handlePriceChange(
+                                                            size,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder={String(
+                                                        defaultUnitPrice || 0,
+                                                    )}
+                                                    className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-right text-xs font-bold font-mono shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30"
+                                                />
+                                            </td>
+
+                                            <td className="p-1.5">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={value}
+                                                    onChange={(e) =>
+                                                        handleSizeChange(
+                                                            size,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="h-8 w-full rounded-md border border-teal-500 bg-white px-2 text-center text-sm font-bold text-teal-900 shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-teal-500/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                />
+                                            </td>
+
+                                            <td className="px-3 py-2 text-right text-[11px] font-bold font-mono text-teal-700">
+                                                {formatCurrency(itemSubtotal)}
+                                            </td>
+
+                                            <td className="px-2 py-2 text-center">
+                                                {Number(value) > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleRemoveSize(size)
+                                                        }
+                                                        className="cursor-pointer p-1 text-slate-400 transition-colors hover:text-rose-600"
+                                                        title="Hapus ukuran ini"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+
+                                {otherActiveSizes.map(([size, value], idx) => {
+                                    const sizePrice = getSizePrice(size);
+                                    const itemSubtotal = Number(value) * sizePrice;
+
+                                    return (
+                                        <tr
+                                            key={size}
+                                            className="bg-teal-50/30 transition-colors hover:bg-slate-50/60"
+                                        >
+                                            <td className="px-2 py-2 text-center font-mono text-slate-400">
+                                                {productPresetList.length + idx + 1}
+                                            </td>
+
+                                            <td className="px-3 py-2 font-bold text-slate-800">
+                                                {size}
+                                            </td>
+
+                                            <td className="px-3 py-2 text-center text-xs text-slate-500">
+                                                {customSizeCategories[size] || "Custom"}
+                                            </td>
+
+                                            <td className="p-1.5">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="100"
+                                                    value={
+                                                        customPrices[size] !== undefined
+                                                            ? customPrices[size]
+                                                            : sizePrice
+                                                    }
+                                                    onChange={(e) =>
+                                                        handlePriceChange(
+                                                            size,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-right text-xs font-bold font-mono shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30"
+                                                />
+                                            </td>
+
+                                            <td className="p-1.5">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={value}
+                                                    onChange={(e) =>
+                                                        handleSizeChange(
+                                                            size,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="h-8 w-full rounded-md border border-teal-500 bg-white px-2 text-center text-sm font-bold text-teal-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-teal-500/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                />
+                                            </td>
+
+                                            <td className="px-3 py-2 text-right text-[11px] font-bold font-mono text-teal-700">
+                                                {formatCurrency(itemSubtotal)}
+                                            </td>
+
+                                            <td className="px-2 py-2 text-center">
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleRemoveSize(szKey)}
-                                                    className="text-slate-400 hover:text-rose-600 ml-0.5 cursor-pointer"
+                                                    onClick={() =>
+                                                        handleRemoveSize(size)
+                                                    }
+                                                    className="cursor-pointer p-1 text-slate-400 transition-colors hover:text-rose-600"
+                                                    title="Hapus ukuran ini"
                                                 >
-                                                    <X className="w-3 h-3" />
+                                                    <Trash2 className="h-4 w-4" />
                                                 </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+
+                                {!showCustomForm ? (
+                                    <tr className="bg-slate-50/70 transition-colors hover:bg-teal-50/40">
+                                        <td className="px-2 py-2 text-center font-mono text-slate-400">
+                                            {productPresetList.length +
+                                                otherActiveSizes.length +
+                                                1}
+                                        </td>
+
+                                        <td className="px-3 py-2 text-center font-bold text-slate-600">
+                                            Custom
+                                        </td>
+
+                                        <td className="px-3 py-2" />
+                                        <td className="px-3 py-2" />
+                                        <td className="px-3 py-2" />
+                                        <td className="px-3 py-2" />
+
+                                        <td className="px-2 py-2 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenCustomForm}
+                                                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-teal-300 bg-white text-base font-bold leading-none text-teal-700 shadow-sm transition-colors hover:bg-teal-50 hover:text-teal-800"
+                                                title="Tambah ukuran custom"
+                                            >
+                                                +
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    <tr className="bg-teal-50/30">
+                                        <td className="px-2 py-2 text-center font-mono text-slate-400">
+                                            {productPresetList.length +
+                                                otherActiveSizes.length +
+                                                1}
+                                        </td>
+
+                                        <td className="p-1.5">
+                                            <input
+                                                type="text"
+                                                placeholder="Custom"
+                                                value={newSizeName}
+                                                onChange={(e) =>
+                                                    setNewSizeName(e.target.value)
+                                                }
+                                                className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30"
+                                                autoFocus
+                                            />
+                                        </td>
+
+                                        <td className="p-1.5">
+                                            <div className="flex h-8 w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-500">
+                                                Custom
                                             </div>
-                                        );
-                                    })}
-                            </div>
-                        </div>
-                    )}
+                                        </td>
+
+                                        <td className="p-1.5">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="100"
+                                                placeholder={String(
+                                                    defaultUnitPrice || 0,
+                                                )}
+                                                value={newSizePrice}
+                                                onChange={(e) =>
+                                                    setNewSizePrice(e.target.value)
+                                                }
+                                                className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-right text-xs font-bold font-mono shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500/30"
+                                            />
+                                        </td>
+
+                                        <td className="p-1.5">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={newSizeQuantity}
+                                                onChange={(e) =>
+                                                    setNewSizeQuantity(e.target.value)
+                                                }
+                                                className="h-8 w-full rounded-md border border-teal-500 bg-white px-2 text-center text-sm font-bold text-teal-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-teal-500/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                            />
+                                        </td>
+
+                                        <td className="px-3 py-2 text-right text-[11px] font-bold font-mono text-teal-700">
+                                            {formatCurrency(newCustomSubtotal)}
+                                        </td>
+
+                                        <td className="px-2 py-2 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={handleAddCustomInline}
+                                                disabled={
+                                                    !newSizeQuantity ||
+                                                    Number(newSizeQuantity) < 1
+                                                }
+                                                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-teal-300 bg-white text-base font-bold leading-none text-teal-700 shadow-sm transition-colors hover:bg-teal-50 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-30"
+                                                title="Tambahkan ukuran custom"
+                                            >
+                                                +
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                {/* Footer with Calculations */}
-                <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/80 px-5 py-3.5">
                     <div className="flex items-center gap-4 text-xs">
                         <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Total Qty</span>
-                            <span className="font-bold text-slate-900 text-sm font-mono">{totalQuantity} pcs</span>
+                            <span className="block text-[10px] font-semibold uppercase text-slate-400">
+                                Total Qty
+                            </span>
+                            <span className="text-sm font-bold font-mono text-slate-900">
+                                {totalQuantity} pcs
+                            </span>
                         </div>
+
                         <div className="h-6 w-px bg-slate-200" />
+
                         <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Total Subtotal</span>
-                            <span className="font-bold text-teal-700 text-sm font-mono">{formatCurrency(calculatedSubtotal)}</span>
+                            <span className="block text-[10px] font-semibold uppercase text-slate-400">
+                                Total Subtotal
+                            </span>
+                            <span className="text-sm font-bold font-mono text-teal-700">
+                                {formatCurrency(calculatedSubtotal)}
+                            </span>
                         </div>
+
                         {totalQuantity > 0 && hasDifferentPrices && (
                             <>
-                                <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+                                <div className="hidden h-6 w-px bg-slate-200 sm:block" />
                                 <div className="hidden sm:block">
-                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Rata-rata / pcs</span>
-                                    <span className="font-bold text-slate-700 text-xs font-mono">
-                                        {formatCurrency(Math.round(calculatedSubtotal / totalQuantity))}
+                                    <span className="block text-[10px] font-semibold uppercase text-slate-400">
+                                        Rata-rata / pcs
+                                    </span>
+                                    <span className="text-xs font-bold font-mono text-slate-700">
+                                        {formatCurrency(
+                                            Math.round(
+                                                calculatedSubtotal /
+                                                    totalQuantity,
+                                            ),
+                                        )}
                                     </span>
                                 </div>
                             </>
@@ -606,21 +829,21 @@ const SizeBreakdownModal = memo(function SizeBreakdownModal({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-md transition-colors cursor-pointer"
+                            className="cursor-pointer rounded-md px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-200/60"
                         >
                             Batal
                         </button>
+
                         <button
                             type="button"
                             onClick={handleApply}
-                            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-md shadow-xs transition-colors cursor-pointer"
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-teal-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-teal-700"
                         >
-                            <Check className="w-3.5 h-3.5" />
+                            <Check className="h-3.5 w-3.5" />
                             <span>Terapkan ke Pesanan</span>
                         </button>
                     </div>
                 </div>
-
             </div>
         </div>
     );

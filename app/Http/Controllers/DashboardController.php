@@ -3,35 +3,40 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Item;
 use App\Models\Role;
+use App\Models\Size;
 use App\Models\StockMutation;
 use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-
-use App\Models\Customer;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\Product;
 
 class DashboardController extends Controller
 {
     public function page(Request $request)
     {
         $summary = $this->getDashboardSummary();
-        $year = (int) ($request->get('year', Carbon::now()->year));
-        $compareYear = (int) ($request->get('compare_year', $year - 1));
-        $customerId = $request->get('customer_id', 'ALL');
 
-        $orderAnalytics = $this->getOrderAnalyticsData($customerId, $year, $compareYear);
+        $canViewAnalytics = $request->user()->hasPermission('dashboard.analytics.view');
+
+        if ($canViewAnalytics) {
+            $year = (int) ($request->get('year', Carbon::now()->year));
+            $compareYear = (int) ($request->get('compare_year', $year - 1));
+            $customerId = $request->get('customer_id', 'ALL');
+
+            $orderAnalytics = $this->getOrderAnalyticsData($customerId, $year, $compareYear);
+        } else {
+            $orderAnalytics = null;
+        }
 
         return Inertia::render('Dashboard', [
             'initialSummary' => $summary,
             'initialOrderAnalytics' => $orderAnalytics,
+            'canViewAnalytics' => $canViewAnalytics,
         ]);
     }
 
@@ -88,49 +93,53 @@ class DashboardController extends Controller
                     ->with('items')
                     ->get();
 
-                $total     = (float) $invs->sum('total_amount');
-                $paid      = (float) $invs->sum('paid_amount');
-                $qty       = (int)   $invs->reduce(fn($c, $i) => $c + $i->items->sum('qty'), 0);
-                $countLunas    = $invs->where('payment_status', 'lunas')->count();
-                $countDp       = $invs->where('payment_status', 'dp')->count();
-                $countBelum    = $invs->where('payment_status', 'belum_bayar')->count();
-                $countSelesai  = $invs->whereIn('production_status', ['selesai', 'dikirim'])->count();
-                $countTotal    = $invs->count();
-                $outstanding   = max(0, $total - $paid);
-                $fulfillRate   = $countTotal > 0 ? round($countSelesai / $countTotal * 100) : 0;
-                $paidRate      = $total > 0 ? round($paid / $total * 100) : 0;
+                $total = (float) $invs->sum('total_amount');
+                $paid = (float) $invs->sum('paid_amount');
+                $qty = (int) $invs->reduce(fn ($c, $i) => $c + $i->items->sum('qty'), 0);
+                $countLunas = $invs->filter(fn ($i) => strtolower((string) $i->payment_status) === 'lunas')->count();
+                $countDp = $invs->filter(fn ($i) => strtolower((string) $i->payment_status) === 'dp')->count();
+                $countBelum = $invs->filter(
+                    fn ($i) => in_array(strtolower((string) $i->payment_status), ['belum_bayar', 'belum_lunas'])
+                )->count();
+                $countSelesai = $invs->filter(
+                    fn ($i) => in_array(strtolower((string) $i->production_status), ['selesai', 'dikirim'])
+                )->count();
+                $countTotal = $invs->count();
+                $outstanding = max(0, $total - $paid);
+                $fulfillRate = $countTotal > 0 ? round($countSelesai / $countTotal * 100) : 0;
+                $paidRate = $total > 0 ? round($paid / $total * 100) : 0;
 
                 $yearData[] = [
-                    'year'          => (int) $yr,
-                    'total_amount'  => $total,
-                    'paid_amount'   => $paid,
-                    'outstanding'   => $outstanding,
-                    'qty'           => $qty,
-                    'invoices'      => $countTotal,
-                    'lunas'         => $countLunas,
-                    'dp'            => $countDp,
-                    'belum_bayar'   => $countBelum,
-                    'prod_selesai'  => $countSelesai,
-                    'fulfill_rate'  => $fulfillRate,  // % invoice yg sudah selesai produksi
-                    'paid_rate'     => $paidRate,     // % uang yang sudah masuk
+                    'year' => (int) $yr,
+                    'total_amount' => $total,
+                    'paid_amount' => $paid,
+                    'outstanding' => $outstanding,
+                    'qty' => $qty,
+                    'invoices' => $countTotal,
+                    'lunas' => $countLunas,
+                    'dp' => $countDp,
+                    'belum_bayar' => $countBelum,
+                    'prod_selesai' => $countSelesai,
+                    'fulfill_rate' => $fulfillRate,  // % invoice yg sudah selesai produksi
+                    'paid_rate' => $paidRate,     // % uang yang sudah masuk
                 ];
             }
             $rows[] = [
-                'customer_id'      => $cust->id,
-                'name'             => $cust->name,
+                'customer_id' => $cust->id,
+                'name' => $cust->name,
                 'institution_name' => $cust->institution_name,
-                'code'             => $cust->code,
-                'years'            => $yearData,
+                'code' => $cust->code,
+                'years' => $yearData,
             ];
         }
 
         // Only include customers that have at least one invoice across all years
-        $rows = array_values(array_filter($rows, fn($r) => collect($r['years'])->sum('invoices') > 0));
+        $rows = array_values(array_filter($rows, fn ($r) => collect($r['years'])->sum('invoices') > 0));
 
         return response()->json([
             'success' => true,
             'data' => [
-                'customers'       => $rows,
+                'customers' => $rows,
                 'available_years' => $availableYears,
             ],
         ]);
@@ -161,7 +170,7 @@ class DashboardController extends Controller
                     'name' => $c->name,
                     'code' => $c->code,
                     'institution_name' => $c->institution_name,
-                    'display_label' => $c->name . ($c->institution_name ? " ({$c->institution_name})" : ''),
+                    'display_label' => $c->name.($c->institution_name ? " ({$c->institution_name})" : ''),
                 ];
             });
 
@@ -197,12 +206,12 @@ class DashboardController extends Controller
         $monthNames = [
             1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
             5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu',
-            9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
+            9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des',
         ];
         $monthFullNames = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
             5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
         ];
 
         $monthlyData = [];
@@ -237,14 +246,16 @@ class DashboardController extends Controller
                 return $carry + $inv->items->sum('qty');
             }, 0);
 
-            $paidInvoices = $curMonthInvoices->where('payment_status', 'lunas')->count();
-            $dpInvoices = $curMonthInvoices->where('payment_status', 'dp')->count();
-            $unpaidInvoices = $curMonthInvoices->where('payment_status', 'belum_bayar')->count();
+            $paidInvoices = $curMonthInvoices->filter(fn ($i) => strtolower((string) $i->payment_status) === 'lunas')->count();
+            $dpInvoices = $curMonthInvoices->filter(fn ($i) => strtolower((string) $i->payment_status) === 'dp')->count();
+            $unpaidInvoices = $curMonthInvoices->filter(
+                fn ($i) => in_array(strtolower((string) $i->payment_status), ['belum_bayar', 'belum_lunas'])
+            )->count();
 
             $monthlyData[] = [
                 'month' => $m,
                 'label' => $monthNames[$m],
-                'full_label' => $monthFullNames[$m] . ' ' . $currentYear,
+                'full_label' => $monthFullNames[$m].' '.$currentYear,
                 'current_revenue' => $curRevenue,
                 'current_paid' => $curPaid,
                 'current_qty' => $curQty,
@@ -286,7 +297,7 @@ class DashboardController extends Controller
         // 6. Top 5 Products
         $allItems = $invoicesCurrent->flatMap->items;
         $topProducts = $allItems->groupBy(function ($item) {
-            return $item->product_id ? 'prod_' . $item->product_id : 'name_' . ($item->item_name ?: 'Custom');
+            return $item->product_id ? 'prod_'.$item->product_id : 'name_'.($item->item_name ?: 'Custom');
         })->map(function ($group) use ($totalCurrentRevenue) {
             $first = $group->first();
             $totalQty = (int) $group->sum('qty');
@@ -311,41 +322,47 @@ class DashboardController extends Controller
             'potong' => ['key' => 'potong', 'label' => 'Proses Potong', 'color' => '#0284c7', 'count' => 0],
             'jahit' => ['key' => 'jahit', 'label' => 'Proses Jahit', 'color' => '#f59e0b', 'count' => 0],
             'qc' => ['key' => 'qc', 'label' => 'QC & Finishing', 'color' => '#8b5cf6', 'count' => 0],
+            'proses' => ['key' => 'proses', 'label' => 'Diproses', 'color' => '#6366f1', 'count' => 0],
             'selesai' => ['key' => 'selesai', 'label' => 'Selesai Jahit', 'color' => '#10b981', 'count' => 0],
             'dikirim' => ['key' => 'dikirim', 'label' => 'Dikirim / Diambil', 'color' => '#0d9488', 'count' => 0],
         ];
         foreach ($invoicesCurrent as $inv) {
-            $st = $inv->production_status ?: 'pending';
+            $st = strtolower(trim((string) ($inv->production_status ?: 'pending')));
             if (isset($prodStatuses[$st])) {
                 $prodStatuses[$st]['count']++;
             }
         }
 
         // 8. Payment Status Breakdown
+        $payOf = fn ($i) => strtolower(trim((string) $i->payment_status));
+        $lunasInvoices = $invoicesCurrent->filter(fn ($i) => $payOf($i) === 'lunas');
+        $dpInvoicesAll = $invoicesCurrent->filter(fn ($i) => $payOf($i) === 'dp');
+        $belumInvoices = $invoicesCurrent->filter(fn ($i) => in_array($payOf($i), ['belum_bayar', 'belum_lunas']));
+
         $paymentBreakdown = [
             'lunas' => [
                 'label' => 'Lunas',
-                'count' => $invoicesCurrent->where('payment_status', 'lunas')->count(),
-                'total' => (float) $invoicesCurrent->where('payment_status', 'lunas')->sum('total_amount'),
-                'color' => '#10b981'
+                'count' => $lunasInvoices->count(),
+                'total' => (float) $lunasInvoices->sum('total_amount'),
+                'color' => '#10b981',
             ],
             'dp' => [
                 'label' => 'DP / Cicilan',
-                'count' => $invoicesCurrent->where('payment_status', 'dp')->count(),
-                'total' => (float) $invoicesCurrent->where('payment_status', 'dp')->sum('total_amount'),
-                'color' => '#f59e0b'
+                'count' => $dpInvoicesAll->count(),
+                'total' => (float) $dpInvoicesAll->sum('total_amount'),
+                'color' => '#f59e0b',
             ],
             'belum_bayar' => [
                 'label' => 'Belum Bayar',
-                'count' => $invoicesCurrent->where('payment_status', 'belum_bayar')->count(),
-                'total' => (float) $invoicesCurrent->where('payment_status', 'belum_bayar')->sum('total_amount'),
-                'color' => '#f43f5e'
+                'count' => $belumInvoices->count(),
+                'total' => (float) $belumInvoices->sum('total_amount'),
+                'color' => '#f43f5e',
             ],
         ];
 
         // 9. Top Customers (If customer_id === ALL)
         $topCustomers = [];
-        if (!$customerId || $customerId === 'ALL') {
+        if (! $customerId || $customerId === 'ALL') {
             $topCustomers = $invoicesCurrent->groupBy('customer_id')->map(function ($group) use ($totalCurrentRevenue) {
                 $first = $group->first();
                 $cust = $first->customer;
@@ -415,13 +432,121 @@ class DashboardController extends Controller
         ];
     }
 
+    public function customerOrdersApi(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'nullable',
+            'year' => 'required|integer|min:2000|max:2100',
+        ]);
+
+        $customerId = $request->get('customer_id', 'ALL');
+        $year = (int) $request->get('year');
+
+        $customer = null;
+        if ($customerId && $customerId !== 'ALL') {
+            $cust = Customer::find($customerId);
+            if (! $cust) {
+                return response()->json(['success' => false, 'message' => 'Pelanggan tidak ditemukan.'], 404);
+            }
+            $customer = ['id' => $cust->id, 'code' => $cust->code, 'name' => $cust->name];
+        }
+
+        $query = Invoice::with(['items.product:id,name,code', 'customer:id,name'])
+            ->whereYear('order_date', $year);
+        if ($customerId && $customerId !== 'ALL') {
+            $query->where('customer_id', $customerId);
+        }
+        $invoices = $query->orderBy('order_date')->orderBy('id')->limit(200)->get();
+
+        $sizeOrder = Size::orderBy('sort_order')->pluck('size_name', 'size_name')
+            ->toArray();
+        $sizeIndex = array_flip(array_values($sizeOrder));
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'customer' => $customer,
+                'year' => $year,
+                'invoices' => $invoices->map(function ($inv) use ($sizeIndex) {
+                    return [
+                        'id' => $inv->id,
+                        'invoice_number' => $inv->invoice_number,
+                        'customer_name' => $inv->customer ? $inv->customer->name : ($inv->customer_name ?: 'Umum'),
+                        'order_date' => $inv->order_date ? Carbon::parse($inv->order_date)->format('Y-m-d') : null,
+                        'target_date' => $inv->completion_date ? Carbon::parse($inv->completion_date)->format('Y-m-d') : null,
+                        'production_status' => $inv->production_status,
+                        'payment_status' => $inv->payment_status,
+                        'total' => (float) $inv->total_amount,
+                        'paid' => (float) $inv->paid_amount,
+                        'outstanding' => max(0, (float) $inv->total_amount - (float) $inv->paid_amount),
+                        'items' => $inv->items->map(function ($it) use ($sizeIndex) {
+                            $unitPrice = (float) $it->unit_price;
+                            $sizes = $this->parseSizeBreakdown($it->size_breakdown);
+
+                            uksort($sizes, function ($a, $b) use ($sizeIndex) {
+                                $ia = $sizeIndex[$a] ?? PHP_INT_MAX;
+                                $ib = $sizeIndex[$b] ?? PHP_INT_MAX;
+
+                                return $ia <=> $ib;
+                            });
+
+                            return [
+                                'product_name' => $it->product ? $it->product->name : ($it->item_name ?: 'Item Custom'),
+                                'unit' => $it->unit,
+                                'qty' => (int) $it->qty,
+                                'unit_price' => $unitPrice,
+                                'subtotal' => (float) $it->subtotal,
+                                'sizes' => collect($sizes)->map(fn ($qty, $size) => [
+                                    'size' => $size,
+                                    'qty' => (int) $qty,
+                                    'unit_price' => $unitPrice,
+                                    'subtotal' => round($unitPrice * $qty, 2),
+                                ])->values()->all(),
+                            ];
+                        }),
+                    ];
+                }),
+            ],
+        ]);
+    }
+
+    private function parseSizeBreakdown($raw): array
+    {
+        if (empty($raw)) {
+            return [];
+        }
+
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+
+        $sizes = [];
+        foreach ($raw as $key => $value) {
+            if (is_array($value)) {
+                if (isset($value['size']) && isset($value['qty'])) {
+                    // Format: {size: {size: "M", qty: 10}}
+                    $sizes[trim((string) $value['size'])] = (float) $value['qty'];
+                } elseif (isset($value['qty'])) {
+                    // New format: {size: {qty: 10, price: 85000}}
+                    $sizes[trim((string) $key)] = (float) $value['qty'];
+                }
+            } elseif (! is_array($value) && is_numeric($value)) {
+                // Old format: {size: qty}
+                $sizes[trim((string) $key)] = (float) $value;
+            }
+        }
+
+        return array_filter($sizes, fn ($qty) => $qty > 0);
+    }
+
     private function getDashboardSummary(): array
     {
         // 1. Basic Counts
         $totalItems = Item::count();
         $activeItems = Item::where('is_active', true)->count();
         $totalStockBase = (int) Item::sum('stock');
-        
+
         $lowStockItems = Item::whereRaw('stock <= min_stock')
             ->where('is_active', true)
             ->with(['unit', 'category'])
@@ -487,6 +612,7 @@ class DashboardController extends Controller
             ->map(function ($cat, $index) use ($palette, $totalItems) {
                 $stockSum = $cat->items->sum('stock');
                 $itemPercentage = $totalItems > 0 ? round(($cat->items_count / $totalItems) * 100, 1) : 0;
+
                 return [
                     'id' => $cat->id,
                     'name' => $cat->name,
@@ -503,6 +629,7 @@ class DashboardController extends Controller
         // 5. Critical Stock Items (Need Restock)
         $criticalItems = $lowStockItems->take(5)->map(function ($item) {
             $ratio = $item->min_stock > 0 ? min(100, round(($item->stock / $item->min_stock) * 100)) : 0;
+
             return [
                 'id' => $item->id,
                 'code' => $item->code,
