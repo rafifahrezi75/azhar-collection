@@ -126,6 +126,8 @@ class ProductController extends Controller
             'base_price' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
+            'production_wage_mode' => 'required|in:manual,steps',
+            'production_wage' => 'nullable|numeric|min:0',
             'sizes' => 'nullable|array',
             'sizes.*.size_id' => 'required_with:sizes|exists:sizes,id',
             'sizes.*.price' => 'nullable|numeric|min:0',
@@ -147,16 +149,34 @@ class ProductController extends Controller
             'primary_image_index' => 'nullable|integer|min:0',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
-            $product = Product::create([
-                'code' => $validated['code'],
-                'name' => $validated['name'],
-                'category' => $validated['category'] ?? null,
-                'default_unit' => $validated['default_unit'] ?? 'Stel',
-                'base_price' => $validated['base_price'] ?? 0,
-                'description' => $validated['description'] ?? null,
-                'is_active' => $request->boolean('is_active', true),
-            ]);
+        $productionWageMode = $validated['production_wage_mode'] ?? 'steps';
+        $productionSteps = $validated['production_steps'] ?? [];
+
+        if ($productionWageMode === 'steps' && empty($productionSteps)) {
+            return response()->json([
+                'message' => 'Langkah produksi wajib diisi.',
+                'errors' => [
+                    'production_steps' => ['Tambahkan minimal satu langkah produksi atau pilih upah produksi manual.'],
+                ],
+            ], 422);
+        }
+
+        $productionWage = $productionWageMode === 'manual'
+            ? (float) ($validated['production_wage'] ?? 0)
+            : collect($productionSteps)->sum(fn ($step) => (float) ($step['wage'] ?? 0));
+
+        return DB::transaction(function () use ($validated, $request, $productionWageMode, $productionWage) {
+            $product = new Product();
+            $product->code = $validated['code'];
+            $product->name = $validated['name'];
+            $product->category = $validated['category'] ?? null;
+            $product->default_unit = $validated['default_unit'] ?? 'Stel';
+            $product->base_price = $validated['base_price'] ?? 0;
+            $product->description = $validated['description'] ?? null;
+            $product->is_active = $request->boolean('is_active', true);
+            $product->production_wage_mode = $productionWageMode;
+            $product->production_wage = $productionWage;
+            $product->save();
 
             // Save Sizes
             if (! empty($validated['sizes'])) {
@@ -192,7 +212,7 @@ class ProductController extends Controller
             }
 
             // Save Production Steps
-            if (! empty($validated['production_steps'])) {
+            if ($productionWageMode === 'steps' && ! empty($validated['production_steps'])) {
                 foreach ($validated['production_steps'] as $idx => $step) {
                     if (! empty($step['production_step_id']) || ! empty($step['custom_name'])) {
                         ProductProductionStep::create([
@@ -234,7 +254,7 @@ class ProductController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Produk, varian ukuran, dan resep bahan berhasil ditambahkan',
+                'message' => 'Produk berhasil ditambahkan',
                 'data' => $product,
             ], 201);
         });
@@ -269,6 +289,8 @@ class ProductController extends Controller
             'base_price' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
+            'production_wage_mode' => 'required|in:manual,steps',
+            'production_wage' => 'nullable|numeric|min:0',
             'sizes' => 'nullable|array',
             'sizes.*.size_id' => 'required_with:sizes|exists:sizes,id',
             'sizes.*.price' => 'nullable|numeric|min:0',
@@ -293,16 +315,33 @@ class ProductController extends Controller
             'primary_image_index' => 'nullable|integer|min:0',
         ]);
 
-        return DB::transaction(function () use ($validated, $request, $product) {
-            $product->update([
-                'code' => $validated['code'],
-                'name' => $validated['name'],
-                'category' => $validated['category'] ?? null,
-                'default_unit' => $validated['default_unit'] ?? 'Stel',
-                'base_price' => $validated['base_price'] ?? 0,
-                'description' => $validated['description'] ?? null,
-                'is_active' => $request->boolean('is_active', true),
-            ]);
+        $productionWageMode = $validated['production_wage_mode'] ?? 'steps';
+        $productionSteps = $validated['production_steps'] ?? [];
+
+        if ($productionWageMode === 'steps' && empty($productionSteps)) {
+            return response()->json([
+                'message' => 'Langkah produksi wajib diisi.',
+                'errors' => [
+                    'production_steps' => ['Tambahkan minimal satu langkah produksi atau pilih upah produksi manual.'],
+                ],
+            ], 422);
+        }
+
+        $productionWage = $productionWageMode === 'manual'
+            ? (float) ($validated['production_wage'] ?? 0)
+            : collect($productionSteps)->sum(fn ($step) => (float) ($step['wage'] ?? 0));
+
+        return DB::transaction(function () use ($validated, $request, $product, $productionWageMode, $productionWage) {
+            $product->code = $validated['code'];
+            $product->name = $validated['name'];
+            $product->category = $validated['category'] ?? null;
+            $product->default_unit = $validated['default_unit'] ?? 'Stel';
+            $product->base_price = $validated['base_price'] ?? 0;
+            $product->description = $validated['description'] ?? null;
+            $product->is_active = $request->boolean('is_active', true);
+            $product->production_wage_mode = $productionWageMode;
+            $product->production_wage = $productionWage;
+            $product->save();
 
             // Sync sizes
             $product->sizes()->delete();
@@ -341,7 +380,7 @@ class ProductController extends Controller
 
             // Sync Production Steps
             $product->productionSteps()->delete();
-            if (! empty($validated['production_steps'])) {
+            if ($productionWageMode === 'steps' && ! empty($validated['production_steps'])) {
                 foreach ($validated['production_steps'] as $idx => $step) {
                     if (! empty($step['production_step_id']) || ! empty($step['custom_name'])) {
                         ProductProductionStep::create([
@@ -418,7 +457,7 @@ class ProductController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Produk, varian ukuran, dan resep bahan berhasil diperbarui',
+                'message' => 'Produk berhasil diperbarui',
                 'data' => $product,
             ]);
         });
@@ -437,7 +476,7 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json([
-            'message' => 'Produk dan seluruh data terkait berhasil dihapus',
+            'message' => 'Produk berhasil dihapus',
         ]);
     }
 

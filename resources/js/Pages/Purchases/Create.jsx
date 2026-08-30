@@ -83,7 +83,7 @@ export default function Create({ items }) {
 
     return (
         <DashboardLayout>
-            <Head title="Tambah Kulaan / Pembelian - Azhar Collection" />
+            <Head title="Tambah Pembelian - Azhar Collection" />
 
             <div className="space-y-4">
                 {/* Header */}
@@ -96,7 +96,7 @@ export default function Create({ items }) {
                             <ArrowLeft className="w-4 h-4" />
                         </Link>
                         <div>
-                            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Input Kulaan / Pembelian Baru</h1>
+                            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Input Pembelian Baru</h1>
                         </div>
                     </div>
                 </div>

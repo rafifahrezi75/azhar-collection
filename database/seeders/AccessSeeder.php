@@ -172,10 +172,10 @@ class AccessSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 4. Pembelian / Kulaan (Direct Top Menu)
+        // 4. Pembelian (Direct Top Menu)
         Menu::create([
             'parent_id' => null,
-            'title' => 'Pembelian / Kulaan',
+            'title' => 'Pembelian',
             'icon' => 'ShoppingBag',
             'path' => '/dashboard/purchases',
             'permission_name' => null,

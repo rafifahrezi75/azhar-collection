@@ -212,7 +212,7 @@
                     Ref : {{ $purchase->reference_no }}
                 </td>
                 <td style="width: 34%; text-align: center; vertical-align: bottom; font-size: 15px; font-weight: bold; letter-spacing: 1px;">
-                    NOTA PEMBELIAN (KULAAN)
+                    NOTA PEMBELIAN
                 </td>
                 <td style="width: 33%;"></td>
             </tr>

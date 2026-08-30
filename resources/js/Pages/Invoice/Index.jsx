@@ -88,6 +88,8 @@ export default function Index() {
     }, [loadData]);
 
     const handleOpenPrint = async (invoice) => {
+        closeFilter();
+
         try {
             const res = await axios.get(`/api/invoices/${invoice.id}`);
             setSelectedInvoice(res.data?.data || invoice);
@@ -120,7 +122,21 @@ export default function Index() {
         setPaymentStatusFilter("all");
         setStartDate("");
         setEndDate("");
+        setCurrentPage(1);
     };
+
+    const closeFilter = useCallback(() => {
+        setIsFilterModalOpen(false);
+    }, []);
+
+    const handleFilterClick = useCallback(() => {
+        setIsFilterModalOpen((prev) => !prev);
+    }, []);
+
+    const handleRefresh = useCallback(() => {
+        closeFilter();
+        loadData();
+    }, [closeFilter, loadData]);
 
     const formatCurrency = (val) => {
         return new Intl.NumberFormat("id-ID", {
@@ -179,12 +195,42 @@ export default function Index() {
                         setCurrentPage(1);
                     }}
                     searchPlaceholder="Cari no invoice, pemesan, instansi..."
-                    onFilterClick={() => setIsFilterModalOpen(true)}
+                    onFilterClick={handleFilterClick}
                     isFilterActive={isFilterActive}
-                    onRefresh={loadData}
+                    filterContent={
+                        <InvoiceFilterModal
+                            isOpen={isFilterModalOpen}
+                            typeFilter={typeFilter}
+                            onTypeFilterChange={(val) => {
+                                setTypeFilter(val);
+                                setCurrentPage(1);
+                            }}
+                            paymentStatusFilter={paymentStatusFilter}
+                            onPaymentStatusFilterChange={(val) => {
+                                setPaymentStatusFilter(val);
+                                setCurrentPage(1);
+                            }}
+                            startDate={startDate}
+                            onStartDateChange={(val) => {
+                                setStartDate(val);
+                                setCurrentPage(1);
+                            }}
+                            endDate={endDate}
+                            onEndDateChange={(val) => {
+                                setEndDate(val);
+                                setCurrentPage(1);
+                            }}
+                            onReset={handleResetFilters}
+                            onClose={closeFilter}
+                        />
+                    }
+                    onRefresh={handleRefresh}
                     refreshing={loading}
-                    onAdd={() => router.visit("/dashboard/invoice/create")}
-                    addTitle="Buat Invoice Baru (Pesanan Baru / Pesanan Lama)"
+                    onAdd={() => {
+                        closeFilter();
+                        router.visit("/dashboard/invoice/create");
+                    }}
+                    addTitle="Tambah (Baru / Lama)"
                     canCreate={canCreate}
                 />
                         {/* Summary Stat Cards */}
@@ -391,7 +437,7 @@ export default function Index() {
                                                         {/* View Detail Page (Sky) */}
                                                         <Link
                                                             href={`/dashboard/invoice/${inv.id}`}
-                                                            title="Lihat Detail Transaksi"
+                                                            title="Detail"
                                                             className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
                                                         >
                                                             <Eye className="w-3.5 h-3.5" />
@@ -401,7 +447,7 @@ export default function Index() {
                                                         <button
                                                             type="button"
                                                             onClick={() => handleOpenPrint(inv)}
-                                                            title="Cetak Nota Resmi"
+                                                            title="Nota"
                                                             className="w-7 h-7 inline-flex items-center justify-center bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-md transition-colors border border-teal-200/80 cursor-pointer shadow-2xs"
                                                         >
                                                             <Printer className="w-3.5 h-3.5" />
@@ -412,7 +458,7 @@ export default function Index() {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleDelete(inv)}
-                                                                title="Hapus Invoice"
+                                                                title="Hapus"
                                                                 className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -444,21 +490,6 @@ export default function Index() {
                     )}
                 </div>
             </div>
-
-            {/* Filter Modal */}
-            <InvoiceFilterModal
-                isOpen={isFilterModalOpen}
-                typeFilter={typeFilter}
-                onTypeFilterChange={setTypeFilter}
-                paymentStatusFilter={paymentStatusFilter}
-                onPaymentStatusFilterChange={setPaymentStatusFilter}
-                startDate={startDate}
-                onStartDateChange={setStartDate}
-                endDate={endDate}
-                onEndDateChange={setEndDate}
-                onReset={handleResetFilters}
-                onClose={() => setIsFilterModalOpen(false)}
-            />
 
             {/* Dedicated Invoice Print Modal */}
             <InvoicePrintModal

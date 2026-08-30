@@ -36,13 +36,13 @@ export default function Index({ purchases }) {
 
     return (
         <DashboardLayout>
-            <Head title="Pembelian / Kulaan - Azhar Collection" />
+            <Head title="Pembelian - Azhar Collection" />
 
             <div className="space-y-4">
                 <PageHeaderBar
                     breadcrumbs={[
                         { label: "Transaksi" },
-                        { label: "Kulaan / Pembelian" },
+                        { label: "Pembelian" },
                     ]}
                     searchValue={searchTerm}
                     onSearchChange={handleSearchChange}
@@ -50,7 +50,7 @@ export default function Index({ purchases }) {
                     onRefresh={handleRefresh}
                     refreshing={loading}
                     onAdd={() => router.visit(route('purchases.create'))}
-                    addTitle="Tambah Kulaan"
+                    addTitle="Tambah"
                     canCreate={true}
                 />
 
@@ -102,18 +102,18 @@ export default function Index({ purchases }) {
                                                     <Link
                                                         href={route('purchases.show', purchase.id)}
                                                         className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
-                                                        title="Lihat Detail"
+                                                        title="Detail"
                                                     >
                                                         <Eye className="w-3.5 h-3.5" />
                                                     </Link>
-                                                    
+
                                                     {/* Cetak PDF (Indigo) - matching preview/print theme */}
                                                     <a
                                                         href={route('purchases.pdf', purchase.id)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
-                                                        title="Cetak PDF"
+                                                        title="PDF"
                                                     >
                                                         <Printer className="w-3.5 h-3.5" />
                                                     </a>

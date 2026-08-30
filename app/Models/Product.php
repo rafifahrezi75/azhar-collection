@@ -18,10 +18,13 @@ class Product extends Model
         'base_price',
         'description',
         'is_active',
+        'production_wage_mode',
+        'production_wage',
     ];
 
     protected $casts = [
         'base_price' => 'decimal:2',
+        'production_wage' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
@@ -57,13 +60,11 @@ class Product extends Model
 
     public function getPrimaryImageUrlAttribute(): ?string
     {
-        // Check if images relation is loaded
         if ($this->relationLoaded('images')) {
             $primary = $this->images->firstWhere('is_primary', true) ?: $this->images->first();
             return $primary ? $primary->image_url : null;
         }
 
-        // Otherwise query
         $primary = $this->images()->where('is_primary', true)->first() ?: $this->images()->first();
         return $primary ? $primary->image_url : null;
     }

@@ -57,7 +57,7 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:invoice.view')
         ->name('invoice.production-pdf');
 
-    // Pembelian / Kulaan
+    // Pembelian
     Route::get('/dashboard/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/dashboard/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
     Route::post('/dashboard/purchases', [PurchaseController::class, 'store'])->name('purchases.store');

@@ -28,7 +28,7 @@ export default function Show({ purchase }) {
 
             <div className="w-full space-y-4">
                 <PageHeaderBar
-                    title="Detail Pembelian / Kulaan"
+                    title="Detail Pembelian"
                     extraActions={
                         <div className="flex items-center gap-1.5">
                             <Link
