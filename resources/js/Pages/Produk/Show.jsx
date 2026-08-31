@@ -80,6 +80,19 @@ export default function Show({ product }) {
     };
 
     const currentImage = images[selectedImageIndex] || null;
+    const productionWageMode = String(
+        product.production_wage_mode || "steps",
+    ).toLowerCase();
+    const directProductionWage = Number(product.production_wage || 0);
+    const stepProductionWage = (product.production_steps || []).reduce(
+        (sum, step) => sum + Number(step.wage || 0),
+        0,
+    );
+    const totalProductionWage =
+        productionWageMode === "manual"
+            ? directProductionWage
+            : stepProductionWage;
+
     const calculateMaterialCost = (mats) =>
         mats.reduce(
             (s, m) =>
@@ -275,16 +288,12 @@ export default function Show({ product }) {
                             </div>
                             <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 space-y-1">
                                 <span className="text-[11px] font-semibold text-indigo-600 block">
-                                    Total Upah
+                                    {productionWageMode === "manual"
+                                        ? "Upah Produksi Langsung"
+                                        : "Total Upah"}
                                 </span>
                                 <span className="text-sm font-bold text-indigo-700 font-mono">
-                                    {formatCurrency(
-                                        (product.production_steps || []).reduce(
-                                            (s, step) =>
-                                                s + Number(step.wage || 0),
-                                            0,
-                                        ),
-                                    )}
+                                    {formatCurrency(totalProductionWage)}
                                 </span>
                             </div>
                         </div>
@@ -546,8 +555,26 @@ export default function Show({ product }) {
 
                         {activeTab === "steps" && (
                             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
-                                {(product.production_steps || []).length ===
-                                0 ? (
+                                {productionWageMode === "manual" ? (
+                                    <div className="p-5 bg-indigo-50/50">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div>
+                                                <div className="text-xs font-bold text-slate-800">
+                                                    Upah Produksi Langsung
+                                                </div>
+                                                <div className="text-[11px] text-slate-500 mt-0.5">
+                                                    Upah produksi ditentukan langsung tanpa rincian langkah.
+                                                </div>
+                                            </div>
+                                            <div className="text-lg font-bold text-indigo-700 font-mono shrink-0">
+                                                {formatCurrency(
+                                                    totalProductionWage,
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (product.production_steps || []).length ===
+                                  0 ? (
                                     <div className="p-4 text-center text-xs text-slate-400">
                                         Belum ada langkah produksi
                                     </div>
