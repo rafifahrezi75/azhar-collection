@@ -77,6 +77,22 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:barang.view')
         ->name('barang.index');
 
+    Route::get('/dashboard/barang/create', [ItemController::class, 'createPage'])
+        ->middleware('permission:barang.create')
+        ->name('barang.create');
+
+    Route::get('/dashboard/barang/{item}/edit', [ItemController::class, 'editPage'])
+        ->middleware('permission:barang.update')
+        ->name('barang.edit');
+
+    Route::get('/dashboard/barang/{item}/stock', [ItemController::class, 'stockPage'])
+        ->middleware('permission:barang.update')
+        ->name('barang.stock');
+
+    Route::get('/dashboard/barang/{item}', [ItemController::class, 'showPage'])
+        ->middleware('permission:barang.view')
+        ->name('barang.show');
+
     Route::get('/dashboard/produk', [ProductController::class, 'page'])
         ->middleware('permission:produk.view')
         ->name('produk.index');

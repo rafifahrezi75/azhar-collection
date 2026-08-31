@@ -20,6 +20,60 @@ class ItemController extends Controller
         return Inertia::render('Barang/Index');
     }
 
+    public function createPage()
+    {
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        $units = Unit::where('is_active', true)->orderBy('name')->get();
+
+        return Inertia::render('Barang/Create', [
+            'categories' => $categories,
+            'units' => $units,
+        ]);
+    }
+
+    public function editPage(Item $item)
+    {
+        $item->load(['category', 'unit', 'conversions.unit']);
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        $units = Unit::where('is_active', true)->orderBy('name')->get();
+
+        return Inertia::render('Barang/Edit', [
+            'item' => $item,
+            'categories' => $categories,
+            'units' => $units,
+        ]);
+    }
+
+    public function showPage(Item $item)
+    {
+        $item->load([
+            'category',
+            'unit',
+            'conversions.unit',
+            'mutations' => function ($q) {
+                $q->with(['unit', 'user'])->latest('mutation_date')->limit(50);
+            },
+        ]);
+
+        return Inertia::render('Barang/Show', [
+            'item' => $item,
+        ]);
+    }
+
+    public function stockPage(Item $item, Request $request)
+    {
+        $item->load(['category', 'unit', 'conversions.unit']);
+        $type = $request->query('type', 'out');
+        if (! in_array($type, ['in', 'out'])) {
+            $type = 'out';
+        }
+
+        return Inertia::render('Barang/Stock', [
+            'item' => $item,
+            'type' => $type,
+        ]);
+    }
+
     public function index()
     {
         $items = Item::with(['category', 'unit', 'conversions.unit'])
@@ -111,9 +165,9 @@ class ItemController extends Controller
                 'name' => $validated['name'],
                 'category_id' => $validated['category_id'],
                 'unit_id' => $validated['unit_id'],
-                'usage_unit' => !empty($validated['usage_unit']) ? trim($validated['usage_unit']) : null,
-                'conversion_rate' => !empty($validated['conversion_rate']) ? (float)$validated['conversion_rate'] : 1.0,
-                'price' => !empty($validated['price']) ? (float)$validated['price'] : 0,
+                'usage_unit' => ! empty($validated['usage_unit']) ? trim($validated['usage_unit']) : null,
+                'conversion_rate' => ! empty($validated['conversion_rate']) ? (float) $validated['conversion_rate'] : 1.0,
+                'price' => ! empty($validated['price']) ? (float) $validated['price'] : 0,
                 'stock' => $totalStock,
                 'real_stock' => $realStock,
                 'estimated_stock' => $estimatedStock,
@@ -144,7 +198,7 @@ class ItemController extends Controller
                     'previous_stock' => 0,
                     'current_stock' => $totalStock,
                     'notes' => $note,
-                    'reference_no' => 'INIT-' . $item->code,
+                    'reference_no' => 'INIT-'.$item->code,
                     'mutation_date' => now(),
                 ]);
             }
@@ -234,9 +288,9 @@ class ItemController extends Controller
                 'name' => $validated['name'],
                 'category_id' => $validated['category_id'],
                 'unit_id' => $validated['unit_id'],
-                'usage_unit' => !empty($validated['usage_unit']) ? trim($validated['usage_unit']) : null,
-                'conversion_rate' => !empty($validated['conversion_rate']) ? (float)$validated['conversion_rate'] : 1.0,
-                'price' => !empty($validated['price']) ? (float)$validated['price'] : 0,
+                'usage_unit' => ! empty($validated['usage_unit']) ? trim($validated['usage_unit']) : null,
+                'conversion_rate' => ! empty($validated['conversion_rate']) ? (float) $validated['conversion_rate'] : 1.0,
+                'price' => ! empty($validated['price']) ? (float) $validated['price'] : 0,
                 'stock' => $newStock,
                 'real_stock' => $realStock,
                 'estimated_stock' => $estimatedStock,
@@ -266,7 +320,7 @@ class ItemController extends Controller
                     'previous_stock' => $previousStock,
                     'current_stock' => $item->stock,
                     'notes' => 'Penyesuaian stok saat edit barang',
-                    'reference_no' => 'ADJ-' . time(),
+                    'reference_no' => 'ADJ-'.time(),
                     'mutation_date' => now(),
                 ]);
             }
@@ -322,7 +376,6 @@ class ItemController extends Controller
         return DB::transaction(function () use (
             $item,
             $conv,
-            $isBaseUnit,
             $type,
             $quantity,
             $unitId,

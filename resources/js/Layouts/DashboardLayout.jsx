@@ -1,7 +1,16 @@
 import React, { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import Sidebar from "@/Components/Sidebar";
-import { Search, Bell, ChevronDown, LogOut, User as UserIcon, Menu, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+    Search,
+    Bell,
+    ChevronDown,
+    LogOut,
+    User as UserIcon,
+    Menu,
+    PanelLeftClose,
+    PanelLeftOpen,
+} from "lucide-react";
 
 export default function DashboardLayout({ children }) {
     const pageProps = usePage().props;
@@ -27,7 +36,9 @@ export default function DashboardLayout({ children }) {
                 isCollapsed={isSidebarCollapsed}
                 isMobileOpen={isMobileSidebarOpen}
                 onCloseMobile={() => setIsMobileSidebarOpen(false)}
-                onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                onToggleCollapse={() =>
+                    setIsSidebarCollapsed(!isSidebarCollapsed)
+                }
             />
 
             {/* Main Content Area */}
@@ -48,16 +59,23 @@ export default function DashboardLayout({ children }) {
                         </button>
 
                         {/* Desktop Toggle Button */}
+                        {/* Desktop Toggle Button */}
                         <button
                             type="button"
-                            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                            onClick={() =>
+                                setIsSidebarCollapsed(!isSidebarCollapsed)
+                            }
                             className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition-all duration-200 cursor-pointer shadow-soft-2xs"
-                            title={isSidebarCollapsed ? "Buka Sidebar" : "Tutup Sidebar"}
+                            title={
+                                isSidebarCollapsed
+                                    ? "Buka Sidebar"
+                                    : "Tutup Sidebar"
+                            }
                         >
                             {isSidebarCollapsed ? (
-                                <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                                <PanelLeftOpen className="w-4 h-4 text-slate-600" />
                             ) : (
-                                <ChevronLeft className="w-3.5 h-3.5 text-slate-600" />
+                                <PanelLeftClose className="w-4 h-4 text-slate-600" />
                             )}
                         </button>
 
@@ -83,7 +101,9 @@ export default function DashboardLayout({ children }) {
                         {/* User Profile Menu */}
                         <div className="relative">
                             <button
-                                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                                onClick={() =>
+                                    setUserDropdownOpen(!userDropdownOpen)
+                                }
                                 className="flex items-center gap-2 p-1 rounded-md hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
                             >
                                 <div className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs shadow-soft-xs">
@@ -104,13 +124,19 @@ export default function DashboardLayout({ children }) {
                             {userDropdownOpen && (
                                 <div className="absolute right-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-lg shadow-soft-lg py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                                     <div className="px-3.5 py-1.5 border-b border-slate-100">
-                                        <p className="text-xs font-semibold text-slate-800">{userName}</p>
-                                        <p className="text-[11px] text-slate-500 truncate">{userEmail}</p>
+                                        <p className="text-xs font-semibold text-slate-800">
+                                            {userName}
+                                        </p>
+                                        <p className="text-[11px] text-slate-500 truncate">
+                                            {userEmail}
+                                        </p>
                                     </div>
                                     <Link
-                                        href={route('profile.edit')}
+                                        href={route("profile.edit")}
                                         className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                                        onClick={() => setUserDropdownOpen(false)}
+                                        onClick={() =>
+                                            setUserDropdownOpen(false)
+                                        }
                                     >
                                         <UserIcon className="w-3.5 h-3.5 text-slate-500" />
                                         Edit Profile
@@ -121,7 +147,9 @@ export default function DashboardLayout({ children }) {
                                         method="post"
                                         as="button"
                                         className="w-full flex items-center gap-2 text-left px-3.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
-                                        onClick={() => setUserDropdownOpen(false)}
+                                        onClick={() =>
+                                            setUserDropdownOpen(false)
+                                        }
                                     >
                                         <LogOut className="w-3.5 h-3.5 text-rose-500" />
                                         Log Out
@@ -134,13 +162,12 @@ export default function DashboardLayout({ children }) {
 
                 {/* Main Body with compact padding */}
                 <main className="flex-1 p-3.5 sm:p-4 md:p-5 overflow-y-auto flex flex-col justify-between">
-                    <div>
-                        {children}
-                    </div>
-                    
+                    <div>{children}</div>
+
                     {/* Footer */}
                     <footer className="mt-8 pt-4 border-t border-slate-100 text-center text-[11px] text-slate-500 font-medium">
-                        &copy; {new Date().getFullYear()} Azhar Collection. Hak Cipta Dilindungi.
+                        &copy; {new Date().getFullYear()} Azhar Collection. Hak
+                        Cipta Dilindungi.
                     </footer>
                 </main>
             </div>
