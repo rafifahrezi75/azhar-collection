@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Head, usePage, router } from "@inertiajs/react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import { hasPermission } from "@/utils/permissions";
@@ -20,22 +20,30 @@ import {
     X,
 } from "lucide-react";
 
-export default function Show({ item }) {
+export default function Show({ item, initialTab = "info" }) {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
     const canUpdate = useMemo(
         () => hasPermission(permissions, "barang.update"),
         [permissions],
     );
-    const [activeTab, setActiveTab] = useState("info");
+    const [activeTab, setActiveTab] = useState(
+        initialTab === "mutations" ? "mutations" : "info",
+    );
     const [lightboxOpen, setLightboxOpen] = useState(false);
+
+    useEffect(() => {
+        if (initialTab === "mutations" || initialTab === "info") {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab]);
 
     if (!item) {
         return (
             <DashboardLayout>
                 <Head title="Bahan Baku Tidak Ditemukan" />
                 <div className="flex items-center justify-center h-64">
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-500 font-medium">
                         Bahan baku tidak ditemukan
                     </p>
                 </div>
@@ -50,13 +58,15 @@ export default function Show({ item }) {
 
     return (
         <DashboardLayout>
-            <Head title={`${item.name} - Detail Bahan Baku`} />
-            <div className="space-y-4">
+            <Head
+                title={`${item.name} - Detail Bahan Baku - Azhar Collection`}
+            />
+            <div className="space-y-4 max-w-7xl mx-auto">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    {/* Header Area */}
+                    {/* HEADER AREA */}
                     <div className="p-4 sm:p-5 border-b border-slate-100">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            {/* Left: Back Button & Title */}
+                            {/* Tombol Kembali & Judul */}
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <button
                                     type="button"
@@ -64,12 +74,12 @@ export default function Show({ item }) {
                                     onClick={() =>
                                         router.visit("/dashboard/barang")
                                     }
-                                    className="w-8 h-8 shrink-0 inline-flex items-center justify-center bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg shadow-2xs transition-all cursor-pointer"
+                                    className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
 
-                                <div className="w-8 h-8 shrink-0 rounded-lg bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center shadow-2xs">
+                                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 border border-teal-100/60 flex items-center justify-center shadow-2xs shrink-0 font-bold">
                                     <Package className="w-4 h-4" />
                                 </div>
 
@@ -78,27 +88,31 @@ export default function Show({ item }) {
                                         Detail Bahan Baku
                                     </h3>
                                     <p className="text-[11px] text-slate-500 truncate">
-                                        Informasi bahan, stok fisik, dan riwayat
-                                        mutasi.
+                                        Informasi spesifikasi bahan, stok fisik
+                                        multi-satuan, dan log mutasi.
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Right: Tab Controls & Action Buttons */}
-                            <div className="flex flex-wrap items-center justify-between lg:justify-end gap-4 shrink-0">
-                                {/* Clean Underscore Tab (Tanpa Background Abu-abu) */}
-                                <div className="flex items-center gap-5 h-8 border-b border-slate-200">
+                            {/* Navigasi Tab & Tombol Aksi */}
+                            <div className="flex flex-wrap items-center justify-between lg:justify-end gap-3 shrink-0">
+                                {/* Tab Navigation */}
+                                <div className="flex items-center gap-2 h-8 border-b border-slate-200/80">
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("info")}
-                                        className={`inline-flex items-center gap-1.5 h-full px-0.5 text-xs font-semibold transition-all cursor-pointer border-b-2 -mb-px ${
+                                        className={`inline-flex items-center gap-1.5 h-full px-2.5 text-xs font-semibold rounded-t-md transition-all cursor-pointer border-b-2 -mb-px ${
                                             activeTab === "info"
-                                                ? "border-teal-600 text-teal-700 font-bold"
+                                                ? "border-teal-600 text-teal-700 bg-teal-50/80 font-bold"
                                                 : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
                                         }`}
                                     >
                                         <FileText
-                                            className={`w-3.5 h-3.5 ${activeTab === "info" ? "text-teal-600" : "text-slate-400"}`}
+                                            className={`w-3.5 h-3.5 ${
+                                                activeTab === "info"
+                                                    ? "text-teal-600"
+                                                    : "text-slate-400"
+                                            }`}
                                         />
                                         <span>Informasi</span>
                                     </button>
@@ -108,20 +122,24 @@ export default function Show({ item }) {
                                         onClick={() =>
                                             setActiveTab("mutations")
                                         }
-                                        className={`inline-flex items-center gap-1.5 h-full px-0.5 text-xs font-semibold transition-all cursor-pointer border-b-2 -mb-px ${
+                                        className={`inline-flex items-center gap-1.5 h-full px-2.5 text-xs font-semibold rounded-t-md transition-all cursor-pointer border-b-2 -mb-px ${
                                             activeTab === "mutations"
-                                                ? "border-teal-600 text-teal-700 font-bold"
+                                                ? "border-teal-600 text-teal-700 bg-teal-50/80 font-bold"
                                                 : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
                                         }`}
                                     >
                                         <History
-                                            className={`w-3.5 h-3.5 ${activeTab === "mutations" ? "text-teal-600" : "text-slate-400"}`}
+                                            className={`w-3.5 h-3.5 ${
+                                                activeTab === "mutations"
+                                                    ? "text-teal-600"
+                                                    : "text-slate-400"
+                                            }`}
                                         />
                                         <span>Riwayat Mutasi</span>
                                         <span
                                             className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
                                                 activeTab === "mutations"
-                                                    ? "bg-teal-50 text-teal-700 border border-teal-200"
+                                                    ? "bg-teal-100/80 text-teal-800 border border-teal-200/80"
                                                     : "bg-slate-100 text-slate-500 border border-slate-200"
                                             }`}
                                         >
@@ -130,7 +148,7 @@ export default function Show({ item }) {
                                     </button>
                                 </div>
 
-                                {/* Action Buttons */}
+                                {/* Tombol Aksi Transaksi & Edit */}
                                 {canUpdate && (
                                     <div className="flex items-center gap-1.5">
                                         <button
@@ -138,12 +156,12 @@ export default function Show({ item }) {
                                             title="Ambil Stok"
                                             onClick={() =>
                                                 router.visit(
-                                                    `/dashboard/barang/${item.id}/stock?type=out`,
+                                                    `/dashboard/barang/${item.id}/stock?type=out&from=show`,
                                                 )
                                             }
-                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[11px] font-semibold rounded-lg border border-amber-200 shadow-2xs transition-all cursor-pointer"
+                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-semibold rounded-lg border border-amber-200 shadow-2xs transition-all cursor-pointer"
                                         >
-                                            <ArrowUpRight className="w-3.5 h-3.5" />
+                                            <ArrowUpRight className="w-3.5 h-3.5 text-amber-700" />
                                             <span className="hidden sm:inline">
                                                 Ambil Stok
                                             </span>
@@ -154,12 +172,12 @@ export default function Show({ item }) {
                                             title="Tambah Stok"
                                             onClick={() =>
                                                 router.visit(
-                                                    `/dashboard/barang/${item.id}/stock?type=in`,
+                                                    `/dashboard/barang/${item.id}/stock?type=in&from=show`,
                                                 )
                                             }
-                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-semibold rounded-lg border border-emerald-200 shadow-2xs transition-all cursor-pointer"
+                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold rounded-lg border border-emerald-200 shadow-2xs transition-all cursor-pointer"
                                         >
-                                            <Plus className="w-3.5 h-3.5" />
+                                            <Plus className="w-3.5 h-3.5 text-emerald-700" />
                                             <span className="hidden sm:inline">
                                                 Tambah Stok
                                             </span>
@@ -173,9 +191,9 @@ export default function Show({ item }) {
                                                     `/dashboard/barang/${item.id}/edit`,
                                                 )
                                             }
-                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg shadow-2xs transition-all cursor-pointer"
                                         >
-                                            <Edit className="w-3.5 h-3.5" />
+                                            <Edit className="w-3.5 h-3.5 text-teal-600" />
                                             <span>Edit</span>
                                         </button>
                                     </div>
@@ -184,13 +202,14 @@ export default function Show({ item }) {
                         </div>
                     </div>
 
-                    {/* Main Tab Content */}
+                    {/* MAIN TAB CONTENT */}
                     <div className="p-4 sm:p-5">
                         {activeTab === "info" ? (
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                <div className="md:col-span-4 space-y-3">
-                                    {/* Item Photo */}
-                                    <div className="relative aspect-square w-full rounded-md overflow-hidden bg-slate-50 border border-slate-200 group shadow-2xs">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                                {/* KOLOM KIRI: Media & Detail Ringkasan */}
+                                <div className="lg:col-span-4 space-y-4">
+                                    {/* Foto Produk / Bahan */}
+                                    <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-slate-50 border border-slate-200 group shadow-2xs">
                                         {item.image_url ? (
                                             <>
                                                 <img
@@ -205,7 +224,7 @@ export default function Show({ item }) {
                                                     onClick={() =>
                                                         setLightboxOpen(true)
                                                     }
-                                                    className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium gap-1.5 cursor-pointer"
+                                                    className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 cursor-pointer"
                                                 >
                                                     <ZoomIn className="w-4 h-4" />
                                                     <span>Perbesar Foto</span>
@@ -213,7 +232,7 @@ export default function Show({ item }) {
                                             </>
                                         ) : (
                                             <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-1.5 p-4 text-center">
-                                                <Package className="w-9 h-9 text-slate-300" />
+                                                <Package className="w-10 h-10 text-slate-300" />
                                                 <span className="text-xs text-slate-400 font-medium">
                                                     Tanpa Foto Produk
                                                 </span>
@@ -221,29 +240,29 @@ export default function Show({ item }) {
                                         )}
                                     </div>
 
-                                    {/* Item General Details */}
-                                    <div className="p-3 rounded-md bg-white border border-slate-200 shadow-2xs">
+                                    {/* Identitas Utama */}
+                                    <div className="p-3.5 rounded-lg bg-slate-50/50 border border-slate-200 shadow-2xs space-y-2">
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <h1 className="text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
                                                         {item.name}
                                                     </h1>
-                                                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-slate-50 text-slate-700 border border-slate-200 font-bold">
+                                                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 font-bold shadow-2xs">
                                                         {item.code}
                                                     </span>
                                                 </div>
-                                                <div className="mt-1.5 space-y-0.5 text-[11px] text-slate-500">
+                                                <div className="mt-2 space-y-1 text-[11px] text-slate-500">
                                                     <p>
                                                         Kategori:{" "}
-                                                        <strong className="text-slate-700 font-semibold">
+                                                        <strong className="text-slate-800 font-semibold">
                                                             {item.category
                                                                 ?.name || "-"}
                                                         </strong>
                                                     </p>
                                                     <p>
                                                         Satuan Dasar:{" "}
-                                                        <strong className="text-slate-700 font-semibold">
+                                                        <strong className="text-slate-800 font-semibold">
                                                             {item.unit?.name ||
                                                                 "-"}{" "}
                                                             ({baseUnitSymbol})
@@ -254,36 +273,20 @@ export default function Show({ item }) {
 
                                             {item.is_active ? (
                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                                                     Aktif
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-                                                    <X className="w-3 h-3" />
+                                                    <X className="w-3 h-3 text-slate-400" />
                                                     Nonaktif
                                                 </span>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Stock Metrics Status */}
-                                    <div className="p-3 rounded-md bg-white border border-slate-200 space-y-2.5 text-xs shadow-2xs">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-slate-500 font-medium">
-                                                Status Katalog:
-                                            </span>
-                                            {item.is_active ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                                    <span>Aktif</span>
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                                                    <X className="w-3 h-3 text-slate-500" />
-                                                    <span>Nonaktif</span>
-                                                </span>
-                                            )}
-                                        </div>
+                                    {/* Metrik & Peringatan Stok */}
+                                    <div className="p-3.5 rounded-lg bg-slate-50/50 border border-slate-200 space-y-2.5 text-xs shadow-2xs">
                                         <div className="flex items-center justify-between">
                                             <span className="text-slate-500 font-medium">
                                                 Kondisi Stok:
@@ -305,7 +308,8 @@ export default function Show({ item }) {
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+
+                                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/80">
                                             <span className="text-slate-500 font-medium">
                                                 Batas Minimum:
                                             </span>
@@ -314,9 +318,10 @@ export default function Show({ item }) {
                                                 {baseUnitSymbol}
                                             </span>
                                         </div>
+
                                         <div className="flex items-center justify-between">
                                             <span className="text-slate-500 font-medium">
-                                                Harga Dasar:
+                                                Harga / {baseUnitSymbol}:
                                             </span>
                                             <span className="font-semibold text-teal-700 font-mono">
                                                 {new Intl.NumberFormat(
@@ -332,29 +337,30 @@ export default function Show({ item }) {
                                     </div>
                                 </div>
 
-                                <div className="md:col-span-8 space-y-3.5">
-                                    {/* Physical Units Cards */}
-                                    <div className="p-3.5 sm:p-4 rounded-md bg-white border border-slate-200 space-y-3 shadow-2xs">
-                                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                                {/* KOLOM KANAN: Rincian Fisik, Akumulasi & Deskripsi */}
+                                <div className="lg:col-span-8 space-y-4">
+                                    {/* Kartu Stok Fisik per Satuan */}
+                                    <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 space-y-3 shadow-2xs">
+                                        <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-md bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
-                                                    <Calculator className="w-3.5 h-3.5" />
-                                                </div>
-                                                <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-wide">
+                                                <Calculator className="w-4 h-4 text-teal-600" />
+                                                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                                                     Stok Fisik per Satuan
+                                                    Kemasan
                                                 </h4>
                                             </div>
-                                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200 shadow-2xs">
                                                 {item.unit_cards?.length || 1}{" "}
                                                 Satuan Terdaftar
                                             </span>
                                         </div>
+
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {item.unit_cards?.map(
                                                 (card, cIdx) => (
                                                     <div
                                                         key={cIdx}
-                                                        className={`p-3 rounded-md border flex flex-col justify-between transition-all ${
+                                                        className={`p-3 rounded-lg border flex flex-col justify-between transition-all ${
                                                             card.is_base
                                                                 ? "bg-teal-50/40 border-teal-200/90 shadow-2xs"
                                                                 : "bg-emerald-50/40 border-emerald-200/90 shadow-2xs"
@@ -386,12 +392,13 @@ export default function Show({ item }) {
                                                                 }
                                                             </span>
                                                         </div>
+
                                                         <div className="space-y-2">
                                                             <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                <div className="p-2 bg-white rounded border border-emerald-200/80 shadow-2xs">
+                                                                <div className="p-2 bg-white rounded-md border border-emerald-200/80 shadow-2xs">
                                                                     <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wide block">
-                                                                        Nyata
-                                                                        (Pasti)
+                                                                        Utuh
+                                                                        (Nyata)
                                                                     </span>
                                                                     <span className="font-mono font-extrabold text-emerald-950 text-sm sm:text-base block mt-0.5">
                                                                         {
@@ -399,7 +406,7 @@ export default function Show({ item }) {
                                                                         }
                                                                     </span>
                                                                 </div>
-                                                                <div className="p-2 bg-amber-50/80 rounded border border-amber-200/80 shadow-2xs">
+                                                                <div className="p-2 bg-amber-50/80 rounded-md border border-amber-200/80 shadow-2xs">
                                                                     <span className="text-[10px] text-amber-900 font-bold uppercase tracking-wide block">
                                                                         Estimasi
                                                                         / Sisa
@@ -412,8 +419,9 @@ export default function Show({ item }) {
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/70 bg-white/70 px-2 py-1 rounded">
-                                                                <span className="text-slate-600 font-semibold">
+
+                                                            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/70 bg-white/80 px-2.5 py-1 rounded-md">
+                                                                <span className="text-slate-600 font-semibold text-[11px]">
                                                                     Subtotal
                                                                     Fisik:
                                                                 </span>
@@ -441,17 +449,17 @@ export default function Show({ item }) {
                                         </div>
                                     </div>
 
-                                    {/* Breakdown Total Hero */}
+                                    {/* Breakdown Hero Card */}
                                     {(() => {
                                         const heroBreakdown =
                                             item.dual_stock_breakdown_text ||
                                             item.stock_breakdown_text ||
                                             `${item.stock} ${baseUnitSymbol}`;
                                         return (
-                                            <div className="p-3.5 sm:p-4 rounded-md bg-gradient-to-br from-slate-50 via-teal-50/30 to-emerald-50/30 border border-slate-200 shadow-2xs space-y-3">
+                                            <div className="p-4 rounded-lg bg-gradient-to-br from-slate-50 via-teal-50/30 to-emerald-50/30 border border-slate-200 shadow-2xs space-y-3">
                                                 <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-                                                    <span className="text-[11px] uppercase tracking-wider font-bold text-slate-700 flex items-center gap-1.5">
-                                                        <Layers className="w-3.5 h-3.5 text-teal-600" />
+                                                    <span className="text-xs uppercase tracking-wider font-bold text-slate-800 flex items-center gap-1.5">
+                                                        <Layers className="w-4 h-4 text-teal-600" />
                                                         Akumulasi & Rincian Stok
                                                         Terbaca
                                                     </span>
@@ -461,7 +469,7 @@ export default function Show({ item }) {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="bg-white p-3 rounded-md border border-slate-200 shadow-2xs space-y-1">
+                                                <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-1">
                                                     <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
                                                         Rincian Keseluruhan
                                                         Fisik Barang:
@@ -472,7 +480,7 @@ export default function Show({ item }) {
                                                     <p className="text-xs text-slate-500 font-medium pt-0.5">
                                                         Total akumulasi
                                                         konversi:{" "}
-                                                        <strong className="font-bold text-slate-900 font-mono">
+                                                        <strong className="font-bold text-teal-900 font-mono">
                                                             {item.stock}{" "}
                                                             {baseUnitSymbol}
                                                         </strong>{" "}
@@ -486,62 +494,63 @@ export default function Show({ item }) {
                                         );
                                     })()}
 
-                                    {/* Description */}
-                                    <div className="p-3 rounded-md bg-white border border-slate-200 space-y-1 shadow-2xs">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-1">
+                                    {/* Deskripsi & Catatan */}
+                                    <div className="p-3.5 rounded-lg bg-slate-50/50 border border-slate-200 space-y-1.5 shadow-2xs">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200/80 pb-1.5">
                                             <FileText className="w-3.5 h-3.5 text-slate-500" />
                                             <span>
-                                                Deskripsi / Catatan Bahan Baku
+                                                Deskripsi / Spesifikasi Bahan
                                             </span>
                                         </div>
-                                        <p className="text-xs text-slate-600 leading-relaxed font-normal pt-0.5">
+                                        <p className="text-xs text-slate-600 leading-relaxed font-medium pt-0.5">
                                             {item.description ||
-                                                "Tidak ada catatan atau deskripsi tambahan untuk barang ini."}
+                                                "Tidak ada catatan atau deskripsi tambahan untuk bahan baku ini."}
                                         </p>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            /* Mutations Tab Content */
-                            <div className="space-y-2.5">
-                                <div className="flex items-center justify-between gap-3">
+                            /* TAB RIWAYAT MUTASI STOK */
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
                                     <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                        Catatan Riwayat Mutasi Stok
+                                        Catatan Log Mutasi Stok
                                     </h4>
-                                    <span className="text-xs text-slate-500">
-                                        Menampilkan log transaksi stok keluar,
-                                        masuk, dan penyesuaian
+                                    <span className="text-xs text-slate-500 hidden sm:inline">
+                                        Log pergerakan transaksi stok keluar,
+                                        masuk, dan penyesuaian.
                                     </span>
                                 </div>
+
                                 {item.mutations && item.mutations.length > 0 ? (
-                                    <div className="border border-slate-200 rounded-md overflow-hidden shadow-2xs overflow-x-auto">
+                                    <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs overflow-x-auto">
                                         <table className="w-full text-left text-xs">
-                                            <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[11px]">
+                                            <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
                                                 <tr>
-                                                    <th className="px-3 py-2">
+                                                    <th className="px-3 py-2.5">
                                                         Tanggal
                                                     </th>
-                                                    <th className="px-3 py-2">
+                                                    <th className="px-3 py-2.5">
                                                         Tipe
                                                     </th>
-                                                    <th className="px-3 py-2">
+                                                    <th className="px-3 py-2.5">
                                                         Jumlah Transaksi
                                                     </th>
-                                                    <th className="px-3 py-2">
+                                                    <th className="px-3 py-2.5">
                                                         Total Satuan Dasar
                                                     </th>
-                                                    <th className="px-3 py-2">
+                                                    <th className="px-3 py-2.5">
                                                         Sisa Stok
                                                     </th>
-                                                    <th className="px-3 py-2">
-                                                        Keperluan / Keterangan
+                                                    <th className="px-3 py-2.5">
+                                                        Keperluan / Catatan
                                                     </th>
-                                                    <th className="px-3 py-2">
+                                                    <th className="px-3 py-2.5">
                                                         Petugas
                                                     </th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-100 bg-white">
+                                            <tbody className="divide-y divide-slate-100 bg-white font-medium">
                                                 {item.mutations.map((m) => {
                                                     const isOut =
                                                         m.type === "out";
@@ -550,7 +559,7 @@ export default function Show({ item }) {
                                                     return (
                                                         <tr
                                                             key={m.id}
-                                                            className="hover:bg-slate-50/70 transition-colors"
+                                                            className="hover:bg-slate-50/80 transition-colors"
                                                         >
                                                             <td className="px-3 py-2 font-mono text-xs text-slate-600 whitespace-nowrap">
                                                                 {new Date(
@@ -631,7 +640,7 @@ export default function Show({ item }) {
                                                             <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
                                                                 <div className="flex items-center gap-1.5">
                                                                     <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-                                                                    <span className="text-slate-700 font-medium">
+                                                                    <span className="text-slate-700 font-semibold">
                                                                         {m.user
                                                                             ?.name ||
                                                                             "System"}
@@ -645,9 +654,9 @@ export default function Show({ item }) {
                                         </table>
                                     </div>
                                 ) : (
-                                    <div className="p-8 text-center text-slate-500 text-xs bg-slate-50 rounded-md border border-slate-200">
+                                    <div className="p-8 text-center text-slate-500 text-xs bg-slate-50/50 rounded-lg border border-slate-200">
                                         Belum ada catatan mutasi stok untuk
-                                        barang ini.
+                                        bahan baku ini.
                                     </div>
                                 )}
                             </div>
@@ -656,20 +665,35 @@ export default function Show({ item }) {
                 </div>
             </div>
 
-            {/* Lightbox Modal */}
+            {/* LIGHTBOX MODAL FOTO */}
             {lightboxOpen && item.image_url && (
                 <div
-                    className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+                    className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 transition-all"
                     onClick={() => setLightboxOpen(false)}
                 >
-                    <div className="relative max-w-2xl max-h-[85vh] p-3 bg-white rounded-md border border-slate-200 shadow-2xl flex flex-col items-center">
+                    <div
+                        className="relative max-w-2xl max-h-[85vh] p-3 bg-white rounded-xl border border-slate-200 shadow-2xl flex flex-col items-center"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setLightboxOpen(false)}
+                            className="absolute -top-3 -right-3 p-1.5 bg-slate-900 text-white rounded-full hover:bg-rose-600 transition-colors shadow-md cursor-pointer"
+                            title="Tutup Preview"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+
                         <img
                             src={item.image_url}
                             alt={item.name}
-                            className="max-h-[75vh] w-auto rounded-md object-contain"
+                            className="max-h-[75vh] w-auto rounded-lg object-contain"
                         />
-                        <div className="mt-2 text-center text-slate-900 text-xs font-semibold">
-                            {item.name} ({item.code})
+                        <div className="mt-2.5 text-center text-slate-900 text-xs font-bold">
+                            {item.name}{" "}
+                            <span className="font-mono text-slate-500">
+                                ({item.code})
+                            </span>
                         </div>
                     </div>
                 </div>

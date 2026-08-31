@@ -113,7 +113,7 @@ export default function Show({ product }) {
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
-                        title="Kembali ke katalog"
+                        title="Kembali"
                         onClick={() => router.visit("/dashboard/produk")}
                         className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer"
                     >

@@ -1034,18 +1034,14 @@ export default function Edit({ product }) {
 
             <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                    <Tooltip
-                        content="Kembali ke daftar produk"
-                        position="bottom"
+                    <button
+                        type="button"
+                        title="Kembali"
+                        onClick={() => router.visit("/dashboard/produk")}
+                        className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer"
                     >
-                        <button
-                            type="button"
-                            onClick={() => router.visit("/dashboard/produk")}
-                            className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                        </button>
-                    </Tooltip>
+                        <ArrowLeft className="w-4 h-4" />
+                    </button>
                     <div>
                         <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
                             Edit Produk
@@ -1700,7 +1696,8 @@ export default function Edit({ product }) {
                                                 )}`}
                                                 className="inline-flex items-center justify-center px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-md text-[11px] font-semibold transition-all duration-200 shadow-2xs cursor-pointer"
                                             >
-                                                Harga Dasar {formatCurrency(
+                                                Harga Dasar{" "}
+                                                {formatCurrency(
                                                     Number(
                                                         data.base_price || 0,
                                                     ),

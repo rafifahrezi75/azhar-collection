@@ -119,7 +119,7 @@ const Sidebar = memo(function Sidebar({
 
             {/* Sidebar Main Container */}
             <aside
-                className={`fixed lg:static inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col min-h-screen border-r border-slate-800/80 shadow-soft-xl select-none transition-all duration-300 ease-in-out ${
+                className={`fixed lg:static inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col h-screen h-[100dvh] overflow-hidden shrink-0 border-r border-slate-800/80 shadow-soft-xl select-none transition-all duration-300 ease-in-out ${
                     isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"
                 } ${isCollapsed ? "lg:w-20" : "lg:w-64"}`}
             >
@@ -153,7 +153,7 @@ const Sidebar = memo(function Sidebar({
                 </div>
 
                 {/* Navigation Section */}
-                <div className="flex-1 px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 min-h-0 px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
                     <div>
                         {!isCollapsed ? (
                             <div className="flex items-center justify-between px-3 mb-2">

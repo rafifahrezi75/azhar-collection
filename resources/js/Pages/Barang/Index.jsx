@@ -125,12 +125,12 @@ export default function Index() {
 
     const handleTakeStock = useCallback((item) => {
         closeFilter();
-        router.visit(`/dashboard/barang/${item.id}/stock?type=out`);
+        router.visit(`/dashboard/barang/${item.id}/stock?type=out&from=table`);
     }, [closeFilter]);
 
     const handleAddStock = useCallback((item) => {
         closeFilter();
-        router.visit(`/dashboard/barang/${item.id}/stock?type=in`);
+        router.visit(`/dashboard/barang/${item.id}/stock?type=in&from=table`);
     }, [closeFilter]);
 
     const handleDelete = useCallback(async (id) => {

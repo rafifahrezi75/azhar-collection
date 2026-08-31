@@ -44,7 +44,7 @@ class ItemController extends Controller
         ]);
     }
 
-    public function showPage(Item $item)
+    public function showPage(Item $item, Request $request)
     {
         $item->load([
             'category',
@@ -55,8 +55,14 @@ class ItemController extends Controller
             },
         ]);
 
+        $initialTab = $request->query('tab', 'info');
+        if (! in_array($initialTab, ['info', 'mutations'])) {
+            $initialTab = 'info';
+        }
+
         return Inertia::render('Barang/Show', [
             'item' => $item,
+            'initialTab' => $initialTab,
         ]);
     }
 
@@ -67,10 +73,18 @@ class ItemController extends Controller
         if (! in_array($type, ['in', 'out'])) {
             $type = 'out';
         }
+        $from = $request->query('from', '');
+        if (! in_array($from, ['table', 'show', 'index', 'detail'])) {
+            $from = '';
+        }
+        $normalizedFrom = $from === 'index' ? 'table' : ($from === 'detail' ? 'show' : $from);
+        $backUrl = $normalizedFrom === 'table' ? '/dashboard/barang' : "/dashboard/barang/{$item->id}";
 
         return Inertia::render('Barang/Stock', [
             'item' => $item,
             'type' => $type,
+            'from' => $normalizedFrom,
+            'backUrl' => $backUrl,
         ]);
     }
 

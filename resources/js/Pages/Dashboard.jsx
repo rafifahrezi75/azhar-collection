@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Head, usePage } from "@inertiajs/react";
 import axios from "axios";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, TrendingUp, Filter } from "lucide-react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import PageHeaderBar from "@/Components/PageHeaderBar";
 import { hasPermission } from "@/utils/permissions";
@@ -95,7 +95,7 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
         const jobs = [fetchSummary()];
         if (showAnalytics) jobs.push(fetchTrend(), fetchAnalytics(customerId));
         Promise.all(jobs)
-            .then(() => Toast.success("Data dashboard diperbarui"))
+            .then(() => Toast.success("Data dashboard berhasil diperbarui"))
             .finally(() => setRefreshing(false));
     }, [fetchSummary, fetchTrend, fetchAnalytics, customerId, showAnalytics]);
 
@@ -168,13 +168,15 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
     );
 
     const restrictedBanner = !showAnalytics && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div className="flex items-start gap-3 bg-amber-50/80 border border-amber-200/90 rounded-xl p-4 shadow-2xs">
             <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-                <p className="text-sm font-bold text-amber-800">Analitik Penjualan Terbatas</p>
-                <p className="text-xs text-amber-700 mt-0.5">
-                    Grafik omzet, piutang, dan data penjualan hanya tersedia untuk Admin & Staff.
-                    Hubungi administrator jika Anda membutuhkan akses.
+            <div className="space-y-0.5">
+                <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                    Analitik Penjualan Terbatas
+                </p>
+                <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                    Grafik omzet, piutang, dan metrik penjualan hanya tersedia untuk hak akses Admin & Staff.
+                    Hubungi administrator jika Anda memerlukan akses laporan keuangan.
                 </p>
             </div>
         </div>
@@ -182,9 +184,10 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
 
     return (
         <DashboardLayout>
-            <Head title="Dashboard Penjualan" />
+            <Head title="Dashboard Penjualan - Azhar Collection" />
 
-            <div className="p-4 sm:p-6 space-y-4 max-w-[1600px] mx-auto">
+            <div className="space-y-5 max-w-[1600px] mx-auto">
+                {/* PAGE HEADER BAR */}
                 <PageHeaderBar
                     title="Dashboard Penjualan"
                     breadcrumbs={[{ label: "Dashboard" }]}
@@ -192,48 +195,78 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
                     refreshing={refreshing}
                 />
 
+                {/* RESTRICTED ACCESS BANNER */}
                 {restrictedBanner}
 
+                {/* ANALYTICS SECTION (FOR AUTHORIZED USERS) */}
                 {showAnalytics && (
                     <>
+                        {/* KPI SUMMARY CARDS */}
                         <KpiCards kpi={analytics?.summary_kpi} loading={analyticsLoading && !analytics} />
 
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 items-stretch">
-                            <Card className="xl:col-span-2">
-                                <div className="flex flex-col sm:flex-row sm:items-end gap-2 mb-4">
-                                    <div className="sm:w-72">
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                                            Pelanggan
-                                        </label>
-                                        <CustomerSelector customers={customers} value={customerId} onChange={handleSelectCustomer} />
-                                    </div>
-                                    <div className="sm:w-56">
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                                            Bandingkan dengan
-                                        </label>
-                                        <CustomerSelector
-                                            customers={customers}
-                                            value={compareId || "ALL"}
-                                            onChange={(id) => setCompareId(id === "ALL" ? "" : id)}
-                                            allLabel="Tidak ada"
-                                        />
-                                    </div>
-                                </div>
+                        {/* TREN TAHUNAN & LEADERBOARD PELANGGAN */}
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-stretch">
+                            <Card className="xl:col-span-2 flex flex-col justify-between">
+                                <div>
+                                    {/* Header Controls & Filter Pelanggan */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-4 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                                                <TrendingUp className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <span>Tren Performa Tahunan</span>
+                                                    <span className="text-teal-700 font-mono font-bold">— {selectedLabel}</span>
+                                                </h2>
+                                                <p className="text-[11px] text-slate-500">
+                                                    Visualisasi akumulasi omzet, pembayaran, dan pemenuhan pesanan.
+                                                </p>
+                                            </div>
+                                        </div>
 
-                                <div className="-mx-1 px-1">
-                                    <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-1">
-                                        Tren Tahunan
-                                        <span className="text-teal-700">— {selectedLabel}</span>
-                                    </h2>
+                                        <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 shrink-0">
+                                            <Filter className="w-3.5 h-3.5 text-slate-400" />
+                                            <span>Klik grafik batang untuk rincian bulanan</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Customer Selectors */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 p-3 bg-slate-50/60 rounded-lg border border-slate-200/80">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                                                Pelanggan Utama
+                                            </label>
+                                            <CustomerSelector
+                                                customers={customers}
+                                                value={customerId}
+                                                onChange={handleSelectCustomer}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                                                Bandingkan Dengan
+                                            </label>
+                                            <CustomerSelector
+                                                customers={customers}
+                                                value={compareId || "ALL"}
+                                                onChange={(id) => setCompareId(id === "ALL" ? "" : id)}
+                                                allLabel="Tanpa Pembanding"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Yearly Chart Component */}
+                                    <CustomerYearlyChart
+                                        data={yearlyRows}
+                                        compareData={compareRows}
+                                        loading={trendLoading}
+                                        onBarClick={handleYearClick}
+                                    />
                                 </div>
-                                <CustomerYearlyChart
-                                    data={yearlyRows}
-                                    compareData={compareRows}
-                                    loading={trendLoading}
-                                    onBarClick={handleYearClick}
-                                />
                             </Card>
 
+                            {/* Leaderboard Pelanggan */}
                             <TopCustomersLeaderboard
                                 customers={customers}
                                 year={currentYear}
@@ -243,7 +276,8 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                        {/* PANELS ANALITIK (PRODUK TERATAS, PEMBAYARAN, STATUS PRODUKSI) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <TopProductsChart products={analytics?.top_products || []} loading={analyticsLoading && !analytics} />
                             <PaymentStatusDonut breakdown={analytics?.payment_breakdown || {}} loading={analyticsLoading && !analytics} />
                             <ProductionStatusBreakdown statuses={analytics?.production_statuses || []} loading={analyticsLoading && !analytics} />
@@ -251,7 +285,8 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
                     </>
                 )}
 
-                <div className={`grid grid-cols-1 md:grid-cols-2 ${showAnalytics ? "xl:grid-cols-4" : ""} gap-3 items-start`}>
+                {/* OPERATIONAL WIDGETS SECTION */}
+                <div className={`grid grid-cols-1 md:grid-cols-2 ${showAnalytics ? "xl:grid-cols-4" : ""} gap-4 items-start`}>
                     <ActivityTrendWidget trend={summary?.activity_trend || []} />
                     <CriticalStockWidget items={summary?.critical_items || []} />
                     <CategoryDonutWidget categories={summary?.category_distribution || []} />
@@ -259,6 +294,7 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
                 </div>
             </div>
 
+            {/* DRAWER RINCIAN PESANAN TAHUN/BULAN */}
             <YearMonthDrawer
                 open={drawer.open}
                 year={drawer.year}
@@ -269,6 +305,7 @@ export default function Dashboard({ initialSummary, initialOrderAnalytics, canVi
                 onSelectInvoice={(inv) => setDrillInvoice(inv)}
             />
 
+            {/* MODAL DRILL-DOWN INVOICE */}
             <InvoiceDrillModal invoice={drillInvoice} onClose={() => setDrillInvoice(null)} />
         </DashboardLayout>
     );

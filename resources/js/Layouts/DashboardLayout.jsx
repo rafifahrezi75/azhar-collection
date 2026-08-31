@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }) {
     const userRoles = currentUser?.roles?.join(", ") || "User";
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 antialiased">
+        <div className="h-screen h-[100dvh] bg-slate-50 flex font-sans text-slate-900 antialiased overflow-hidden">
             {/* Sidebar Component */}
             <Sidebar
                 menus={currentMenus}
@@ -42,9 +42,9 @@ export default function DashboardLayout({ children }) {
             />
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
                 {/* Topbar Header */}
-                <header className="h-14 sm:h-15 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-5 flex items-center justify-between sticky top-0 z-30 shadow-soft-sm">
+                <header className="h-14 sm:h-15 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-5 flex items-center justify-between shrink-0 z-30 shadow-soft-sm">
                     {/* Left: Sidebar Toggle Buttons & Search Bar */}
                     <div className="flex items-center gap-2.5">
                         {/* Mobile Toggle Button */}
@@ -160,16 +160,16 @@ export default function DashboardLayout({ children }) {
                     </div>
                 </header>
 
-                {/* Main Body with compact padding */}
-                <main className="flex-1 p-3.5 sm:p-4 md:p-5 overflow-y-auto flex flex-col justify-between">
+                {/* Main Body with compact padding - only this scrolls */}
+                <main className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-4 md:p-5 custom-scrollbar bg-slate-50">
                     <div>{children}</div>
-
-                    {/* Footer */}
-                    <footer className="mt-8 pt-4 border-t border-slate-100 text-center text-[11px] text-slate-500 font-medium">
-                        &copy; {new Date().getFullYear()} Azhar Collection. Hak
-                        Cipta Dilindungi.
-                    </footer>
                 </main>
+
+                {/* Sticky Footer - always visible */}
+                <footer className="shrink-0 bg-white border-t border-slate-200/80 px-4 py-3 text-center text-[11px] text-slate-500 font-medium">
+                    &copy; {new Date().getFullYear()} Azhar Collection. Hak
+                    Cipta Dilindungi.
+                </footer>
             </div>
         </div>
     );
