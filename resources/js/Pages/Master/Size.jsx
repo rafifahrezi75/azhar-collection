@@ -330,27 +330,16 @@ export default function Size() {
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[200] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
                         <div className="bg-white rounded-xl w-full max-w-xl p-4 sm:p-5 shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 my-auto max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-32px)] overflow-y-auto">
-                            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
-                                        {editingId ? <Edit className="w-4.5 h-4.5" /> : <Ruler className="w-4.5 h-4.5" />}
-                                    </div>
-
-                                    <div className="min-w-0 flex-1">
-                                        <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
-                                            {editingId ? "Edit Ukuran" : "Tambah Ukuran"}
-                                        </h2>
-                                    </div>
+                            <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
+                                <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
+                                    {editingId ? <Edit className="w-4.5 h-4.5" /> : <Ruler className="w-4.5 h-4.5" />}
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    disabled={submitting}
-                                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <div className="min-w-0 flex-1">
+                                    <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                                        {editingId ? "Edit Ukuran" : "Tambah Ukuran"}
+                                    </h2>
+                                </div>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-3 pt-3">
@@ -437,32 +426,24 @@ export default function Size() {
                                     />
                                 </div>
 
-                                <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 mt-4">
+                                <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-4">
                                     <button
                                         type="button"
                                         onClick={closeModal}
                                         disabled={submitting}
-                                        className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 focus:ring-2 focus:ring-slate-200 transition-all disabled:opacity-50"
+                                        title="Kembali"
+                                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
-                                        Batal
+                                        <X className="w-4 h-4" />
                                     </button>
 
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:ring-2 focus:ring-teal-500/30 transition-all disabled:opacity-70"
+                                        title={submitting ? "Memproses..." : editingId ? "Simpan" : "Simpan"}
+                                        className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
-                                        {submitting ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                Menyimpan...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save className="w-4 h-4" />
-                                                Simpan
-                                            </>
-                                        )}
+                                        <Save className="w-4 h-4" />
                                     </button>
                                 </div>
                             </form>

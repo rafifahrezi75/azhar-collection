@@ -113,12 +113,21 @@ export default function Edit({ product }) {
         base_price: product?.base_price || 0,
         description: product?.description || "",
         is_active: product ? Boolean(product.is_active) : true,
-        sizes: (product?.sizes || []).map((s) => ({
-            size_id: s.size_id,
-            size_name: s.size?.size_name || "",
-            price: s.price,
-            notes: s.notes || "",
-        })),
+        sizes: (product?.sizes || []).map((s) => {
+            const sizeName = s.size?.size_name || s.size_name || "";
+            const sizeCategory = s.size?.category || s.category || "";
+            return {
+                size_id: s.size_id || null,
+                size_name: sizeName,
+                category: sizeCategory || (s.size_id ? "" : "Custom"),
+                is_custom:
+                    Boolean(s.is_custom) ||
+                    !s.size_id ||
+                    String(sizeCategory || "").toLowerCase() === "custom",
+                price: s.price,
+                notes: s.notes || "",
+            };
+        }),
         materials: (product?.materials || []).map((m) => ({
             item_id: m.item_id,
             size_id: m.size_id,
@@ -158,6 +167,10 @@ export default function Edit({ product }) {
     const [masterSizes, setMasterSizes] = useState([]);
     const [submitting, setSubmitting] = useState(false);
     const [completedSteps, setCompletedSteps] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
+    const [dialogSizeError, setDialogSizeError] = useState("");
+    const [dialogMaterialError, setDialogMaterialError] = useState("");
+    const [quickDialogErrors, setQuickDialogErrors] = useState({});
     const fileInputRef = useRef(null);
 
     const [quickItemSelect, setQuickItemSelect] = useState("");
@@ -178,7 +191,7 @@ export default function Edit({ product }) {
             return n;
         });
     const [showSizePopover, setShowSizePopover] = useState(false);
-    const [dialogSizeId, setDialogSizeId] = useState("");
+    const [dialogSizeName, setDialogSizeName] = useState("");
     const [dialogPrice, setDialogPrice] = useState(0);
     const [dialogNotes, setDialogNotes] = useState("");
     const [showMaterialDialog, setShowMaterialDialog] = useState(null);
@@ -195,10 +208,19 @@ export default function Edit({ product }) {
         permissions.includes("produk.update") || permissions.includes("admin");
 
     useEffect(() => {
+        if (dialogMaterial.item_id && dialogMaterialError) {
+            setDialogMaterialError("");
+        }
+    }, [dialogMaterial.item_id, dialogMaterialError]);
+
+    useEffect(() => {
         setShowSizePopover(false);
-        setDialogSizeId("");
+        setDialogSizeName("");
         setDialogPrice(0);
         setDialogNotes("");
+        setDialogSizeError("");
+        setDialogMaterialError("");
+        setQuickDialogErrors({});
 
         setShowQuickAddAll(false);
         setQuickItemSelect("");
@@ -306,7 +328,6 @@ export default function Edit({ product }) {
                   "Celana & Rok Seragam",
               ];
 
-    // Helpers
     const getSizeId = (sizeName) => {
         if (!sizeName || sizeName === "ALL") return null;
         const found = masterSizes.find((ms) => ms.size_name === sizeName);
@@ -332,7 +353,6 @@ export default function Edit({ product }) {
             return n;
         });
 
-    // Image handlers
     const handleFileSelect = (e) => {
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
@@ -373,44 +393,64 @@ export default function Edit({ product }) {
         setData("primary_image_id", null);
     };
 
-    // Size handlers
     const handleAddSizeRow = () => {
         if (showSizePopover) {
             setShowSizePopover(false);
             return;
         }
-        setDialogSizeId("");
+        setDialogSizeName("");
         setDialogPrice(data.base_price || 0);
         setDialogNotes("");
+        setDialogSizeError("");
         setShowSizePopover(true);
     };
+
     const handleConfirmSizeDialog = () => {
-        if (!dialogSizeId) {
-            Toast.error("Pilih ukuran dulu");
+        const sizeName = dialogSizeName.trim();
+
+        if (!sizeName) {
+            setDialogSizeError("Nama ukuran wajib diisi");
             return;
         }
-        if (
-            definedSizes.some((s) => String(s.size_id) === String(dialogSizeId))
-        ) {
-            Toast.error("Ukuran sudah ada");
-            return;
-        }
-        const selectedMaster = masterSizes.find(
-            (ms) => String(ms.id) === String(dialogSizeId),
+
+        const alreadyExists = definedSizes.some(
+            (s) =>
+                String(s.size_name || "")
+                    .trim()
+                    .toLowerCase() === sizeName.toLowerCase(),
         );
+
+        if (alreadyExists) {
+            setDialogSizeError("Ukuran sudah ada");
+            return;
+        }
+
+        const existingMaster = masterSizes.find(
+            (ms) =>
+                String(ms.size_name || "")
+                    .trim()
+                    .toLowerCase() === sizeName.toLowerCase(),
+        );
+
         setData("sizes", [
             ...definedSizes,
             {
-                size_id: dialogSizeId,
-                size_name: selectedMaster ? selectedMaster.size_name : "",
+                size_id: existingMaster ? existingMaster.id : null,
+                size_name: existingMaster ? existingMaster.size_name : sizeName,
+                category: existingMaster ? existingMaster.category : "Custom",
+                is_custom:
+                    !existingMaster ||
+                    String(existingMaster.category || "").toLowerCase() ===
+                        "custom",
                 price: Number(dialogPrice) || 0,
                 notes: dialogNotes || "",
             },
         ]);
         setShowSizePopover(false);
-        setDialogSizeId("");
+        setDialogSizeName("");
         setDialogPrice(0);
         setDialogNotes("");
+        setDialogSizeError("");
     };
 
     const handleApplyPresetSizes = (category) => {
@@ -426,6 +466,8 @@ export default function Edit({ product }) {
             .map((ms) => ({
                 size_id: ms.id,
                 size_name: ms.size_name,
+                category: ms.category,
+                is_custom: false,
                 price: data.base_price || 0,
                 notes: "",
             }));
@@ -469,7 +511,6 @@ export default function Edit({ product }) {
         }
     };
 
-    // BOM Material handlers
     const handleAddMaterialToSize = (sizeName, sizeId) => {
         const targetSizeName = sizeName || "ALL";
         const targetSizeId = sizeId || null;
@@ -490,6 +531,7 @@ export default function Edit({ product }) {
             unit_name: defaultItem?.unit?.name || "Meter",
             notes: "",
         });
+        setDialogMaterialError("");
         setShowMaterialDialog({
             sizeName: targetSizeName,
             sizeId: targetSizeId,
@@ -497,7 +539,7 @@ export default function Edit({ product }) {
     };
     const handleConfirmMaterialDialog = () => {
         if (!dialogMaterial.item_id) {
-            Toast.error("Pilih bahan baku");
+            setDialogMaterialError("Pilih bahan baku");
             return;
         }
         if (!showMaterialDialog) return;
@@ -512,6 +554,7 @@ export default function Edit({ product }) {
             notes: dialogMaterial.notes || "",
         };
         setData("materials", [...(data.materials || []), newRow]);
+        setDialogMaterialError("");
         setShowMaterialDialog(null);
     };
 
@@ -587,7 +630,24 @@ export default function Edit({ product }) {
     };
 
     const handleQuickAddMaterialToAll = () => {
-        if (!quickItemSelect) return;
+        const nextErrors = {};
+
+        if (!quickItemSelect) {
+            nextErrors.item_id = "Pilih bahan baku";
+        }
+        if (!quickQty || Number(quickQty) <= 0) {
+            nextErrors.required_qty = "Kebutuhan wajib lebih dari 0";
+        }
+        if (!quickYieldQty || Number(quickYieldQty) <= 0) {
+            nextErrors.yield_qty = "Hasil jadi wajib lebih dari 0";
+        }
+        if (!quickConversionRate || Number(quickConversionRate) <= 0) {
+            nextErrors.conversion_rate = "Konversi wajib lebih dari 0";
+        }
+
+        setQuickDialogErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
+
         const definedSizes = (data.sizes || [])
             .map((s) => ({ name: s.size_name, id: s.size_id }))
             .filter((s) => s.name);
@@ -600,22 +660,23 @@ export default function Edit({ product }) {
             item_id: quickItemSelect,
             size_id: sz.id,
             size_name: sz.name,
-            required_qty: Number(quickQty) || 1,
-            yield_qty: Number(quickYieldQty) || 1,
-            conversion_rate: Number(quickConversionRate) || 1,
+            required_qty: Number(quickQty),
+            yield_qty: Number(quickYieldQty),
+            conversion_rate: Number(quickConversionRate),
             unit_name: quickUnit || "Meter",
             notes: quickNotes || "",
         }));
+
         setData("materials", [...currentMaterials, ...newRows]);
         setQuickItemSelect("");
         setQuickQty(1);
         setQuickYieldQty(1);
         setQuickConversionRate(1);
         setQuickNotes("");
+        setQuickDialogErrors({});
         setShowQuickAddAll(false);
     };
 
-    // Production Steps handlers
     const handleAddProductionStep = (stepId) => {
         const stepMaster = masterSteps.find(
             (s) => String(s.id) === String(stepId),
@@ -694,68 +755,172 @@ export default function Edit({ product }) {
         setData("production_steps", reordered);
     };
 
-    // Validation helpers
+    useEffect(() => {
+        setFieldErrors((prev) => {
+            if (Object.keys(prev).length === 0) return prev;
+
+            const next = { ...prev };
+            let changed = false;
+            const clear = (key, condition) => {
+                if (
+                    condition &&
+                    Object.prototype.hasOwnProperty.call(next, key)
+                ) {
+                    delete next[key];
+                    changed = true;
+                }
+            };
+
+            clear("code", Boolean(data.code?.trim()));
+            clear("name", Boolean(data.name?.trim()));
+            clear("category", Boolean(data.category));
+            clear("default_unit", Boolean(data.default_unit));
+            clear(
+                "materials.general",
+                definedSizes.length === 0 || (data.materials || []).length > 0,
+            );
+            clear(
+                "production_wage",
+                data.production_wage_mode !== "manual" ||
+                    (data.production_wage !== "" &&
+                        data.production_wage != null &&
+                        Number(data.production_wage) >= 0),
+            );
+            clear(
+                "production_steps.general",
+                data.production_wage_mode !== "steps" ||
+                    (data.production_steps || []).length > 0,
+            );
+
+            Object.keys(next).forEach((key) => {
+                let match = key.match(/^sizes\.(\d+)\.(size|price)$/);
+                if (match) {
+                    const index = Number(match[1]);
+                    const row = (data.sizes || [])[index];
+                    if (!row) {
+                        clear(key, true);
+                    } else if (match[2] === "size") {
+                        clear(
+                            key,
+                            Boolean(row.size_id || row.size_name?.trim()),
+                        );
+                    } else {
+                        clear(key, Number(row.price) > 0);
+                    }
+                    return;
+                }
+
+                match = key.match(
+                    /^materials\.(\d+)\.(item_id|required_qty|yield_qty|conversion_rate)$/,
+                );
+                if (match) {
+                    const index = Number(match[1]);
+                    const row = (data.materials || [])[index];
+                    if (!row) {
+                        clear(key, true);
+                    } else if (match[2] === "item_id") {
+                        clear(key, Boolean(row.item_id));
+                    } else {
+                        clear(key, Number(row[match[2]]) > 0);
+                    }
+                    return;
+                }
+
+                match = key.match(
+                    /^production_steps\.(\d+)\.(custom_name|wage)$/,
+                );
+                if (match) {
+                    const index = Number(match[1]);
+                    const row = (data.production_steps || [])[index];
+                    if (!row) {
+                        clear(key, true);
+                    } else if (match[2] === "custom_name") {
+                        clear(
+                            key,
+                            Boolean(
+                                row.production_step_id ||
+                                row.custom_name?.trim(),
+                            ),
+                        );
+                    } else {
+                        clear(key, row.wage == null || Number(row.wage) >= 0);
+                    }
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [
+        data.code,
+        data.name,
+        data.category,
+        data.default_unit,
+        data.sizes,
+        data.materials,
+        data.production_wage_mode,
+        data.production_wage,
+        data.production_steps,
+    ]);
+
     const validateStep = (step) => {
+        const nextErrors = {};
+
         if (step === 0) {
             if (!data.code?.trim()) {
-                Toast.error("Kode produk wajib diisi");
-                return false;
+                nextErrors.code = "Kode produk wajib diisi";
             }
             if (!data.name?.trim()) {
-                Toast.error("Nama produk wajib diisi");
-                return false;
+                nextErrors.name = "Nama produk wajib diisi";
             }
             if (!data.category) {
-                Toast.error("Kategori wajib dipilih");
-                return false;
+                nextErrors.category = "Kategori wajib dipilih";
+            }
+            if (!data.default_unit) {
+                nextErrors.default_unit = "Satuan wajib dipilih";
             }
         }
+
         if (step === 1) {
-            for (const s of data.sizes || []) {
-                if (s.size_id && (!s.price || Number(s.price) <= 0)) {
-                    Toast.error(`Harga untuk ukuran ${s.size_name} wajib > 0`);
-                    return false;
+            (data.sizes || []).forEach((s, idx) => {
+                if (!s.size_id && !s.size_name?.trim()) {
+                    nextErrors[`sizes.${idx}.size`] = "Ukuran wajib diisi";
                 }
-                if (!s.size_id) {
-                    Toast.error("Ada varian ukuran belum dipilih");
-                    return false;
+                if (!s.price || Number(s.price) <= 0) {
+                    nextErrors[`sizes.${idx}.price`] =
+                        "Harga jual wajib lebih dari 0";
                 }
-            }
+            });
         }
+
         if (step === 2) {
             if (
                 (data.materials || []).length === 0 &&
                 definedSizes.length > 0
             ) {
-                Toast.error("Resep bahan belum diisi untuk ukuran yang ada");
-                return false;
+                nextErrors["materials.general"] =
+                    "Resep bahan wajib diisi untuk ukuran yang ada";
             }
-            for (let idx = 0; idx < (data.materials || []).length; idx++) {
-                const m = data.materials[idx];
+
+            (data.materials || []).forEach((m, idx) => {
                 if (!m.item_id) {
-                    Toast.error(`Baris bahan #${idx + 1}: pilih bahan baku`);
-                    setActiveStep(2);
-                    return false;
+                    nextErrors[`materials.${idx}.item_id`] =
+                        "Bahan baku wajib dipilih";
                 }
                 if (!m.required_qty || Number(m.required_qty) <= 0) {
-                    Toast.error(`Baris bahan #${idx + 1}: Kebutuhan wajib > 0`);
-                    setActiveStep(2);
-                    return false;
+                    nextErrors[`materials.${idx}.required_qty`] =
+                        "Kebutuhan wajib lebih dari 0";
                 }
                 if (!m.yield_qty || Number(m.yield_qty) <= 0) {
-                    Toast.error(
-                        `Baris bahan #${idx + 1}: Hasil jadi wajib > 0`,
-                    );
-                    setActiveStep(2);
-                    return false;
+                    nextErrors[`materials.${idx}.yield_qty`] =
+                        "Hasil jadi wajib lebih dari 0";
                 }
                 if (!m.conversion_rate || Number(m.conversion_rate) <= 0) {
-                    Toast.error(`Baris bahan #${idx + 1}: Konversi wajib > 0`);
-                    setActiveStep(2);
-                    return false;
+                    nextErrors[`materials.${idx}.conversion_rate`] =
+                        "Konversi wajib lebih dari 0";
                 }
-            }
+            });
         }
+
         if (step === 3) {
             if (data.production_wage_mode === "manual") {
                 if (
@@ -763,34 +928,29 @@ export default function Edit({ product }) {
                     data.production_wage == null ||
                     Number(data.production_wage) < 0
                 ) {
-                    Toast.error("Upah produksi manual tidak valid");
-                    return false;
+                    nextErrors.production_wage = "Upah produksi tidak valid";
                 }
             } else {
                 if ((data.production_steps || []).length === 0) {
-                    Toast.error(
-                        "Tambahkan minimal satu langkah produksi atau pilih upah produksi manual",
-                    );
-                    return false;
+                    nextErrors["production_steps.general"] =
+                        "Tambahkan minimal satu langkah produksi atau pilih upah produksi langsung";
                 }
-                for (
-                    let idx = 0;
-                    idx < (data.production_steps || []).length;
-                    idx++
-                ) {
-                    const s = data.production_steps[idx];
+
+                (data.production_steps || []).forEach((s, idx) => {
                     if (!s.production_step_id && !s.custom_name?.trim()) {
-                        Toast.error(`Langkah #${idx + 1}: nama langkah kosong`);
-                        return false;
+                        nextErrors[`production_steps.${idx}.custom_name`] =
+                            "Nama langkah wajib diisi";
                     }
                     if (s.wage != null && Number(s.wage) < 0) {
-                        Toast.error(`Langkah #${idx + 1}: upah tidak valid`);
-                        return false;
+                        nextErrors[`production_steps.${idx}.wage`] =
+                            "Upah tidak valid";
                     }
-                }
+                });
             }
         }
-        return true;
+
+        setFieldErrors(nextErrors);
+        return Object.keys(nextErrors).length === 0;
     };
 
     const validateAll = () => {
@@ -820,7 +980,6 @@ export default function Edit({ product }) {
         }
         if (!validateStep(activeStep)) return;
         if (!canNavigateToStep(idx)) {
-            Toast.error("Selesaikan step sebelumnya dulu");
             return;
         }
         setCompletedSteps((prev) => ({ ...prev, [activeStep]: true }));
@@ -836,34 +995,19 @@ export default function Edit({ product }) {
     const handleBack = () => {
         if (activeStep > 0) setActiveStep(activeStep - 1);
     };
-
-    // Submit handlers
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateAll()) return;
-        if (masterSizes.length === 0 && (data.sizes || []).length > 0) {
-            Toast.error("Master ukuran belum termuat, coba refresh");
-            return;
-        }
         if (loadingItems) {
             Toast.error("Data bahan masih dimuat, tunggu sebentar");
             return;
         }
         setSubmitting(true);
 
-        const getSizeId = (sizeName) => {
-            if (!sizeName || sizeName === "ALL") return null;
-            const found = masterSizes.find((ms) => ms.size_name === sizeName);
-            return found ? found.id : null;
-        };
-
         const materialsForBackend = (data.materials || []).map((m) => ({
             item_id: m.item_id ? Number(m.item_id) : null,
-            size_id: m.size_id
-                ? Number(m.size_id)
-                : getSizeId(m.size_name)
-                  ? Number(getSizeId(m.size_name))
-                  : null,
+            size_id: m.size_id ? Number(m.size_id) : null,
+            size_name: m.size_name || null,
             required_qty: Number(m.required_qty) || 0,
             yield_qty: Number(m.yield_qty) || 1,
             conversion_rate: Number(m.conversion_rate) || 1,
@@ -889,16 +1033,20 @@ export default function Edit({ product }) {
                 ? Number(data.production_wage || 0)
                 : 0,
         );
+
         const validSizes = (data.sizes || [])
-            .filter((s) => s.size_id)
+            .filter((s) => s.size_id || s.size_name?.trim())
             .map((s) => ({
-                size_id: Number(s.size_id),
+                size_id: s.size_id ? Number(s.size_id) : null,
+                size_name: s.size_name?.trim() || null,
                 price: Number(s.price) || 0,
                 notes: s.notes || null,
             }));
+
         const validMaterials = materialsForBackend.filter(
             (m) => m.item_id && m.required_qty > 0,
         );
+
         const validSteps =
             data.production_wage_mode === "steps"
                 ? (data.production_steps || [])
@@ -914,6 +1062,7 @@ export default function Edit({ product }) {
                           sort_order: idx + 1,
                       }))
                 : [];
+
         formData.append("sizes", JSON.stringify(validSizes));
         formData.append("materials", JSON.stringify(validMaterials));
         formData.append("production_steps", JSON.stringify(validSteps));
@@ -979,7 +1128,6 @@ export default function Edit({ product }) {
             ? Number(data.production_wage || 0)
             : stepWageTotal;
 
-    // Total material cost per size for summary
     const getSizeMaterialCost = (sizeName) => {
         const sizeMats = (data.materials || []).filter(
             (m) => m.size_name === sizeName,
@@ -1051,9 +1199,7 @@ export default function Edit({ product }) {
                         </p>
                     </div>
                 </div>
-
-                {/* Stepper Navigation + Next/Back */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-2">
+<div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-2">
                     <button
                         type="button"
                         onClick={handleBack}
@@ -1142,15 +1288,13 @@ export default function Edit({ product }) {
                         </button>
                     )}
                 </div>
-
-                {/* Form */}
-                <form
+<form
                     onSubmit={handleSubmit}
                     id="product-form-edit"
+                    noValidate
                     className="space-y-4"
                 >
-                    {/* STEP 0: INFO & FOTO */}
-                    {activeStep === 0 && (
+{activeStep === 0 && (
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6 animate-in fade-in duration-150">
                             <div>
                                 <h3 className="text-lg font-bold text-slate-800">
@@ -1163,8 +1307,7 @@ export default function Edit({ product }) {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Kode Produk */}
-                                <div>
+<div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                                         Kode Produk{" "}
                                         <span className="text-rose-500">*</span>
@@ -1177,13 +1320,19 @@ export default function Edit({ product }) {
                                             setData("code", e.target.value)
                                         }
                                         placeholder="Contoh: PRD-001"
-                                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md font-mono font-semibold bg-white text-slate-800 focus:border-teal-500"
-                                        required
+                                        className={`w-full px-3 py-2 text-xs border rounded-md font-mono font-semibold bg-white text-slate-800 focus:border-teal-500 ${
+                                            fieldErrors.code
+                                                ? "border-rose-400"
+                                                : "border-slate-300"
+                                        }`}
                                     />
+                                    {fieldErrors.code && (
+                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                            {fieldErrors.code}
+                                        </p>
+                                    )}
                                 </div>
-
-                                {/* Nama Produk */}
-                                <div>
+<div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                                         Nama Model Produk{" "}
                                         <span className="text-rose-500">*</span>
@@ -1196,13 +1345,19 @@ export default function Edit({ product }) {
                                             setData("name", e.target.value)
                                         }
                                         placeholder="Contoh: Baju Olahraga SD Lengan Pendek"
-                                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:border-teal-500 font-semibold"
-                                        required
+                                        className={`w-full px-3 py-2 text-xs border rounded-md focus:border-teal-500 font-semibold ${
+                                            fieldErrors.name
+                                                ? "border-rose-400"
+                                                : "border-slate-300"
+                                        }`}
                                     />
+                                    {fieldErrors.name && (
+                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                            {fieldErrors.name}
+                                        </p>
+                                    )}
                                 </div>
-
-                                {/* Kategori */}
-                                <div>
+<div>
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                                         Kategori Produk{" "}
                                         <span className="text-rose-500">*</span>
@@ -1213,8 +1368,11 @@ export default function Edit({ product }) {
                                         onChange={(e) =>
                                             setData("category", e.target.value)
                                         }
-                                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:border-teal-500 bg-white"
-                                        required
+                                        className={`w-full px-3 py-2 text-xs border rounded-md focus:border-teal-500 bg-white ${
+                                            fieldErrors.category
+                                                ? "border-rose-400"
+                                                : "border-slate-300"
+                                        }`}
                                     >
                                         <option value="">
                                             -- Pilih Kategori --
@@ -1225,10 +1383,13 @@ export default function Edit({ product }) {
                                             </option>
                                         ))}
                                     </select>
+                                    {fieldErrors.category && (
+                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                            {fieldErrors.category}
+                                        </p>
+                                    )}
                                 </div>
-
-                                {/* Satuan & Harga Dasar */}
-                                <div className="grid grid-cols-2 gap-2">
+<div className="grid grid-cols-2 gap-2">
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                                             Satuan{" "}
@@ -1245,8 +1406,11 @@ export default function Edit({ product }) {
                                                     e.target.value,
                                                 )
                                             }
-                                            className="w-full px-2.5 py-2 text-xs border border-slate-300 rounded-md focus:border-teal-500 bg-white"
-                                            required
+                                            className={`w-full px-2.5 py-2 text-xs border rounded-md focus:border-teal-500 bg-white ${
+                                                fieldErrors.default_unit
+                                                    ? "border-rose-400"
+                                                    : "border-slate-300"
+                                            }`}
                                         >
                                             {units.map((u) => (
                                                 <option key={u} value={u}>
@@ -1254,6 +1418,11 @@ export default function Edit({ product }) {
                                                 </option>
                                             ))}
                                         </select>
+                                        {fieldErrors.default_unit && (
+                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                {fieldErrors.default_unit}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -1275,9 +1444,7 @@ export default function Edit({ product }) {
                                         />
                                     </div>
                                 </div>
-
-                                {/* Deskripsi */}
-                                <div className="md:col-span-2">
+<div className="md:col-span-2">
                                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                                         Keterangan & Spesifikasi Model
                                     </label>
@@ -1296,9 +1463,7 @@ export default function Edit({ product }) {
                                     />
                                 </div>
                             </div>
-
-                            {/* MULTI-PHOTO GALLERY */}
-                            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
+<div className="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <ImageIcon className="w-4.5 h-4.5 text-teal-600" />
@@ -1485,9 +1650,7 @@ export default function Edit({ product }) {
                             </div>
                         </div>
                     )}
-
-                    {/* STEP 1: VARIAN UKURAN */}
-                    {activeStep === 1 && (
+{activeStep === 1 && (
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4 animate-in fade-in duration-150">
                             <div className="flex items-start justify-between gap-3 overflow-visible">
                                 <div>
@@ -1502,7 +1665,14 @@ export default function Edit({ product }) {
                                 <div className="flex items-center gap-1.5 flex-wrap shrink-0 bg-teal-50/50 border border-teal-200 rounded-lg p-1.5 overflow-visible">
                                     {[
                                         ...new Set(
-                                            masterSizes.map((s) => s.category),
+                                            masterSizes
+                                                .map((s) => s.category)
+                                                .filter(
+                                                    (category) =>
+                                                        category &&
+                                                        category.toLowerCase() !==
+                                                            "custom",
+                                                ),
                                         ),
                                     ].map((category) => (
                                         <button
@@ -1526,73 +1696,85 @@ export default function Edit({ product }) {
                                         </button>
                                         {showSizePopover && (
                                             <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-3rem)] bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-30">
-                                                <div className="pb-2.5 mb-3 border-b border-slate-100">
-                                                    <span className="text-xs font-bold text-slate-900">
+                                                <div className="grid grid-cols-[32px_1fr_32px] items-center gap-2 pb-2.5 mb-3 border-b border-slate-100">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setShowSizePopover(
+                                                                false,
+                                                            );
+                                                            setDialogSizeError(
+                                                                "",
+                                                            );
+                                                        }}
+                                                        title="Batal"
+                                                        aria-label="Batal"
+                                                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+
+                                                    <span className="text-xs font-bold text-slate-900 text-center">
                                                         Tambah Ukuran Kustom
                                                     </span>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={
+                                                            handleConfirmSizeDialog
+                                                        }
+                                                        title="Terapkan"
+                                                        aria-label="Terapkan"
+                                                        className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                                                    >
+                                                        <Save className="w-4 h-4" />
+                                                    </button>
                                                 </div>
+
                                                 <div className="space-y-3">
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                                            Ukuran{" "}
+                                                            Nama Ukuran{" "}
                                                             <span className="text-rose-500">
                                                                 *
                                                             </span>
                                                         </label>
-                                                        <select
-                                                            value={dialogSizeId}
-                                                            onChange={(e) =>
-                                                                setDialogSizeId(
+                                                        <input
+                                                            type="text"
+                                                            value={
+                                                                dialogSizeName
+                                                            }
+                                                            onChange={(e) => {
+                                                                setDialogSizeName(
                                                                     e.target
                                                                         .value,
-                                                                )
-                                                            }
-                                                            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md bg-white font-medium"
-                                                        >
-                                                            <option value="">
-                                                                -- Pilih Ukuran
-                                                                --
-                                                            </option>
-                                                            {masterSizes.map(
-                                                                (ms) => {
-                                                                    const isSelected =
-                                                                        definedSizes.some(
-                                                                            (
-                                                                                s,
-                                                                            ) =>
-                                                                                String(
-                                                                                    s.size_id,
-                                                                                ) ===
-                                                                                String(
-                                                                                    ms.id,
-                                                                                ),
-                                                                        );
-                                                                    return (
-                                                                        <option
-                                                                            key={
-                                                                                ms.id
-                                                                            }
-                                                                            value={
-                                                                                ms.id
-                                                                            }
-                                                                            disabled={
-                                                                                isSelected
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                ms.size_name
-                                                                            }{" "}
-                                                                            (
-                                                                            {
-                                                                                ms.category
-                                                                            }
-                                                                            )
-                                                                        </option>
+                                                                );
+
+                                                                if (
+                                                                    dialogSizeError
+                                                                ) {
+                                                                    setDialogSizeError(
+                                                                        "",
                                                                     );
-                                                                },
-                                                            )}
-                                                        </select>
+                                                                }
+                                                            }}
+                                                            placeholder="Contoh: Jumbo, 42 Anak, XXXL Panjang"
+                                                            className={`w-full px-3 py-2 text-xs border rounded-md bg-white font-medium focus:border-teal-500 ${
+                                                                dialogSizeError
+                                                                    ? "border-rose-400"
+                                                                    : "border-slate-300"
+                                                            }`}
+                                                            autoFocus
+                                                        />
+                                                        {dialogSizeError && (
+                                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                {
+                                                                    dialogSizeError
+                                                                }
+                                                            </p>
+                                                        )}
                                                     </div>
+
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                                                             Harga Jual
@@ -1615,6 +1797,7 @@ export default function Edit({ product }) {
                                                             className="w-full px-3 py-2 text-xs font-mono font-bold border border-slate-200 rounded-md text-right focus:border-teal-500"
                                                         />
                                                     </div>
+
                                                     <div>
                                                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                                                             Catatan
@@ -1632,33 +1815,6 @@ export default function Edit({ product }) {
                                                             className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md focus:border-teal-500"
                                                         />
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setShowSizePopover(
-                                                                false,
-                                                            )
-                                                        }
-                                                        title="Batal"
-                                                        aria-label="Batal"
-                                                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={
-                                                            handleConfirmSizeDialog
-                                                        }
-                                                        title="Terapkan"
-                                                        aria-label="Terapkan"
-                                                        className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
-                                                    >
-                                                        <Save className="w-4 h-4" />
-                                                    </button>
                                                 </div>
                                             </div>
                                         )}
@@ -1750,70 +1906,121 @@ export default function Edit({ product }) {
                                                     <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px]">
                                                         {idx + 1}
                                                     </td>
-                                                    <td className="py-2 px-3">
-                                                        <select
-                                                            value={
-                                                                sz.size_id || ""
-                                                            }
-                                                            onChange={(e) =>
-                                                                handleSizeFieldChange(
-                                                                    idx,
-                                                                    "size_id",
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            required
-                                                            className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded focus:border-teal-500 bg-white"
-                                                        >
-                                                            <option value="">
-                                                                -- Pilih Ukuran
-                                                                --
-                                                            </option>
-                                                            {masterSizes.map(
-                                                                (ms) => {
-                                                                    const isSelected =
-                                                                        definedSizes.some(
-                                                                            (
-                                                                                s,
-                                                                                sIdx,
-                                                                            ) =>
-                                                                                sIdx !==
-                                                                                    idx &&
-                                                                                String(
-                                                                                    s.size_id,
-                                                                                ) ===
-                                                                                    String(
-                                                                                        ms.id,
-                                                                                    ),
-                                                                        );
-                                                                    return (
-                                                                        <option
-                                                                            key={
-                                                                                ms.id
-                                                                            }
-                                                                            value={
-                                                                                ms.id
-                                                                            }
-                                                                            disabled={
-                                                                                isSelected
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                ms.size_name
-                                                                            }{" "}
-                                                                            (
-                                                                            {
-                                                                                ms.category
-                                                                            }
-                                                                            )
-                                                                        </option>
-                                                                    );
-                                                                },
-                                                            )}
-                                                        </select>
+                                                    <td className="py-2 px-3 align-top">
+                                                        {sz.is_custom ||
+                                                        !sz.size_id ? (
+                                                            <div
+                                                                className={`w-full px-2.5 py-1.5 text-xs font-bold border rounded bg-slate-50 text-slate-700 flex items-center justify-between gap-2 ${
+                                                                    fieldErrors[
+                                                                        `sizes.${idx}.size`
+                                                                    ]
+                                                                        ? "border-rose-400"
+                                                                        : "border-slate-200"
+                                                                }`}
+                                                            >
+                                                                <span className="truncate">
+                                                                    {
+                                                                        sz.size_name
+                                                                    }
+                                                                </span>
+                                                                <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">
+                                                                    Custom
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <select
+                                                                value={
+                                                                    sz.size_id ||
+                                                                    ""
+                                                                }
+                                                                onChange={(e) =>
+                                                                    handleSizeFieldChange(
+                                                                        idx,
+                                                                        "size_id",
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                className={`w-full px-2.5 py-1.5 text-xs font-bold border rounded focus:border-teal-500 bg-white ${
+                                                                    fieldErrors[
+                                                                        `sizes.${idx}.size`
+                                                                    ]
+                                                                        ? "border-rose-400"
+                                                                        : "border-slate-200"
+                                                                }`}
+                                                            >
+                                                                <option value="">
+                                                                    -- Pilih
+                                                                    Ukuran --
+                                                                </option>
+                                                                {masterSizes
+                                                                    .filter(
+                                                                        (ms) =>
+                                                                            String(
+                                                                                ms.category ||
+                                                                                    "",
+                                                                            ).toLowerCase() !==
+                                                                            "custom",
+                                                                    )
+                                                                    .map(
+                                                                        (
+                                                                            ms,
+                                                                        ) => {
+                                                                            const isSelected =
+                                                                                definedSizes.some(
+                                                                                    (
+                                                                                        s,
+                                                                                        sIdx,
+                                                                                    ) =>
+                                                                                        sIdx !==
+                                                                                            idx &&
+                                                                                        String(
+                                                                                            s.size_id,
+                                                                                        ) ===
+                                                                                            String(
+                                                                                                ms.id,
+                                                                                            ),
+                                                                                );
+                                                                            return (
+                                                                                <option
+                                                                                    key={
+                                                                                        ms.id
+                                                                                    }
+                                                                                    value={
+                                                                                        ms.id
+                                                                                    }
+                                                                                    disabled={
+                                                                                        isSelected
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        ms.size_name
+                                                                                    }{" "}
+                                                                                    (
+                                                                                    {
+                                                                                        ms.category
+                                                                                    }
+
+                                                                                    )
+                                                                                </option>
+                                                                            );
+                                                                        },
+                                                                    )}
+                                                            </select>
+                                                        )}
+                                                        {fieldErrors[
+                                                            `sizes.${idx}.size`
+                                                        ] && (
+                                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                {
+                                                                    fieldErrors[
+                                                                        `sizes.${idx}.size`
+                                                                    ]
+                                                                }
+                                                            </p>
+                                                        )}
                                                     </td>
-                                                    <td className="py-2 px-3">
+                                                    <td className="py-2 px-3 align-top">
                                                         <input
                                                             type="text"
                                                             inputMode="numeric"
@@ -1830,10 +2037,26 @@ export default function Edit({ product }) {
                                                                     ),
                                                                 )
                                                             }
-                                                            required
                                                             placeholder="0"
-                                                            className="w-full px-2.5 py-1.5 text-xs font-bold font-mono border border-slate-200 rounded focus:border-teal-500 text-slate-900 text-right"
+                                                            className={`w-full px-2.5 py-1.5 text-xs font-bold font-mono border rounded focus:border-teal-500 text-slate-900 text-right ${
+                                                                fieldErrors[
+                                                                    `sizes.${idx}.price`
+                                                                ]
+                                                                    ? "border-rose-400"
+                                                                    : "border-slate-200"
+                                                            }`}
                                                         />
+                                                        {fieldErrors[
+                                                            `sizes.${idx}.price`
+                                                        ] && (
+                                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                {
+                                                                    fieldErrors[
+                                                                        `sizes.${idx}.price`
+                                                                    ]
+                                                                }
+                                                            </p>
+                                                        )}
                                                     </td>
                                                     <td className="py-2 px-3">
                                                         <input
@@ -1879,8 +2102,6 @@ export default function Edit({ product }) {
                             )}
                         </div>
                     )}
-
-                    {/* STEP 2: RESEP BAHAN (BOM) */}
                     {activeStep === 2 && (
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4 animate-in fade-in duration-150">
                             <div className="flex items-start justify-between gap-3 overflow-visible">
@@ -1896,23 +2117,49 @@ export default function Edit({ product }) {
                                 <div className="relative shrink-0">
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setShowQuickAddAll((prev) => !prev)
-                                        }
+                                        onClick={() => {
+                                            setShowQuickAddAll((prev) => !prev);
+                                            setQuickDialogErrors({});
+                                        }}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-600 rounded-md transition-colors cursor-pointer shadow-sm"
                                     >
                                         <Sparkles className="w-3.5 h-3.5 text-white" />
                                         <span>
-                                            + Tambah 1 Bahan ke SEMUA Ukuran
+                                            Tambah 1 Bahan ke SEMUA Ukuran
                                         </span>
                                     </button>
                                     {showQuickAddAll && (
                                         <div className="absolute right-0 top-full mt-2 w-[520px] max-w-[calc(100vw-3rem)] bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-40">
-                                            <div className="pb-2.5 mb-3 border-b border-slate-100">
-                                                <span className="text-xs font-bold text-slate-900">
+                                            <div className="grid grid-cols-[32px_1fr_32px] items-center gap-2 pb-2.5 mb-3 border-b border-slate-100">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowQuickAddAll(false);
+                                                        setQuickDialogErrors({});
+                                                    }}
+                                                    title="Batal"
+                                                    aria-label="Batal"
+                                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+
+                                                <span className="text-xs font-bold text-slate-900 text-center">
                                                     Tambah 1 Bahan ke Semua
                                                     Ukuran
                                                 </span>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={
+                                                        handleQuickAddMaterialToAll
+                                                    }
+                                                    title="Terapkan"
+                                                    aria-label="Terapkan"
+                                                    className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                                                >
+                                                    <Save className="w-4 h-4" />
+                                                </button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
@@ -1930,6 +2177,16 @@ export default function Edit({ product }) {
                                                             setQuickItemSelect(
                                                                 itmId,
                                                             );
+                                                            if (
+                                                                quickDialogErrors.item_id
+                                                            ) {
+                                                                setQuickDialogErrors(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        item_id: undefined,
+                                                                    }),
+                                                                );
+                                                            }
                                                             const found =
                                                                 rawItems.find(
                                                                     (i) =>
@@ -1951,7 +2208,11 @@ export default function Edit({ product }) {
                                                                 );
                                                             }
                                                         }}
-                                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-md bg-white font-medium"
+                                                        className={`w-full px-2.5 py-1.5 text-xs border rounded-md bg-white font-medium ${
+                                                            quickDialogErrors.item_id
+                                                                ? "border-rose-400"
+                                                                : "border-slate-300"
+                                                        }`}
                                                     >
                                                         <option value="">
                                                             -- Pilih Bahan --
@@ -1973,6 +2234,13 @@ export default function Edit({ product }) {
                                                             ),
                                                         )}
                                                     </select>
+                                                    {quickDialogErrors.item_id && (
+                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                            {
+                                                                quickDialogErrors.item_id
+                                                            }
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="block text-[10px] font-semibold text-slate-700 mb-1">
@@ -1984,7 +2252,7 @@ export default function Edit({ product }) {
                                                         value={formatQty(
                                                             quickQty,
                                                         )}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
                                                             setQuickQty(
                                                                 parseFloat(
                                                                     e.target.value.replace(
@@ -1992,10 +2260,31 @@ export default function Edit({ product }) {
                                                                         ".",
                                                                     ),
                                                                 ) || 0,
-                                                            )
-                                                        }
-                                                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold border border-slate-200 rounded-md text-right"
+                                                            );
+                                                            if (
+                                                                quickDialogErrors.required_qty
+                                                            ) {
+                                                                setQuickDialogErrors(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        required_qty: undefined,
+                                                                    }),
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={`w-full px-2.5 py-1.5 text-xs font-mono font-bold border rounded-md text-right ${
+                                                            quickDialogErrors.required_qty
+                                                                ? "border-rose-400"
+                                                                : "border-slate-200"
+                                                        }`}
                                                     />
+                                                    {quickDialogErrors.required_qty && (
+                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                            {
+                                                                quickDialogErrors.required_qty
+                                                            }
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="block text-[10px] font-semibold text-slate-700 mb-1">
@@ -2021,7 +2310,7 @@ export default function Edit({ product }) {
                                                         value={formatQty(
                                                             quickYieldQty,
                                                         )}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
                                                             setQuickYieldQty(
                                                                 parseFloat(
                                                                     e.target.value.replace(
@@ -2029,10 +2318,31 @@ export default function Edit({ product }) {
                                                                         ".",
                                                                     ),
                                                                 ) || 0,
-                                                            )
-                                                        }
-                                                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold border border-teal-200 rounded-md text-right bg-teal-50/40"
+                                                            );
+                                                            if (
+                                                                quickDialogErrors.yield_qty
+                                                            ) {
+                                                                setQuickDialogErrors(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        yield_qty: undefined,
+                                                                    }),
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={`w-full px-2.5 py-1.5 text-xs font-mono font-bold border rounded-md text-right bg-teal-50/40 ${
+                                                            quickDialogErrors.yield_qty
+                                                                ? "border-rose-400"
+                                                                : "border-teal-200"
+                                                        }`}
                                                     />
+                                                    {quickDialogErrors.yield_qty && (
+                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                            {
+                                                                quickDialogErrors.yield_qty
+                                                            }
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="block text-[10px] font-semibold text-slate-700 mb-1">
@@ -2044,7 +2354,7 @@ export default function Edit({ product }) {
                                                         value={formatQty(
                                                             quickConversionRate,
                                                         )}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
                                                             setQuickConversionRate(
                                                                 parseFloat(
                                                                     e.target.value.replace(
@@ -2052,10 +2362,31 @@ export default function Edit({ product }) {
                                                                         ".",
                                                                     ),
                                                                 ) || 0,
-                                                            )
-                                                        }
-                                                        className="w-full px-2.5 py-1.5 text-xs font-mono border border-slate-200 rounded-md text-right"
+                                                            );
+                                                            if (
+                                                                quickDialogErrors.conversion_rate
+                                                            ) {
+                                                                setQuickDialogErrors(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        conversion_rate: undefined,
+                                                                    }),
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={`w-full px-2.5 py-1.5 text-xs font-mono border rounded-md text-right ${
+                                                            quickDialogErrors.conversion_rate
+                                                                ? "border-rose-400"
+                                                                : "border-slate-200"
+                                                        }`}
                                                     />
+                                                    {quickDialogErrors.conversion_rate && (
+                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                            {
+                                                                quickDialogErrors.conversion_rate
+                                                            }
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="block text-[10px] font-semibold text-slate-700 mb-1">
@@ -2074,40 +2405,15 @@ export default function Edit({ product }) {
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setShowQuickAddAll(
-                                                            false,
-                                                        )
-                                                    }
-                                                    title="Batal"
-                                                    aria-label="Batal"
-                                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={
-                                                        handleQuickAddMaterialToAll
-                                                    }
-                                                    disabled={!quickItemSelect}
-                                                    title="Terapkan Bahan ke Semua Ukuran"
-                                                    aria-label="Terapkan Bahan ke Semua Ukuran"
-                                                    className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                                >
-                                                    <Save className="w-4 h-4" />
-                                                </button>
-                                            </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-
-                            {/* Size Cards - collapsible default tutup */}
+                            {fieldErrors["materials.general"] && (
+                                <p className="text-[10px] font-medium text-rose-600">
+                                    {fieldErrors["materials.general"]}
+                                </p>
+                            )}
                             {definedSizes.length === 0 ? (
                                 <div className="border border-slate-200 rounded-xl shadow-2xs bg-white overflow-visible">
                                     <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 rounded-t-xl">
@@ -2141,7 +2447,7 @@ export default function Edit({ product }) {
                                                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded shadow-2xs transition-colors cursor-pointer"
                                             >
                                                 <Plus className="w-3.5 h-3.5" />{" "}
-                                                <span>+ Tambah Bahan</span>
+                                                <span>Bahan</span>
                                             </button>
                                             {showMaterialDialog?.sizeName ===
                                                 "ALL" && (
@@ -2210,7 +2516,11 @@ export default function Edit({ product }) {
                                                                         }),
                                                                     );
                                                                 }}
-                                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-md bg-white font-medium"
+                                                                className={`w-full px-2.5 py-1.5 text-xs border rounded-md bg-white font-medium ${
+                                                                    dialogMaterialError
+                                                                        ? "border-rose-400"
+                                                                        : "border-slate-300"
+                                                                }`}
                                                             >
                                                                 <option value="">
                                                                     -- Pilih
@@ -2238,6 +2548,13 @@ export default function Edit({ product }) {
                                                                     ),
                                                                 )}
                                                             </select>
+                                                            {dialogMaterialError && (
+                                                                <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                    {
+                                                                        dialogMaterialError
+                                                                    }
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <div>
                                                             <label className="block text-[10px] font-semibold text-slate-700 mb-1">
@@ -2455,7 +2772,13 @@ export default function Edit({ product }) {
                                                                                         .value,
                                                                                 )
                                                                             }
-                                                                            className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded focus:border-teal-500 bg-white font-medium"
+                                                                            className={`w-full px-2 py-1.5 text-xs border rounded focus:border-teal-500 bg-white font-medium ${
+                                                                                fieldErrors[
+                                                                                    `materials.${originalIndex}.item_id`
+                                                                                ]
+                                                                                    ? "border-rose-400"
+                                                                                    : "border-slate-200"
+                                                                            }`}
                                                                         >
                                                                             <option value="">
                                                                                 --
@@ -2494,6 +2817,17 @@ export default function Edit({ product }) {
                                                                                 ),
                                                                             )}
                                                                         </select>
+                                                                        {fieldErrors[
+                                                                            `materials.${originalIndex}.item_id`
+                                                                        ] && (
+                                                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                {
+                                                                                    fieldErrors[
+                                                                                        `materials.${originalIndex}.item_id`
+                                                                                    ]
+                                                                                }
+                                                                            </p>
+                                                                        )}
                                                                         {selectedItem && (
                                                                             <span className="text-[10px] text-teal-700 block mt-1 font-medium">
                                                                                 Stok:{" "}
@@ -2532,8 +2866,25 @@ export default function Edit({ product }) {
                                                                                         0,
                                                                                 )
                                                                             }
-                                                                            className="w-full px-2 py-1.5 text-xs font-mono font-bold border border-slate-200 rounded focus:border-teal-500 bg-white text-right"
+                                                                            className={`w-full px-2 py-1.5 text-xs font-mono font-bold border rounded focus:border-teal-500 bg-white text-right ${
+                                                                                fieldErrors[
+                                                                                    `materials.${originalIndex}.required_qty`
+                                                                                ]
+                                                                                    ? "border-rose-400"
+                                                                                    : "border-slate-200"
+                                                                            }`}
                                                                         />
+                                                                        {fieldErrors[
+                                                                            `materials.${originalIndex}.required_qty`
+                                                                        ] && (
+                                                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                {
+                                                                                    fieldErrors[
+                                                                                        `materials.${originalIndex}.required_qty`
+                                                                                    ]
+                                                                                }
+                                                                            </p>
+                                                                        )}
                                                                     </div>
                                                                     <div className="sm:col-span-2">
                                                                         <label className="block text-[10px] font-semibold text-slate-700 mb-0.5">
@@ -2578,8 +2929,25 @@ export default function Edit({ product }) {
                                                                                         0,
                                                                                 )
                                                                             }
-                                                                            className="w-full px-2 py-1.5 text-xs font-mono font-bold border border-teal-200 rounded focus:border-teal-500 bg-teal-50/40 text-right"
+                                                                            className={`w-full px-2 py-1.5 text-xs font-mono font-bold border rounded focus:border-teal-500 bg-teal-50/40 text-right ${
+                                                                                fieldErrors[
+                                                                                    `materials.${originalIndex}.yield_qty`
+                                                                                ]
+                                                                                    ? "border-rose-400"
+                                                                                    : "border-teal-200"
+                                                                            }`}
                                                                         />
+                                                                        {fieldErrors[
+                                                                            `materials.${originalIndex}.yield_qty`
+                                                                        ] && (
+                                                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                {
+                                                                                    fieldErrors[
+                                                                                        `materials.${originalIndex}.yield_qty`
+                                                                                    ]
+                                                                                }
+                                                                            </p>
+                                                                        )}
                                                                     </div>
                                                                     <div className="sm:col-span-2">
                                                                         <label className="block text-[10px] font-semibold text-slate-700 mb-0.5">
@@ -2607,8 +2975,25 @@ export default function Edit({ product }) {
                                                                                         0,
                                                                                 )
                                                                             }
-                                                                            className="w-full px-2 py-1.5 text-xs font-mono border border-slate-200 rounded focus:border-teal-500 bg-white"
+                                                                            className={`w-full px-2 py-1.5 text-xs font-mono border rounded focus:border-teal-500 bg-white ${
+                                                                                fieldErrors[
+                                                                                    `materials.${originalIndex}.conversion_rate`
+                                                                                ]
+                                                                                    ? "border-rose-400"
+                                                                                    : "border-slate-200"
+                                                                            }`}
                                                                         />
+                                                                        {fieldErrors[
+                                                                            `materials.${originalIndex}.conversion_rate`
+                                                                        ] && (
+                                                                            <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                {
+                                                                                    fieldErrors[
+                                                                                        `materials.${originalIndex}.conversion_rate`
+                                                                                    ]
+                                                                                }
+                                                                            </p>
+                                                                        )}
                                                                     </div>
                                                                     <div className="sm:col-span-1 flex items-center justify-center pt-4">
                                                                         <button
@@ -2645,6 +3030,23 @@ export default function Edit({ product }) {
                                             );
                                         const isOpen =
                                             openBOMCards.has(sizeName);
+                                        const sizeCategory =
+                                            masterSizes.find(
+                                                (ms) =>
+                                                    String(ms.id) ===
+                                                    String(sz.size_id),
+                                            )?.category ||
+                                            masterSizes.find(
+                                                (ms) =>
+                                                    ms.size_name === sizeName,
+                                            )?.category ||
+                                            "";
+                                        const isCustomSize =
+                                            Boolean(sz.is_custom) ||
+                                            !sz.size_id ||
+                                            String(
+                                                sizeCategory,
+                                            ).toLowerCase() === "custom";
                                         return (
                                             <div
                                                 key={szIdx}
@@ -2664,7 +3066,9 @@ export default function Edit({ product }) {
                                                             className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
                                                         />
                                                         <div className="w-7 h-7 rounded-md bg-teal-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                                                            {sizeName}
+                                                            {isCustomSize
+                                                                ? "C"
+                                                                : sizeName}
                                                         </div>
                                                         <div className="truncate flex items-center gap-1 flex-wrap">
                                                             <span className="text-xs font-bold text-slate-900">
@@ -2672,29 +3076,14 @@ export default function Edit({ product }) {
                                                                 Ukuran{" "}
                                                                 {sizeName}
                                                             </span>
-                                                            {(() => {
-                                                                const cat =
-                                                                    masterSizes.find(
-                                                                        (ms) =>
-                                                                            String(
-                                                                                ms.id,
-                                                                            ) ===
-                                                                            String(
-                                                                                sz.size_id,
-                                                                            ),
-                                                                    )
-                                                                        ?.category ||
-                                                                    masterSizes.find(
-                                                                        (ms) =>
-                                                                            ms.size_name ===
-                                                                            sizeName,
-                                                                    )?.category;
-                                                                return cat ? (
-                                                                    <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
-                                                                        {cat}
-                                                                    </span>
-                                                                ) : null;
-                                                            })()}
+                                                            {(isCustomSize ||
+                                                                sizeCategory) && (
+                                                                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                                                                    {isCustomSize
+                                                                        ? "Custom"
+                                                                        : sizeCategory}
+                                                                </span>
+                                                            )}
                                                             {sz.price > 0 && (
                                                                 <span className="text-[10px] font-bold text-teal-800 bg-teal-100 px-1.5 py-0.2 rounded font-mono">
                                                                     Rp{" "}
@@ -2799,7 +3188,6 @@ export default function Edit({ product }) {
                                                             >
                                                                 <Plus className="w-3.5 h-3.5" />{" "}
                                                                 <span>
-                                                                    + Tambah
                                                                     Bahan
                                                                 </span>
                                                             </button>
@@ -2885,7 +3273,11 @@ export default function Edit({ product }) {
                                                                                             }),
                                                                                         );
                                                                                     }}
-                                                                                    className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-md bg-white font-medium"
+                                                                                    className={`w-full px-2.5 py-1.5 text-xs border rounded-md bg-white font-medium ${
+                                                                                        dialogMaterialError
+                                                                                            ? "border-rose-400"
+                                                                                            : "border-slate-300"
+                                                                                    }`}
                                                                                 >
                                                                                     <option value="">
                                                                                         --
@@ -2918,6 +3310,13 @@ export default function Edit({ product }) {
                                                                                         ),
                                                                                     )}
                                                                                 </select>
+                                                                                {dialogMaterialError && (
+                                                                                    <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                        {
+                                                                                            dialogMaterialError
+                                                                                        }
+                                                                                    </p>
+                                                                                )}
                                                                             </div>
                                                                             <div>
                                                                                 <label className="block text-[10px] font-semibold text-slate-700 mb-1">
@@ -3150,7 +3549,13 @@ export default function Edit({ product }) {
                                                                                                     .value,
                                                                                             )
                                                                                         }
-                                                                                        className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded focus:border-teal-500 bg-white font-medium"
+                                                                                        className={`w-full px-2 py-1.5 text-xs border rounded focus:border-teal-500 bg-white font-medium ${
+                                                                                            fieldErrors[
+                                                                                                `materials.${originalIndex}.item_id`
+                                                                                            ]
+                                                                                                ? "border-rose-400"
+                                                                                                : "border-slate-200"
+                                                                                        }`}
                                                                                     >
                                                                                         <option value="">
                                                                                             --
@@ -3189,6 +3594,17 @@ export default function Edit({ product }) {
                                                                                             ),
                                                                                         )}
                                                                                     </select>
+                                                                                    {fieldErrors[
+                                                                                        `materials.${originalIndex}.item_id`
+                                                                                    ] && (
+                                                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                            {
+                                                                                                fieldErrors[
+                                                                                                    `materials.${originalIndex}.item_id`
+                                                                                                ]
+                                                                                            }
+                                                                                        </p>
+                                                                                    )}
                                                                                 </div>
                                                                                 <div className="sm:col-span-2">
                                                                                     <label className="block text-[10px] font-semibold text-slate-700 mb-0.5">
@@ -3216,8 +3632,25 @@ export default function Edit({ product }) {
                                                                                                     0,
                                                                                             )
                                                                                         }
-                                                                                        className="w-full px-2 py-1.5 text-xs font-mono font-bold border border-slate-200 rounded focus:border-teal-500 bg-white text-right"
+                                                                                        className={`w-full px-2 py-1.5 text-xs font-mono font-bold border rounded focus:border-teal-500 bg-white text-right ${
+                                                                                            fieldErrors[
+                                                                                                `materials.${originalIndex}.required_qty`
+                                                                                            ]
+                                                                                                ? "border-rose-400"
+                                                                                                : "border-slate-200"
+                                                                                        }`}
                                                                                     />
+                                                                                    {fieldErrors[
+                                                                                        `materials.${originalIndex}.required_qty`
+                                                                                    ] && (
+                                                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                            {
+                                                                                                fieldErrors[
+                                                                                                    `materials.${originalIndex}.required_qty`
+                                                                                                ]
+                                                                                            }
+                                                                                        </p>
+                                                                                    )}
                                                                                 </div>
                                                                                 <div className="sm:col-span-2">
                                                                                     <label className="block text-[10px] font-semibold text-slate-700 mb-0.5">
@@ -3262,8 +3695,25 @@ export default function Edit({ product }) {
                                                                                                     0,
                                                                                             )
                                                                                         }
-                                                                                        className="w-full px-2 py-1.5 text-xs font-mono font-bold border border-teal-200 rounded focus:border-teal-500 bg-teal-50/40 text-right"
+                                                                                        className={`w-full px-2 py-1.5 text-xs font-mono font-bold border rounded focus:border-teal-500 bg-teal-50/40 text-right ${
+                                                                                            fieldErrors[
+                                                                                                `materials.${originalIndex}.yield_qty`
+                                                                                            ]
+                                                                                                ? "border-rose-400"
+                                                                                                : "border-teal-200"
+                                                                                        }`}
                                                                                     />
+                                                                                    {fieldErrors[
+                                                                                        `materials.${originalIndex}.yield_qty`
+                                                                                    ] && (
+                                                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                            {
+                                                                                                fieldErrors[
+                                                                                                    `materials.${originalIndex}.yield_qty`
+                                                                                                ]
+                                                                                            }
+                                                                                        </p>
+                                                                                    )}
                                                                                 </div>
                                                                                 <div className="sm:col-span-2">
                                                                                     <label className="block text-[10px] font-semibold text-slate-700 mb-0.5">
@@ -3291,8 +3741,25 @@ export default function Edit({ product }) {
                                                                                                     0,
                                                                                             )
                                                                                         }
-                                                                                        className="w-full px-2 py-1.5 text-xs font-mono border border-slate-200 rounded focus:border-teal-500 bg-white"
+                                                                                        className={`w-full px-2 py-1.5 text-xs font-mono border rounded focus:border-teal-500 bg-white ${
+                                                                                            fieldErrors[
+                                                                                                `materials.${originalIndex}.conversion_rate`
+                                                                                            ]
+                                                                                                ? "border-rose-400"
+                                                                                                : "border-slate-200"
+                                                                                        }`}
                                                                                     />
+                                                                                    {fieldErrors[
+                                                                                        `materials.${originalIndex}.conversion_rate`
+                                                                                    ] && (
+                                                                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                                            {
+                                                                                                fieldErrors[
+                                                                                                    `materials.${originalIndex}.conversion_rate`
+                                                                                                ]
+                                                                                            }
+                                                                                        </p>
+                                                                                    )}
                                                                                 </div>
                                                                                 <div className="sm:col-span-1 flex items-center justify-center pt-4">
                                                                                     <button
@@ -3333,8 +3800,6 @@ export default function Edit({ product }) {
                             )}
                         </div>
                     )}
-
-                    {/* STEP 3: LANGKAH PRODUKSI */}
                     {activeStep === 3 && (
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4 animate-in fade-in duration-150">
                             <div>
@@ -3441,9 +3906,18 @@ export default function Edit({ product }) {
                                                 )
                                             }
                                             placeholder="0"
-                                            className="w-full pl-9 pr-3 py-2 text-sm font-bold font-mono text-right border border-slate-200 rounded-md bg-white focus:border-teal-500 outline-none"
+                                            className={`w-full pl-9 pr-3 py-2 text-sm font-bold font-mono text-right border rounded-md bg-white focus:border-teal-500 outline-none ${
+                                                fieldErrors.production_wage
+                                                    ? "border-rose-400"
+                                                    : "border-slate-200"
+                                            }`}
                                         />
                                     </div>
+                                    {fieldErrors.production_wage && (
+                                        <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                            {fieldErrors.production_wage}
+                                        </p>
+                                    )}
                                     <p className="text-[11px] text-slate-500 mt-2">
                                         Langkah produksi tidak akan disimpan
                                         pada mode ini.
@@ -3483,6 +3957,17 @@ export default function Edit({ product }) {
                                                 Pilih dari master atau tambah
                                                 langkah kustom.
                                             </p>
+                                            {fieldErrors[
+                                                "production_steps.general"
+                                            ] && (
+                                                <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                    {
+                                                        fieldErrors[
+                                                            "production_steps.general"
+                                                        ]
+                                                    }
+                                                </p>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
@@ -3521,8 +4006,25 @@ export default function Edit({ product }) {
                                                                         )
                                                                     }
                                                                     placeholder="Nama langkah kustom..."
-                                                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-teal-500 font-bold"
+                                                                    className={`w-full px-2 py-1 text-xs border rounded focus:border-teal-500 font-bold ${
+                                                                        fieldErrors[
+                                                                            `production_steps.${idx}.custom_name`
+                                                                        ]
+                                                                            ? "border-rose-400"
+                                                                            : "border-slate-200"
+                                                                    }`}
                                                                 />
+                                                            )}
+                                                            {fieldErrors[
+                                                                `production_steps.${idx}.custom_name`
+                                                            ] && (
+                                                                <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                    {
+                                                                        fieldErrors[
+                                                                            `production_steps.${idx}.custom_name`
+                                                                        ]
+                                                                    }
+                                                                </p>
                                                             )}
                                                         </div>
                                                         <div className="w-32">
@@ -3543,8 +4045,25 @@ export default function Edit({ product }) {
                                                                     )
                                                                 }
                                                                 placeholder="0"
-                                                                className="w-full px-2 py-1.5 text-xs font-bold font-mono border border-slate-200 rounded focus:border-teal-500 text-right"
+                                                                className={`w-full px-2 py-1.5 text-xs font-bold font-mono border rounded focus:border-teal-500 text-right ${
+                                                                    fieldErrors[
+                                                                        `production_steps.${idx}.wage`
+                                                                    ]
+                                                                        ? "border-rose-400"
+                                                                        : "border-slate-200"
+                                                                }`}
                                                             />
+                                                            {fieldErrors[
+                                                                `production_steps.${idx}.wage`
+                                                            ] && (
+                                                                <p className="mt-1 text-[10px] font-medium text-rose-600">
+                                                                    {
+                                                                        fieldErrors[
+                                                                            `production_steps.${idx}.wage`
+                                                                        ]
+                                                                    }
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <Tooltip
                                                             content="Pindah ke atas"
@@ -3654,8 +4173,6 @@ export default function Edit({ product }) {
                             )}
                         </div>
                     )}
-
-                    {/* STEP 4: RINGKASAN */}
                     {activeStep === 4 && (
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6 animate-in fade-in duration-150">
                             <div>
@@ -3667,8 +4184,6 @@ export default function Edit({ product }) {
                                     produk
                                 </p>
                             </div>
-
-                            {/* Summary Cards - pindah ke atas */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
                                     <div className="text-[11px] font-semibold text-teal-700 uppercase">
@@ -3749,8 +4264,6 @@ export default function Edit({ product }) {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Info Summary */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                                     <div className="text-[11px] font-semibold text-slate-500 uppercase">
@@ -3777,8 +4290,6 @@ export default function Edit({ product }) {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Varian & Langkah sebelahan */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs bg-white">
                                     {definedSizes.length === 0 ? (
@@ -4090,12 +4601,10 @@ export default function Edit({ product }) {
                                     )}
                                 </div>
                             </div>
-
-                            {/* BOM per ukuran - card grid */}
                             <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs bg-white">
                                 <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
                                     <h4 className="text-xs font-bold text-slate-700">
-                                        Resep Bahan Baku —{" "}
+                                        Resep Bahan Baku -{" "}
                                         {(data.materials || []).length} total
                                     </h4>
                                 </div>
@@ -4203,6 +4712,12 @@ export default function Edit({ product }) {
                                                         sz.size_name,
                                                 )?.category ||
                                                 "";
+                                            const isCustom =
+                                                Boolean(sz.is_custom) ||
+                                                !sz.size_id ||
+                                                String(
+                                                    cat || "",
+                                                ).toLowerCase() === "custom";
                                             const isOpen =
                                                 openRingkasanCards.has(
                                                     sz.size_name,
@@ -4229,10 +4744,16 @@ export default function Edit({ product }) {
                                                                 Ukuran{" "}
                                                                 {sz.size_name}
                                                             </span>
-                                                            {cat && (
+                                                            {isCustom ? (
                                                                 <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
-                                                                    {cat}
+                                                                    Custom
                                                                 </span>
+                                                            ) : (
+                                                                cat && (
+                                                                    <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                                                                        {cat}
+                                                                    </span>
+                                                                )
                                                             )}
                                                         </div>
                                                         <span className="text-[10px] bg-teal-50 text-teal-700 px-2 py-0.5 rounded border border-teal-200 font-mono">

@@ -7,6 +7,7 @@ use App\Models\ProductImage;
 use App\Models\ProductMaterial;
 use App\Models\ProductProductionStep;
 use App\Models\ProductSize;
+use App\Models\Size;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -115,7 +116,6 @@ class ProductController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        // Parse JSON inputs if sent via FormData
         $this->parseJsonInputs($request);
 
         $validated = $request->validate([
@@ -129,12 +129,14 @@ class ProductController extends Controller
             'production_wage_mode' => 'required|in:manual,steps',
             'production_wage' => 'nullable|numeric|min:0',
             'sizes' => 'nullable|array',
-            'sizes.*.size_id' => 'required_with:sizes|exists:sizes,id',
+            'sizes.*.size_id' => 'nullable|exists:sizes,id',
+            'sizes.*.size_name' => 'nullable|string|max:255',
             'sizes.*.price' => 'nullable|numeric|min:0',
             'sizes.*.notes' => 'nullable|string|max:255',
             'materials' => 'nullable|array',
             'materials.*.item_id' => 'required_with:materials|exists:items,id',
             'materials.*.size_id' => 'nullable|exists:sizes,id',
+            'materials.*.size_name' => 'nullable|string|max:255',
             'materials.*.required_qty' => 'required_with:materials|numeric|min:0.0001',
             'materials.*.yield_qty' => 'nullable|numeric|min:0.0001',
             'materials.*.conversion_rate' => 'nullable|numeric|min:0.0001',
@@ -178,40 +180,54 @@ class ProductController extends Controller
             $product->production_wage = $productionWage;
             $product->save();
 
-            // Save Sizes
             if (! empty($validated['sizes'])) {
+                $usedSizeIds = [];
+
                 foreach ($validated['sizes'] as $idx => $s) {
-                    if (! empty($s['size_id'])) {
-                        ProductSize::create([
-                            'product_id' => $product->id,
-                            'size_id' => $s['size_id'],
-                            'price' => isset($s['price']) && $s['price'] !== '' ? $s['price'] : ($validated['base_price'] ?? 0),
-                            'sort_order' => $idx,
-                            'notes' => $s['notes'] ?? null,
-                        ]);
+                    $sizeId = $this->resolveSizeId(
+                        ! empty($s['size_id']) ? (int) $s['size_id'] : null,
+                        $s['size_name'] ?? null,
+                    );
+
+                    if (! $sizeId || in_array($sizeId, $usedSizeIds, true)) {
+                        continue;
                     }
+
+                    $usedSizeIds[] = $sizeId;
+
+                    ProductSize::create([
+                        'product_id' => $product->id,
+                        'size_id' => $sizeId,
+                        'price' => isset($s['price']) && $s['price'] !== '' ? $s['price'] : ($validated['base_price'] ?? 0),
+                        'sort_order' => $idx,
+                        'notes' => $s['notes'] ?? null,
+                    ]);
                 }
             }
 
-            // Save Materials (BOM)
             if (! empty($validated['materials'])) {
                 foreach ($validated['materials'] as $mat) {
-                    if (! empty($mat['item_id'])) {
-                        ProductMaterial::create([
-                            'product_id' => $product->id,
-                            'item_id' => $mat['item_id'],
-                            'size_id' => ! empty($mat['size_id']) ? $mat['size_id'] : null,
-                            'required_qty' => $mat['required_qty'],
-                            'yield_qty' => ! empty($mat['yield_qty']) ? (float) $mat['yield_qty'] : 1.0,
-                            'conversion_rate' => ! empty($mat['conversion_rate']) ? (float) $mat['conversion_rate'] : 1.0,
-                            'unit_name' => $mat['unit_name'] ?? null,
-                            'notes' => $mat['notes'] ?? null,
-                        ]);
+                    if (empty($mat['item_id'])) {
+                        continue;
                     }
+
+                    $sizeId = $this->resolveSizeId(
+                        ! empty($mat['size_id']) ? (int) $mat['size_id'] : null,
+                        $mat['size_name'] ?? null,
+                    );
+
+                    ProductMaterial::create([
+                        'product_id' => $product->id,
+                        'item_id' => $mat['item_id'],
+                        'size_id' => $sizeId,
+                        'required_qty' => $mat['required_qty'],
+                        'yield_qty' => ! empty($mat['yield_qty']) ? (float) $mat['yield_qty'] : 1.0,
+                        'conversion_rate' => ! empty($mat['conversion_rate']) ? (float) $mat['conversion_rate'] : 1.0,
+                        'unit_name' => $mat['unit_name'] ?? null,
+                        'notes' => $mat['notes'] ?? null,
+                    ]);
                 }
             }
-
-            // Save Production Steps
             if ($productionWageMode === 'steps' && ! empty($validated['production_steps'])) {
                 foreach ($validated['production_steps'] as $idx => $step) {
                     if (! empty($step['production_step_id']) || ! empty($step['custom_name'])) {
@@ -225,8 +241,6 @@ class ProductController extends Controller
                     }
                 }
             }
-
-            // Save Uploaded Images
             if ($request->hasFile('images')) {
                 $primaryIndex = (int) $request->input('primary_image_index', 0);
                 $files = $request->file('images');
@@ -278,7 +292,6 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product): JsonResponse
     {
-        // Parse JSON inputs if sent via FormData
         $this->parseJsonInputs($request);
 
         $validated = $request->validate([
@@ -292,12 +305,14 @@ class ProductController extends Controller
             'production_wage_mode' => 'required|in:manual,steps',
             'production_wage' => 'nullable|numeric|min:0',
             'sizes' => 'nullable|array',
-            'sizes.*.size_id' => 'required_with:sizes|exists:sizes,id',
+            'sizes.*.size_id' => 'nullable|exists:sizes,id',
+            'sizes.*.size_name' => 'nullable|string|max:255',
             'sizes.*.price' => 'nullable|numeric|min:0',
             'sizes.*.notes' => 'nullable|string|max:255',
             'materials' => 'nullable|array',
             'materials.*.item_id' => 'required_with:materials|exists:items,id',
             'materials.*.size_id' => 'nullable|exists:sizes,id',
+            'materials.*.size_name' => 'nullable|string|max:255',
             'materials.*.required_qty' => 'required_with:materials|numeric|min:0.0001',
             'materials.*.yield_qty' => 'nullable|numeric|min:0.0001',
             'materials.*.conversion_rate' => 'nullable|numeric|min:0.0001',
@@ -343,42 +358,56 @@ class ProductController extends Controller
             $product->production_wage = $productionWage;
             $product->save();
 
-            // Sync sizes
             $product->sizes()->delete();
             if (! empty($validated['sizes'])) {
+                $usedSizeIds = [];
+
                 foreach ($validated['sizes'] as $idx => $s) {
-                    if (! empty($s['size_id'])) {
-                        ProductSize::create([
-                            'product_id' => $product->id,
-                            'size_id' => $s['size_id'],
-                            'price' => isset($s['price']) && $s['price'] !== '' ? $s['price'] : ($validated['base_price'] ?? 0),
-                            'sort_order' => $idx,
-                            'notes' => $s['notes'] ?? null,
-                        ]);
+                    $sizeId = $this->resolveSizeId(
+                        ! empty($s['size_id']) ? (int) $s['size_id'] : null,
+                        $s['size_name'] ?? null,
+                    );
+
+                    if (! $sizeId || in_array($sizeId, $usedSizeIds, true)) {
+                        continue;
                     }
+
+                    $usedSizeIds[] = $sizeId;
+
+                    ProductSize::create([
+                        'product_id' => $product->id,
+                        'size_id' => $sizeId,
+                        'price' => isset($s['price']) && $s['price'] !== '' ? $s['price'] : ($validated['base_price'] ?? 0),
+                        'sort_order' => $idx,
+                        'notes' => $s['notes'] ?? null,
+                    ]);
                 }
             }
 
-            // Sync materials (BOM)
             $product->materials()->delete();
             if (! empty($validated['materials'])) {
                 foreach ($validated['materials'] as $mat) {
-                    if (! empty($mat['item_id'])) {
-                        ProductMaterial::create([
-                            'product_id' => $product->id,
-                            'item_id' => $mat['item_id'],
-                            'size_id' => ! empty($mat['size_id']) ? $mat['size_id'] : null,
-                            'required_qty' => $mat['required_qty'],
-                            'yield_qty' => ! empty($mat['yield_qty']) ? (float) $mat['yield_qty'] : 1.0,
-                            'conversion_rate' => ! empty($mat['conversion_rate']) ? (float) $mat['conversion_rate'] : 1.0,
-                            'unit_name' => $mat['unit_name'] ?? null,
-                            'notes' => $mat['notes'] ?? null,
-                        ]);
+                    if (empty($mat['item_id'])) {
+                        continue;
                     }
+
+                    $sizeId = $this->resolveSizeId(
+                        ! empty($mat['size_id']) ? (int) $mat['size_id'] : null,
+                        $mat['size_name'] ?? null,
+                    );
+
+                    ProductMaterial::create([
+                        'product_id' => $product->id,
+                        'item_id' => $mat['item_id'],
+                        'size_id' => $sizeId,
+                        'required_qty' => $mat['required_qty'],
+                        'yield_qty' => ! empty($mat['yield_qty']) ? (float) $mat['yield_qty'] : 1.0,
+                        'conversion_rate' => ! empty($mat['conversion_rate']) ? (float) $mat['conversion_rate'] : 1.0,
+                        'unit_name' => $mat['unit_name'] ?? null,
+                        'notes' => $mat['notes'] ?? null,
+                    ]);
                 }
             }
-
-            // Sync Production Steps
             $product->productionSteps()->delete();
             if ($productionWageMode === 'steps' && ! empty($validated['production_steps'])) {
                 foreach ($validated['production_steps'] as $idx => $step) {
@@ -393,8 +422,6 @@ class ProductController extends Controller
                     }
                 }
             }
-
-            // Delete removed images
             if (! empty($validated['deleted_image_ids'])) {
                 $imagesToDelete = ProductImage::where('product_id', $product->id)
                     ->whereIn('id', $validated['deleted_image_ids'])
@@ -407,15 +434,11 @@ class ProductController extends Controller
                     $img->delete();
                 }
             }
-
-            // Set primary image among existing
             $primaryImageId = $request->input('primary_image_id');
             if ($primaryImageId) {
                 ProductImage::where('product_id', $product->id)->update(['is_primary' => false]);
                 ProductImage::where('product_id', $product->id)->where('id', $primaryImageId)->update(['is_primary' => true]);
             }
-
-            // Add newly uploaded images
             if ($request->hasFile('images')) {
                 $existingCount = $product->images()->count();
                 $primaryIndex = $request->input('primary_image_index');
@@ -425,8 +448,6 @@ class ProductController extends Controller
                         if ($file->isValid()) {
                             $path = $file->store('products', 'public');
                             $isPrimary = ($primaryIndex !== null && (int) $primaryIndex === $idx);
-
-                            // If marked primary or if there's no primary yet
                             if ($isPrimary) {
                                 ProductImage::where('product_id', $product->id)->update(['is_primary' => false]);
                             }
@@ -441,8 +462,6 @@ class ProductController extends Controller
                     }
                 }
             }
-
-            // Ensure at least one image is primary if images exist
             $hasPrimary = ProductImage::where('product_id', $product->id)->where('is_primary', true)->exists();
             if (! $hasPrimary) {
                 ProductImage::where('product_id', $product->id)->orderBy('sort_order')->limit(1)->update(['is_primary' => true]);
@@ -465,7 +484,6 @@ class ProductController extends Controller
 
     public function destroy(Product $product): JsonResponse
     {
-        // Delete all physical images from storage
         $images = $product->images()->get();
         foreach ($images as $img) {
             if ($img->image_path) {
@@ -479,10 +497,35 @@ class ProductController extends Controller
             'message' => 'Produk berhasil dihapus',
         ]);
     }
+    private function resolveSizeId(?int $sizeId, ?string $sizeName): ?int
+    {
+        if ($sizeId) {
+            return $sizeId;
+        }
 
-    /**
-     * Parse JSON fields if sent via multipart/form-data
-     */
+        $sizeName = trim((string) $sizeName);
+
+        if ($sizeName === '' || strtoupper($sizeName) === 'ALL') {
+            return null;
+        }
+
+        $size = Size::query()
+            ->whereRaw('LOWER(size_name) = ?', [mb_strtolower($sizeName)])
+            ->first();
+
+        if ($size) {
+            return $size->id;
+        }
+
+        $size = Size::create([
+            'category' => 'Custom',
+            'size_name' => $sizeName,
+            'description' => null,
+        ]);
+
+        return $size->id;
+    }
+
     private function parseJsonInputs(Request $request): void
     {
         if (is_string($request->input('sizes'))) {

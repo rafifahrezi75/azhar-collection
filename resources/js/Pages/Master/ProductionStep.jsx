@@ -5,11 +5,11 @@ import DashboardLayout from "@/Layouts/DashboardLayout";
 import PageHeaderBar from "@/Components/PageHeaderBar";
 import { hasPermission } from "@/utils/permissions";
 import { Toast, confirmDialog } from "@/utils/sweetalert";
-import { Pencil, Trash2, X, Save, Edit, Loader2, Scissors } from "lucide-react";
+import { Pencil, Trash2, X, Save, Edit, Loader2, Ruler } from "lucide-react";
 import Pagination from "@/Components/Pagination";
 import SortableTableBody, { SortableRow } from "@/Components/SortableTableBody";
 
-export default function ProductionStep() {
+export default function Size() {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
 
@@ -23,10 +23,11 @@ export default function ProductionStep() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [isCustomCategory, setIsCustomCategory] = useState(false);
 
     const [form, setForm] = useState({
-        name: "",
-        default_wage: "",
+        category: "Dewasa",
+        size_name: "",
         description: "",
     });
 
@@ -37,13 +38,13 @@ export default function ProductionStep() {
     const loadData = useCallback(() => {
         setLoading(true);
         axios
-            .get("/api/production-steps")
+            .get("/api/sizes")
             .then((response) => {
                 setItems(response.data.data || []);
                 setLoading(false);
             })
             .catch((err) => {
-                Toast.error(err.response?.data?.message || "Gagal memuat data langkah produksi.");
+                Toast.error(err.response?.data?.message || "Gagal memuat data ukuran.");
                 setLoading(false);
             });
     }, []);
@@ -62,7 +63,7 @@ export default function ProductionStep() {
 
         try {
             await axios.post('/api/master/reorder', {
-                table: 'production_steps',
+                table: 'sizes',
                 ids: newItems.map(i => i.id)
             });
             Toast.success("Urutan berhasil disimpan!");
@@ -76,8 +77,8 @@ export default function ProductionStep() {
         return items.filter((item) => {
             return (
                 !searchTerm ||
-                item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+                item.size_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.category?.toLowerCase().includes(searchTerm.toLowerCase())
             );
         });
     }, [items, searchTerm]);
@@ -86,6 +87,10 @@ export default function ProductionStep() {
         const start = (currentPage - 1) * itemsPerPage;
         return filteredItems.slice(start, start + itemsPerPage);
     }, [filteredItems, currentPage, itemsPerPage]);
+
+    const uniqueCategories = useMemo(() => {
+        return [...new Set(items.map((i) => i.category))].filter(Boolean).sort();
+    }, [items]);
 
     useEffect(() => {
         const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
@@ -104,15 +109,15 @@ export default function ProductionStep() {
 
     const openCreateModal = useCallback(() => {
         setEditingId(null);
-        setForm({ name: "", default_wage: "", description: "" });
+        setForm({ category: "Dewasa", size_name: "", description: "" });
         setIsModalOpen(true);
     }, []);
 
     const openEditModal = useCallback((item) => {
         setEditingId(item.id);
         setForm({
-            name: item.name,
-            default_wage: item.default_wage,
+            category: item.category,
+            size_name: item.size_name,
             description: item.description || "",
         });
         setIsModalOpen(true);
@@ -121,7 +126,7 @@ export default function ProductionStep() {
     const closeModal = useCallback(() => {
         setIsModalOpen(false);
         setEditingId(null);
-        setForm({ name: "", default_wage: "", description: "" });
+        setForm({ category: "Dewasa", size_name: "", description: "" });
     }, []);
 
     const handleSubmit = useCallback(
@@ -131,11 +136,11 @@ export default function ProductionStep() {
 
             try {
                 if (editingId) {
-                    const res = await axios.put(`/api/production-steps/${editingId}`, form);
-                    Toast.success(res.data.message || "Langkah produksi berhasil diperbarui.");
+                    const res = await axios.put(`/api/sizes/${editingId}`, form);
+                    Toast.success(res.data.message || "Ukuran berhasil diperbarui.");
                 } else {
-                    const res = await axios.post("/api/production-steps", form);
-                    Toast.success(res.data.message || "Langkah produksi berhasil ditambahkan.");
+                    const res = await axios.post("/api/sizes", form);
+                    Toast.success(res.data.message || "Ukuran berhasil ditambahkan.");
                 }
                 closeModal();
                 loadData();
@@ -151,19 +156,19 @@ export default function ProductionStep() {
     const handleDelete = useCallback(
         async (id) => {
             const confirmed = await confirmDialog({
-                title: "Hapus Langkah Produksi?",
-                text: "Apakah Anda yakin ingin menghapus data langkah produksi ini?",
+                title: "Hapus Ukuran?",
+                text: "Apakah Anda yakin ingin menghapus data ukuran ini?",
                 confirmButtonText: "Ya, Hapus",
             });
 
             if (!confirmed) return;
 
             try {
-                const res = await axios.delete(`/api/production-steps/${id}`);
-                Toast.success(res.data.message || "Langkah produksi berhasil dihapus.");
+                const res = await axios.delete(`/api/sizes/${id}`);
+                Toast.success(res.data.message || "Ukuran berhasil dihapus.");
                 loadData();
             } catch (err) {
-                Toast.error(err.response?.data?.message || "Gagal menghapus data.");
+                Toast.error(err.response?.data?.message || "Gagal menghapus data. Pastikan ukuran tidak sedang dipakai produk.");
             }
         },
         [loadData]
@@ -171,16 +176,16 @@ export default function ProductionStep() {
 
     return (
         <DashboardLayout>
-            <Head title="Master Langkah Produksi - Azhar Collection" />
+            <Head title="Ukuran - Azhar Collection" />
             <div className="space-y-4">
                 <PageHeaderBar
                     breadcrumbs={[
                         { label: "Master Data" },
-                        { label: "Langkah Produksi" },
+                        { label: "Ukuran" },
                     ]}
                     searchValue={searchTerm}
                     onSearchChange={handleSearchChange}
-                    searchPlaceholder="Cari langkah produksi..."
+                    searchPlaceholder="Cari ukuran atau kategori..."
                     onRefresh={loadData}
                     refreshing={loading}
                     onAdd={openCreateModal}
@@ -195,8 +200,8 @@ export default function ProductionStep() {
                                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
                                     {!searchTerm && <th className="px-3 py-3 w-10 text-center"></th>}
                                     <th className="px-4 py-3 w-16 text-center">No</th>
-                                    <th className="px-4 py-3">Nama Langkah (Operasi)</th>
-                                    <th className="px-4 py-3">Upah Standar</th>
+                                    <th className="px-4 py-3">Kategori</th>
+                                    <th className="px-4 py-3">Nama Ukuran</th>
                                     <th className="px-4 py-3">Deskripsi</th>
                                     <th className="px-4 py-3 w-28 text-center">Aksi</th>
                                 </tr>
@@ -208,13 +213,13 @@ export default function ProductionStep() {
                                             <td className="px-3.5 py-2.5 text-slate-400 font-mono text-xs font-medium text-center">
                                                 {(currentPage - 1) * itemsPerPage + idx + 1}
                                             </td>
-                                            <td className="px-3.5 py-2.5 font-semibold text-slate-900">
-                                                {item.name}
-                                            </td>
-                                            <td className="px-3.5 py-2.5 whitespace-nowrap">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    Rp {parseFloat(item.default_wage).toLocaleString('id-ID')}
+                                            <td className="px-3.5 py-2.5 font-medium text-slate-900">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                    {item.category}
                                                 </span>
+                                            </td>
+                                            <td className="px-3.5 py-2.5 font-semibold text-slate-900">
+                                                {item.size_name}
                                             </td>
                                             <td className="px-3.5 py-2.5 text-slate-600 text-xs">
                                                 {item.description || "-"}
@@ -267,13 +272,13 @@ export default function ProductionStep() {
                                                 <td className="px-3.5 py-2.5 text-slate-400 font-mono text-xs font-medium text-center">
                                                     {(currentPage - 1) * itemsPerPage + idx + 1}
                                                 </td>
-                                                <td className="px-3.5 py-2.5 font-semibold text-slate-900">
-                                                    {item.name}
-                                                </td>
-                                                <td className="px-3.5 py-2.5 whitespace-nowrap">
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                        Rp {parseFloat(item.default_wage).toLocaleString('id-ID')}
+                                                <td className="px-3.5 py-2.5 font-medium text-slate-900">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                        {item.category}
                                                     </span>
+                                                </td>
+                                                <td className="px-3.5 py-2.5 font-semibold text-slate-900">
+                                                    {item.size_name}
                                                 </td>
                                                 <td className="px-3.5 py-2.5 text-slate-600 text-xs">
                                                     {item.description || "-"}
@@ -325,62 +330,83 @@ export default function ProductionStep() {
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[200] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
                         <div className="bg-white rounded-xl w-full max-w-xl p-4 sm:p-5 shadow-soft-xl border border-slate-100 animate-in zoom-in-95 duration-150 my-auto max-h-[calc(100vh-24px)] sm:max-h-[calc(100vh-32px)] overflow-y-auto">
-                            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
-                                        {editingId ? <Edit className="w-4.5 h-4.5" /> : <Save className="w-4.5 h-4.5" />}
-                                    </div>
-
-                                    <div className="min-w-0 flex-1">
-                                        <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
-                                            {editingId ? "Edit Langkah Produksi" : "Tambah Langkah Produksi"}
-                                        </h2>
-                                    </div>
+                            <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
+                                <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
+                                    {editingId ? <Edit className="w-4.5 h-4.5" /> : <Ruler className="w-4.5 h-4.5" />}
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    disabled={submitting}
-                                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <div className="min-w-0 flex-1">
+                                    <h2 className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                                        {editingId ? "Edit Ukuran" : "Tambah Ukuran"}
+                                    </h2>
+                                </div>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-3 pt-3">
                                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                                     <div className="sm:col-span-7 min-w-0">
-                                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                            Nama Langkah / Operasi <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                                                Kategori <span className="text-rose-500">*</span>
+                                            </label>
 
-                                        <input
-                                            type="text"
-                                            name="name"
-                                            required
-                                            value={form.name}
-                                            onChange={handleFormChange}
-                                            placeholder="Cth: Sum, Obras, Cutting"
-                                            className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 placeholder-slate-400 font-medium shadow-soft-2xs"
-                                            autoFocus
-                                        />
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer select-none shrink-0">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isCustomCategory}
+                                                    onChange={(e) => {
+                                                        setIsCustomCategory(e.target.checked);
+                                                        setForm((prev) => ({ ...prev, category: "" }));
+                                                    }}
+                                                    className="w-3.5 h-3.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500/25 focus:ring-2 focus:ring-offset-1 cursor-pointer"
+                                                />
+                                                <span className="text-[10px] font-semibold text-slate-500 whitespace-nowrap">
+                                                    Kategori Baru (Custom)
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {isCustomCategory ? (
+                                            <input
+                                                type="text"
+                                                name="category"
+                                                required
+                                                value={form.category}
+                                                onChange={handleFormChange}
+                                                placeholder="Cth: Dewasa, Anak, SD"
+                                                className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 placeholder-slate-400 font-medium shadow-soft-2xs"
+                                            />
+                                        ) : (
+                                            <select
+                                                name="category"
+                                                required
+                                                value={form.category}
+                                                onChange={handleFormChange}
+                                                className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 bg-white font-medium shadow-soft-2xs cursor-pointer"
+                                            >
+                                                <option value="" disabled>-- Pilih Kategori --</option>
+                                                {uniqueCategories.map((cat) => (
+                                                    <option key={cat} value={cat}>
+                                                        {cat}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
                                     </div>
 
                                     <div className="sm:col-span-5 min-w-0">
                                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                                            Upah Standar (Rp) <span className="text-rose-500">*</span>
+                                            Nama Ukuran <span className="text-rose-500">*</span>
                                         </label>
 
                                         <input
-                                            type="number"
-                                            name="default_wage"
+                                            type="text"
+                                            name="size_name"
                                             required
-                                            min="0"
-                                            value={form.default_wage}
+                                            value={form.size_name}
                                             onChange={handleFormChange}
-                                            placeholder="Cth: 1500"
-                                            className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 placeholder-slate-400 font-medium shadow-soft-2xs"
+                                            placeholder="Cth: XL, 32"
+                                            className="w-full min-w-0 border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all duration-200 placeholder-slate-400 uppercase font-semibold shadow-soft-2xs"
                                         />
                                     </div>
                                 </div>
@@ -392,7 +418,7 @@ export default function ProductionStep() {
 
                                     <textarea
                                         name="description"
-                                        rows={3}
+                                        rows={2}
                                         value={form.description}
                                         onChange={handleFormChange}
                                         placeholder="Tambahkan keterangan jika ada..."
@@ -400,32 +426,24 @@ export default function ProductionStep() {
                                     />
                                 </div>
 
-                                <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 mt-4">
+                                <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-4">
                                     <button
                                         type="button"
                                         onClick={closeModal}
                                         disabled={submitting}
-                                        className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 focus:ring-2 focus:ring-slate-200 transition-all disabled:opacity-50"
+                                        title="Kembali"
+                                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
-                                        Batal
+                                        <X className="w-4 h-4" />
                                     </button>
 
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 focus:ring-2 focus:ring-teal-500/30 transition-all disabled:opacity-70"
+                                        title={submitting ? "Memproses..." : editingId ? "Simpan" : "Simpa"}
+                                        className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
-                                        {submitting ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                Menyimpan...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save className="w-4 h-4" />
-                                                Simpan
-                                            </>
-                                        )}
+                                        <Save className="w-4 h-4" />
                                     </button>
                                 </div>
                             </form>
