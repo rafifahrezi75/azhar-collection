@@ -969,13 +969,13 @@ export default function Create() {
             <div className="space-y-4">
                 <div className="flex items-center gap-3">
                     <button
-                        type="button"
-                        title="Kembali"
-                        onClick={() => router.visit("/dashboard/produk")}
-                        className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                    </button>
+                                            type="button"
+                                            title="Kembali"
+                                            onClick={() => router.visit("/dashboard/produk")}
+                                            className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer"
+                                        >
+                                            <ArrowLeft className="w-4 h-4" />
+                                        </button>
                     <div>
                         <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
                             Tambah Produk Baru
