@@ -6,56 +6,127 @@ use App\Models\Invoice;
 use App\Models\ProductionAssignment;
 use App\Models\ProductionAssignmentStep;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ProductionAssignmentSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $invoice = Invoice::with('items.product.productionSteps')->where('invoice_number', 'INV-20260810-BZZB')->first();
-        if (! $invoice) {
-            $invoice = Invoice::with('items.product.productionSteps')->first();
-        }
+        DB::table('production_progress_logs')->delete();
+        DB::table('production_assignment_steps')->delete();
+        DB::table('production_assignments')->delete();
 
-        if (! $invoice) {
-            $this->command->info('No invoices found. Skip SPK Seeder.');
+        $ahmad = User::where('email', 'ahmad@azhar.test')->first() ?? User::where('name', 'like', '%Ahmad%')->first();
+        $budi = User::where('email', 'budi@azhar.test')->first() ?? User::where('name', 'like', '%Budi%')->first();
+        $agus = User::where('email', 'agus@azhar.test')->first() ?? User::where('name', 'like', '%Agus%')->first();
+        $dewi = User::where('email', 'dewi@azhar.test')->first() ?? User::where('name', 'like', '%Dewi%')->first();
+        $siti = User::where('email', 'siti@azhar.test')->first() ?? User::where('name', 'like', '%Siti%')->first();
 
-            return;
-        }
+        $fallbackUser = User::first();
+        $ahmad = $ahmad ?? $fallbackUser;
+        $budi = $budi ?? $fallbackUser;
+        $agus = $agus ?? $fallbackUser;
+        $dewi = $dewi ?? $fallbackUser;
+        $siti = $siti ?? $fallbackUser;
 
-        // Ambil user dengan role staff (penjahit)
-        $user = User::whereHas('roles', fn ($q) => $q->where('name', 'staff'))->first()
-            ?? User::first(); // fallback ke admin jika belum ada staff
+        $invSD = Invoice::with(['items.product.productionSteps.productionStep'])->where('invoice_number', 'like', '%-0001')->first();
+        if ($invSD && $invSD->items->isNotEmpty()) {
+            $item = $invSD->items->first();
+            $pSteps = $item->product?->productionSteps ?? collect();
 
-        foreach ($invoice->items as $item) {
-            if (! $item->product || $item->product->productionSteps->isEmpty()) {
-                continue;
-            }
-
-            // Assign
-            $assignment = ProductionAssignment::create([
+            $assignAhmad = ProductionAssignment::create([
                 'invoice_item_id' => $item->id,
-                'user_id' => $user->id,
-                'qty' => $item->qty,
-                'target_date' => now()->addDays(7)->format('Y-m-d'),
-                'status' => 'PENDING',
+                'user_id' => $ahmad->id,
+                'qty' => 20,
+                'target_date' => Carbon::parse($invSD->order_date)->addDays(10)->format('Y-m-d'),
+                'status' => 'in_progress',
             ]);
 
-            // Assign steps
-            foreach ($item->product->productionSteps as $productStep) {
+            $assignBudi = ProductionAssignment::create([
+                'invoice_item_id' => $item->id,
+                'user_id' => $budi->id,
+                'qty' => 20,
+                'target_date' => Carbon::parse($invSD->order_date)->addDays(10)->format('Y-m-d'),
+                'status' => 'in_progress',
+            ]);
+
+            foreach ([$assignAhmad, $assignBudi] as $asgn) {
+                foreach ($pSteps as $idx => $ps) {
+                    ProductionAssignmentStep::create([
+                        'production_assignment_id' => $asgn->id,
+                        'production_step_id' => $ps->production_step_id,
+                        'step_name' => $ps->custom_name ?? $ps->productionStep?->name ?? 'Langkah Produksi',
+                        'wage' => $ps->wage ?? 3000,
+                        'qty' => 20,
+                        'status' => $idx === 0 ? 'completed' : ($idx === 1 ? 'in_progress' : 'pending'),
+                        'completed_at' => $idx === 0 ? Carbon::now()->subDays(5) : null,
+                    ]);
+                }
+            }
+        }
+
+        $invSMP = Invoice::with(['items.product.productionSteps.productionStep'])->where('invoice_number', 'like', '%-0002')->first();
+        if ($invSMP && $invSMP->items->isNotEmpty()) {
+            $item = $invSMP->items->first();
+            $pSteps = $item->product?->productionSteps ?? collect();
+
+            $assignAgus = ProductionAssignment::create([
+                'invoice_item_id' => $item->id,
+                'user_id' => $agus->id,
+                'qty' => 30,
+                'target_date' => Carbon::parse($invSMP->order_date)->addDays(12)->format('Y-m-d'),
+                'status' => 'in_progress',
+            ]);
+
+            $assignDewi = ProductionAssignment::create([
+                'invoice_item_id' => $item->id,
+                'user_id' => $dewi->id,
+                'qty' => 30,
+                'target_date' => Carbon::parse($invSMP->order_date)->addDays(12)->format('Y-m-d'),
+                'status' => 'in_progress',
+            ]);
+
+            foreach ([$assignAgus, $assignDewi] as $asgn) {
+                foreach ($pSteps as $idx => $ps) {
+                    ProductionAssignmentStep::create([
+                        'production_assignment_id' => $asgn->id,
+                        'production_step_id' => $ps->production_step_id,
+                        'step_name' => $ps->custom_name ?? $ps->productionStep?->name ?? 'Langkah Produksi',
+                        'wage' => $ps->wage ?? 3000,
+                        'qty' => 30,
+                        'status' => $idx === 0 ? 'completed' : 'pending',
+                        'completed_at' => $idx === 0 ? Carbon::now()->subDays(2) : null,
+                    ]);
+                }
+            }
+        }
+
+        $invSMA = Invoice::with(['items.product.productionSteps.productionStep'])->where('invoice_number', 'like', '%-0003')->first();
+        if ($invSMA && $invSMA->items->isNotEmpty()) {
+            $item = $invSMA->items->first();
+            $pSteps = $item->product?->productionSteps ?? collect();
+
+            $assignSiti = ProductionAssignment::create([
+                'invoice_item_id' => $item->id,
+                'user_id' => $siti->id,
+                'qty' => 50,
+                'target_date' => Carbon::parse($invSMA->order_date)->addDays(18)->format('Y-m-d'),
+                'status' => 'completed',
+            ]);
+
+            foreach ($pSteps as $ps) {
                 ProductionAssignmentStep::create([
-                    'production_assignment_id' => $assignment->id,
-                    'production_step_id' => $productStep->production_step_id,
-                    'step_name' => $productStep->custom_name ?? $productStep->productionStep?->name ?? 'Langkah Produksi',
-                    'wage' => $productStep->wage ?? $productStep->productionStep?->default_wage ?? 0,
-                    'status' => 'PENDING',
+                    'production_assignment_id' => $assignSiti->id,
+                    'production_step_id' => $ps->production_step_id,
+                    'step_name' => $ps->custom_name ?? $ps->productionStep?->name ?? 'Langkah Produksi',
+                    'wage' => $ps->wage ?? 3500,
+                    'qty' => 50,
+                    'status' => 'completed',
+                    'completed_at' => Carbon::now()->subDays(4),
                 ]);
             }
         }
-
-        $this->command->info('Production Assignment (SPK) seeded successfully.');
     }
 }

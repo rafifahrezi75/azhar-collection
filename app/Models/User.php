@@ -67,4 +67,9 @@ class User extends Authenticatable
     {
         return $this->roles()->where('name', $role)->exists();
     }
+
+    public function productionAssignments()
+    {
+        return $this->hasMany(ProductionAssignment::class, 'user_id');
+    }
 }

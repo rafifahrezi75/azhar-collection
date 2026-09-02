@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>Nota Pembelian - {{ $purchase->reference_no }}</title>
+    <title>Slip Gaji - {{ $user->name }} - {{ $periodName }}</title>
     <style>
         @page {
             size: 210mm 148mm;
@@ -72,8 +72,7 @@
 <body>
     @php
         $totalRows = 10;
-        $itemsArray = $purchase->items ? $purchase->items->all() : [];
-        $chunks = array_chunk($itemsArray, $totalRows);
+        $chunks = array_chunk($payrollItems, $totalRows);
         if (empty($chunks)) {
             $chunks = [[]];
         }
@@ -105,9 +104,10 @@
                 </td>
                 <td style="width: 45%; text-align: right; vertical-align: top;">
                     <div style="display: inline-block; text-align: left; font-size: 12px; line-height: 1.3;">
-                        <div style="margin-bottom: 2px;">Sidoarjo, {{ date('d F Y', strtotime($purchase->date)) }}</div>
-                        <strong>Supplier / Toko:</strong> {{ $purchase->supplier_name ?: '-' }}<br>
-                        <strong>Dibuat Oleh:</strong> {{ $purchase->creator ? $purchase->creator->name : 'Admin' }}
+                        <div style="margin-bottom: 2px;">Sidoarjo, {{ date('d F Y') }}</div>
+                        <strong>Nama Karyawan:</strong> {{ $user->name }}<br>
+                        <strong>Periode Gaji:</strong> {{ $periodName }}<br>
+                        <strong>Email / Kontak:</strong> {{ $user->email ?? '-' }}
                     </div>
                 </td>
             </tr>
@@ -116,13 +116,13 @@
         <table style="width: 100%; margin-bottom: 2px; margin-top: 5px;">
             <tr>
                 <td style="width: 33%; vertical-align: bottom; font-weight: bold; font-size: 12px;">
-                    Ref No : {{ $purchase->reference_no }}
+                    SLIP NO : SLIP-{{ date('Ym') }}-{{ str_pad($user->id, 4, '0', STR_PAD_LEFT) }}
                 </td>
                 <td style="width: 34%; text-align: center; vertical-align: bottom; font-weight: bold; font-size: 16px; letter-spacing: 1px;">
-                    NOTA PEMBELIAN
+                    SLIP PENGGAJIAN
                 </td>
                 <td style="width: 33%; text-align: right; font-size: 11px; vertical-align: bottom;">
-                    Tanggal: {{ date('d/m/Y', strtotime($purchase->date)) }}
+                    Periode: {{ $periodName }}
                 </td>
             </tr>
         </table>
@@ -131,31 +131,25 @@
             <thead>
                 <tr>
                     <th style="width: 8%;">No</th>
-                    <th style="width: 48%;">Nama Barang / Bahan</th>
-                    <th style="width: 14%;">Banyak</th>
-                    <th style="width: 15%;">Harga Satuan</th>
-                    <th style="width: 15%;">Jumlah</th>
+                    <th style="width: 52%;">Nama Produk</th>
+                    <th style="width: 12%;">Banyak</th>
+                    <th style="width: 14%;">Harga Satuan</th>
+                    <th style="width: 14%;">Jumlah</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($pageItems as $item)
                 @php
                     $rowNo = ($pageIndex * $totalRows) + $loop->iteration;
-                    $unitName = optional($item->unit)->name
-                        ?? optional(optional($item->item)->unit)->name
-                        ?? '-';
                 @endphp
                 <tr style="height: 1%;">
                     <td class="cell text-center">{{ $rowNo }}</td>
                     <td class="cell">
-                        {{ $item->item->name ?? '-' }}
-                        @if(!empty($item->item->code))
-                            <span style="font-size: 10px; color: #475569; margin-left: 4px;">({{ $item->item->code }})</span>
-                        @endif
+                        {{ $item['product_label'] }}
                     </td>
-                    <td class="cell text-center">{{ $item->quantity }} {{ $unitName }}</td>
-                    <td class="cell text-right">{{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                    <td class="cell text-right font-bold">{{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                    <td class="cell text-center">{{ $item['qty'] }}</td>
+                    <td class="cell text-right">{{ number_format($item['unit_wage'], 0, ',', '.') }}</td>
+                    <td class="cell text-right font-bold">{{ number_format($item['subtotal'], 0, ',', '.') }}</td>
                 </tr>
                 @endforeach
 
@@ -178,21 +172,21 @@
                 <tr style="height: 1%;">
                     <td colspan="3" rowspan="2" style="border: none; vertical-align: bottom; text-align: center; padding-bottom: 5px;">
                         <div style="display: inline-block; width: 45%; font-weight: bold; font-size: 12px; padding-top: 15px;">
-                            <br>Mengetahui<br><br><br><br><br>
-                            ( ___________________ )
+                            <br>Tanda Terima<br><br><br><br><br>
+                            ( {{ $user->name }} )
                         </div>
                         <div style="display: inline-block; width: 45%; font-weight: bold; font-size: 12px; padding-top: 15px;">
-                            <br>Dibuat Oleh<br><br><br><br><br>
-                            ( {{ $purchase->creator ? $purchase->creator->name : 'Admin' }} )
+                            <br>Hormat Kami<br><br><br><br><br>
+                            ( Azhar Collection )
                         </div>
                     </td>
-                    <td class="cell text-center font-bold" style="vertical-align: middle;">TOTAL</td>
-                    <td class="cell text-right font-bold" style="vertical-align: middle;">{{ number_format($purchase->total_amount, 0, ',', '.') }}</td>
+                    <td class="cell text-center" style="font-weight: bold; vertical-align: middle;">TOTAL UPAH</td>
+                    <td class="cell text-right" style="font-weight: bold; vertical-align: middle;">{{ number_format($grandTotalWage, 0, ',', '.') }}</td>
                 </tr>
                 <tr style="height: 1%;">
                     <td colspan="2" class="cell" style="font-size: 10px; vertical-align: top; padding: 4px;">
                         <strong>Catatan:</strong><br>
-                        {{ $purchase->notes ?: '-' }}
+                        Upah borongan resmi Azhar Collection periode {{ $periodName }}.
                     </td>
                 </tr>
             </tbody>

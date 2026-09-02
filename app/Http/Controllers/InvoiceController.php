@@ -6,8 +6,10 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\InvoiceItemMaterial;
 use App\Models\InvoiceItemProductionStep;
-use App\Models\Item;
 use App\Models\Product;
+use App\Models\ProductionAssignment;
+use App\Models\ProductionAssignmentStep;
+use App\Models\ProductProductionStep;
 use App\Models\Size;
 use App\Models\StockMutation;
 use App\Models\User;
@@ -28,15 +30,21 @@ class InvoiceController extends Controller
 
     public function createPage(Request $request): Response
     {
+        $users = User::select('id', 'name', 'email')->orderBy('name')->get();
+
         return Inertia::render('Invoice/Create', [
             'initialType' => $request->query('type', 'REGULAR'),
+            'users' => $users,
         ]);
     }
 
     public function createHistoricalPage(): Response
     {
+        $users = User::select('id', 'name', 'email')->orderBy('name')->get();
+
         return Inertia::render('Invoice/Create', [
             'initialType' => 'HISTORICAL',
+            'users' => $users,
         ]);
     }
 
@@ -164,6 +172,12 @@ class InvoiceController extends Controller
             'items.*.subtotal' => 'required|numeric|min:0',
             'items.*.size_breakdown' => 'nullable|array',
             'items.*.description' => 'nullable|string',
+            'assignments' => 'nullable|array',
+            'assignments.*.item_index' => 'required|integer|min:0',
+            'assignments.*.user_id' => 'required|exists:users,id',
+            'assignments.*.qty' => 'nullable|integer|min:1',
+            'assignments.*.target_date' => 'nullable|date',
+            'assignments.*.steps' => 'required|array|min:1',
         ]);
 
         return DB::transaction(function () use ($validated, $request) {
@@ -185,8 +199,8 @@ class InvoiceController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            foreach ($validated['items'] as $itemData) {
-                // Normalize size_breakdown: support both old format {size: qty} and new {size: {qty, price}}
+            $createdInvoiceItems = [];
+            foreach ($validated['items'] as $index => $itemData) {
                 $sizeBreakdown = $itemData['size_breakdown'] ?? null;
                 $normalizedBreakdown = null;
                 if (! empty($sizeBreakdown)) {
@@ -197,13 +211,11 @@ class InvoiceController extends Controller
                         $normalizedBreakdown = [];
                         foreach ($sizeBreakdown as $sizeKey => $sizeData) {
                             if (is_array($sizeData) && isset($sizeData['qty'])) {
-                                // New format: {size: {qty: X, price: Y}}
                                 $normalizedBreakdown[$sizeKey] = [
                                     'qty' => (int) $sizeData['qty'],
                                     'price' => isset($sizeData['price']) ? (float) $sizeData['price'] : (float) $itemData['unit_price'],
                                 ];
                             } elseif (is_numeric($sizeData)) {
-                                // Old format: {size: qty}
                                 $normalizedBreakdown[$sizeKey] = [
                                     'qty' => (int) $sizeData,
                                     'price' => (float) $itemData['unit_price'],
@@ -225,13 +237,13 @@ class InvoiceController extends Controller
                     'description' => $itemData['description'] ?? null,
                 ]);
 
+                $createdInvoiceItems[$index] = $invoiceItem;
+
                 $this->syncProductionSteps($invoiceItem);
 
-                // If cut_stock is active and item is linked to a Product, deduct raw materials
                 if ($invoice->cut_stock && ! empty($itemData['product_id'])) {
                     $product = Product::with('materials.item')->find($itemData['product_id']);
                     if ($product && $product->materials->isNotEmpty()) {
-                        // Parse size breakdown (extract qty only for BOM calculation)
                         $breakdownMap = [];
                         $rawBreakdown = $itemData['size_breakdown'] ?? null;
                         if (! empty($rawBreakdown)) {
@@ -241,37 +253,28 @@ class InvoiceController extends Controller
                             if (is_array($rawBreakdown)) {
                                 foreach ($rawBreakdown as $k => $v) {
                                     if (is_array($v) && isset($v['qty'])) {
-                                        // New format: {size: {qty, price}}
                                         $breakdownMap[trim($k)] = (float) $v['qty'];
                                     } elseif (is_array($v) && isset($v['size']) && isset($v['qty'])) {
-                                        // Alternative format: {size: {size: "M", qty: 10}}
                                         $breakdownMap[trim($v['size'])] = (float) $v['qty'];
                                     } elseif (is_numeric($v)) {
-                                        // Old format: {size: qty}
                                         $breakdownMap[trim($k)] = (float) $v;
                                     }
                                 }
                             }
                         }
 
-                        // Calculate total needed per raw item using Two-Stage Formula:
-                        // Stage 1: Usage Qty (Meter) = (Size Qty / Yield Qty) * Required Qty
-                        // Stage 2: Warehouse Qty (Kg) = Usage Qty / Conversion Rate
-                        $deductions = []; // [item_id => ['item' => Item, 'total_usage_qty' => float, 'total_warehouse_qty' => float, 'usage_unit' => string, 'warehouse_unit' => string]]
+                        $deductions = [];
 
                         if (! empty($breakdownMap)) {
-                            // Calculate per size
                             foreach ($breakdownMap as $sizeName => $sizeQty) {
                                 if ($sizeQty <= 0) {
                                     continue;
                                 }
 
-                                // Get materials specifically configured for this size
                                 $sizeMaterials = $product->materials->filter(function ($m) use ($sizeName) {
                                     return $m->size_name === $sizeName;
                                 });
 
-                                // Fallback to universal materials if this size has no specific BOM
                                 if ($sizeMaterials->isEmpty()) {
                                     $sizeMaterials = $product->materials->filter(function ($m) {
                                         return empty($m->size_name) || $m->size_name === 'ALL';
@@ -286,9 +289,7 @@ class InvoiceController extends Controller
                                         $yieldQty = max(0.0001, (float) ($sizeRule->yield_qty ?: 1.0));
                                         $conversionRate = max(0.0001, (float) ($sizeRule->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
 
-                                        // Stage 1: Kebutuhan pola pakai
                                         $usageQty = ($sizeQty / $yieldQty) * $requiredQty;
-                                        // Stage 2: Potongan stok gudang
                                         $warehouseQty = $usageQty / $conversionRate;
 
                                         if (! isset($deductions[$matItemId])) {
@@ -303,7 +304,6 @@ class InvoiceController extends Controller
                                         $deductions[$matItemId]['total_usage_qty'] += $usageQty;
                                         $deductions[$matItemId]['total_warehouse_qty'] += $warehouseQty;
 
-                                        // Snapshot parameter BOM per item+size ke invoice_item_materials
                                         $sizeId = null;
                                         if (! empty($sizeName)) {
                                             $matchedSize = Size::where('size_name', $sizeName)->first();
@@ -327,7 +327,6 @@ class InvoiceController extends Controller
                                 }
                             }
                         } else {
-                            // Fallback if no size breakdown: use default recipes with total line qty
                             $totalLineQty = (float) ($itemData['qty'] ?? 0);
                             $defaultMaterials = $product->materials->filter(function ($m) {
                                 return empty($m->size_name) || $m->size_name === 'ALL';
@@ -341,9 +340,7 @@ class InvoiceController extends Controller
                                     $yieldQty = max(0.0001, (float) ($mat->yield_qty ?: 1.0));
                                     $conversionRate = max(0.0001, (float) ($mat->conversion_rate ?: ($rawItem->conversion_rate ?: 1.0)));
 
-                                    // Stage 1: Kebutuhan pola pakai
                                     $usageQty = ($totalLineQty / $yieldQty) * $requiredQty;
-                                    // Stage 2: Potongan stok gudang
                                     $warehouseQty = $usageQty / $conversionRate;
 
                                     if (! isset($deductions[$matItemId])) {
@@ -358,7 +355,6 @@ class InvoiceController extends Controller
                                     $deductions[$matItemId]['total_usage_qty'] += $usageQty;
                                     $deductions[$matItemId]['total_warehouse_qty'] += $warehouseQty;
 
-                                    // Snapshot parameter BOM per item (tanpa size spesifik) ke invoice_item_materials
                                     $materialSnapshot = new InvoiceItemMaterial;
                                     $materialSnapshot->invoice_item_id = $invoiceItem->id;
                                     $materialSnapshot->item_id = $rawItem->id;
@@ -374,7 +370,6 @@ class InvoiceController extends Controller
                             }
                         }
 
-                        // Apply deductions & stock mutations
                         foreach ($deductions as $d) {
                             $rawItem = $d['item'];
                             $warehouseDeduction = round($d['total_warehouse_qty'], 4);
@@ -406,6 +401,51 @@ class InvoiceController extends Controller
                                     'notes' => $note,
                                     'reference_no' => $invoice->invoice_number,
                                     'mutation_date' => now(),
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (! empty($validated['assignments'])) {
+                foreach ($validated['assignments'] as $assignData) {
+                    $itemIdx = (int) ($assignData['item_index'] ?? 0);
+                    if (isset($createdInvoiceItems[$itemIdx])) {
+                        $invItem = $createdInvoiceItems[$itemIdx];
+                        $defaultQty = (int) ($assignData['qty'] ?? $invItem->qty ?? 1);
+
+                        $assignment = ProductionAssignment::create([
+                            'invoice_item_id' => $invItem->id,
+                            'user_id' => $assignData['user_id'],
+                            'qty' => $defaultQty,
+                            'target_date' => $assignData['target_date'] ?? null,
+                            'status' => 'PENDING',
+                        ]);
+
+                        $invoiceItemProdSteps = InvoiceItemProductionStep::where('invoice_item_id', $invItem->id)
+                            ->pluck('wage', 'production_step_id')
+                            ->toArray();
+
+                        foreach ($assignData['steps'] as $stepItem) {
+                            $stepId = is_array($stepItem) ? ($stepItem['id'] ?? null) : $stepItem;
+                            $stepQty = (is_array($stepItem) && ! empty($stepItem['qty'])) ? (int) $stepItem['qty'] : $defaultQty;
+
+                            $productStep = ProductProductionStep::with('productionStep')->find($stepId);
+                            if ($productStep) {
+                                $snapshotWage = $invoiceItemProdSteps[$productStep->production_step_id] ?? null;
+                                $matchedISS = InvoiceItemProductionStep::where('invoice_item_id', $invItem->id)
+                                    ->where('production_step_id', $productStep->production_step_id)
+                                    ->first();
+                                $stepName = $matchedISS ? $matchedISS->step_name : null;
+
+                                ProductionAssignmentStep::create([
+                                    'production_assignment_id' => $assignment->id,
+                                    'production_step_id' => $productStep->production_step_id,
+                                    'step_name' => $stepName ?? ($productStep->custom_name ?? $productStep->productionStep?->name ?? 'Langkah Produksi'),
+                                    'wage' => $snapshotWage ?? ($productStep->wage ?? $productStep->productionStep?->default_wage ?? 0),
+                                    'qty' => $stepQty,
+                                    'status' => 'PENDING',
                                 ]);
                             }
                         }
@@ -450,6 +490,32 @@ class InvoiceController extends Controller
         ]);
     }
 
+    public function printPreviewPage(Invoice $invoice)
+    {
+        $invoice->load(['customer', 'items.product.sizes', 'creator']);
+
+        return Inertia::render('Invoice/PrintPreview', [
+            'invoice' => $invoice,
+        ]);
+    }
+
+    public function productionPreviewPage(Invoice $invoice)
+    {
+        $invoice->load([
+            'customer',
+            'items.product.images',
+            'items.product.sizes',
+            'items.product.productionSteps.productionStep',
+            'items.productionSteps.assignee',
+            'items.product.materials.item.unit',
+            'creator',
+        ]);
+
+        return Inertia::render('Invoice/ProductionPreview', [
+            'invoice' => $invoice,
+        ]);
+    }
+
     public function print(Invoice $invoice)
     {
         $invoice->load([
@@ -483,6 +549,54 @@ class InvoiceController extends Controller
             ->setPaper('a4', 'portrait');
 
         return $pdf->stream('SPK-'.$invoice->invoice_number.'.pdf');
+    }
+
+    public function payrollPreviewPage(Invoice $invoice, Request $request)
+    {
+        $invoice->load([
+            'customer',
+            'items.productionAssignments.assignee',
+            'items.productionAssignments.steps.productionStep',
+            'creator',
+        ]);
+
+        return Inertia::render('Invoice/PayrollPreview', [
+            'invoice' => $invoice,
+            'assignmentId' => $request->query('assignment_id'),
+        ]);
+    }
+
+    public function printPayrollPDF(Invoice $invoice, Request $request)
+    {
+        $invoice->load([
+            'customer',
+            'items.productionAssignments.assignee',
+            'items.productionAssignments.steps.productionStep',
+            'creator',
+        ]);
+
+        $assignmentId = $request->query('assignment_id');
+        $targetAssignment = null;
+
+        if ($assignmentId) {
+            foreach ($invoice->items as $item) {
+                foreach ($item->productionAssignments as $assignment) {
+                    if ((string) $assignment->id === (string) $assignmentId) {
+                        $targetAssignment = $assignment;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        $pdf = Pdf::loadView('payroll-pdf', compact('invoice', 'targetAssignment'))
+            ->setPaper('a5', 'landscape');
+
+        $fileName = $targetAssignment
+            ? 'Slip-Gaji-'.($targetAssignment->assignee?->name ?? 'Karyawan').'-'.$invoice->invoice_number.'.pdf'
+            : 'Rekap-Gaji-'.$invoice->invoice_number.'.pdf';
+
+        return $pdf->stream($fileName);
     }
 
     private function syncProductionSteps(InvoiceItem $invoiceItem)

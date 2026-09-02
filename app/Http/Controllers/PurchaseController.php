@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Item;
 use App\Models\ItemConversion;
 use App\Models\Purchase;
 use App\Models\StockMutation;
+use App\Models\Unit;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,9 +35,13 @@ class PurchaseController extends Controller
     public function create()
     {
         $items = Item::with(['unit', 'conversions.unit'])->where('is_active', true)->orderBy('name')->get();
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        $units = Unit::where('is_active', true)->orderBy('name')->get();
 
         return Inertia::render('Purchases/Create', [
             'items' => $items,
+            'categories' => $categories,
+            'units' => $units,
         ]);
     }
 
@@ -141,6 +147,15 @@ class PurchaseController extends Controller
         $purchase->load(['items.item.unit', 'items.item.conversions.unit', 'items.unit', 'creator']);
 
         return Inertia::render('Purchases/Show', [
+            'purchase' => $purchase,
+        ]);
+    }
+
+    public function previewPage(Purchase $purchase)
+    {
+        $purchase->load(['items.item.unit', 'items.item.conversions.unit', 'items.unit', 'creator']);
+
+        return Inertia::render('Purchases/PdfPreview', [
             'purchase' => $purchase,
         ]);
     }

@@ -183,14 +183,25 @@ class AccessSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 5. Master Data (Parent Menu with Collapsible Submenu)
+        // 5. Gaji Karyawan (Direct Top Menu)
+        Menu::create([
+            'parent_id' => null,
+            'title' => 'Gaji Karyawan',
+            'icon' => 'Wallet',
+            'path' => '/dashboard/payroll',
+            'permission_name' => null,
+            'sort_order' => 5,
+            'is_active' => true,
+        ]);
+
+        // 6. Master Data (Parent Menu with Collapsible Submenu)
         $masterDataParent = Menu::create([
             'parent_id' => null,
             'title' => 'Master Data',
             'icon' => 'Boxes',
             'path' => null,
             'permission_name' => null,
-            'sort_order' => 5,
+            'sort_order' => 6,
             'is_active' => true,
         ]);
 
@@ -283,14 +294,14 @@ class AccessSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 6. Pengaturan Sistem (Parent Menu with Collapsible Submenu)
+        // 7. Pengaturan Sistem (Parent Menu with Collapsible Submenu)
         $settingsParent = Menu::create([
             'parent_id' => null,
             'title' => 'Pengaturan',
             'icon' => 'Settings',
             'path' => null,
             'permission_name' => null,
-            'sort_order' => 6,
+            'sort_order' => 7,
             'is_active' => true,
         ]);
 

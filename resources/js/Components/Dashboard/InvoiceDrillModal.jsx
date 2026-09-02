@@ -19,7 +19,7 @@ const InvoiceDrillModal = memo(function InvoiceDrillModal({ invoice, onClose }) 
     if (!invoice) return null;
 
     const handlePrint = () => {
-        window.open(route("invoice.print", invoice.id), "_blank");
+        window.location.href = route("invoice.print-preview", invoice.id);
     };
 
     return (

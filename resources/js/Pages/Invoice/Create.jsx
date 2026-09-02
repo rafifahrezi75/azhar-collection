@@ -29,9 +29,13 @@ import {
     ChevronUp,
     Building,
     Percent,
+    Scissors,
+    User,
+    Wallet,
+    X,
 } from "lucide-react";
 
-export default function Create({ initialType = "REGULAR" }) {
+export default function Create({ initialType = "REGULAR", users: initialUsers = [] }) {
     // Mode switcher: "REGULAR" (Pesanan Baru) vs "HISTORICAL" (Pesanan Lama)
     const [orderType, setOrderType] = useState(initialType || "REGULAR");
 
@@ -89,6 +93,11 @@ export default function Create({ initialType = "REGULAR" }) {
         },
     ]);
 
+    const [users, setUsers] = useState(initialUsers || []);
+    const [showSpkSection, setShowSpkSection] = useState(false);
+    const [spkDrafts, setSpkDrafts] = useState([]);
+    const [spkForm, setSpkForm] = useState({ item_index: "", user_id: "", qty: "", target_date: "", steps: [] });
+
     // Handle Mode Switch
     const handleSwitchMode = (newType) => {
         setOrderType(newType);
@@ -116,16 +125,18 @@ export default function Create({ initialType = "REGULAR" }) {
     const fetchMasters = useCallback(async () => {
         setLoadingMasters(true);
         try {
-            const [custRes, prodRes, numRes] = await Promise.all([
+            const [custRes, prodRes, numRes, usersRes] = await Promise.all([
                 axios.get("/api/customers"),
                 axios.get("/api/products"),
                 axios.get("/api/invoices/next-number"),
+                axios.get("/api/users-management").catch(() => ({ data: { users: [] } })),
             ]);
             setCustomers(custRes.data?.data || []);
             setProducts(prodRes.data?.data || []);
             if (numRes.data?.next_number) {
                 setInvoiceNumber(numRes.data.next_number);
             }
+            setUsers(usersRes.data?.users || usersRes.data?.data || []);
         } catch {
             Toast.error("Gagal memuat master data pelanggan atau produk");
         } finally {
@@ -227,6 +238,67 @@ export default function Create({ initialType = "REGULAR" }) {
             });
             setActiveItemIndexForSize(null);
         }
+    };
+
+    const selectedSpkProduct = useMemo(() => {
+        if (spkForm.item_index === "" || spkForm.item_index === null) return null;
+        const idx = parseInt(spkForm.item_index, 10);
+        const line = items[idx];
+        if (!line?.product_id) return null;
+        return products.find((p) => String(p.id) === String(line.product_id)) || null;
+    }, [spkForm.item_index, items, products]);
+
+    const handleAddSpkDraft = () => {
+        if (spkForm.item_index === "" || spkForm.item_index === null || !spkForm.user_id || spkForm.steps.length === 0) {
+            Toast.warning("Pilih Item Pesanan, Karyawan, dan minimal 1 langkah produksi");
+            return;
+        }
+        const idx = parseInt(spkForm.item_index, 10);
+        const line = items[idx];
+        const defaultQty = parseInt(spkForm.qty, 10) || parseInt(line?.qty, 10) || 1;
+        const mappedSteps = spkForm.steps.map((s) => {
+            const sId = typeof s === "object" ? s.id : s;
+            const pStep = selectedSpkProduct?.production_steps?.find((ps) => ps.id === sId);
+            return {
+                id: sId,
+                name: pStep?.production_step?.name || pStep?.custom_name || "Langkah Produksi",
+                wage: Number(pStep?.wage) || 0,
+                qty: typeof s === "object" && s.qty ? parseInt(s.qty, 10) : defaultQty,
+            };
+        });
+
+        const totalWage = mappedSteps.reduce((acc, st) => acc + st.qty * st.wage, 0);
+
+        const draft = {
+            id: Date.now(),
+            item_index: idx,
+            item_name: line?.item_name || `Item #${idx + 1}`,
+            product_name: selectedSpkProduct?.name || "",
+            user_id: spkForm.user_id,
+            user_name: users.find((u) => String(u.id) === String(spkForm.user_id))?.name || "Karyawan",
+            qty: defaultQty,
+            target_date: spkForm.target_date || "",
+            steps: mappedSteps,
+            total_wage: totalWage,
+        };
+
+        setSpkDrafts((prev) => [...prev, draft]);
+        setSpkForm({ item_index: "", user_id: "", qty: "", target_date: "", steps: [] });
+    };
+
+    const handleRemoveSpkDraft = (draftId) => {
+        setSpkDrafts((prev) => prev.filter((d) => d.id !== draftId));
+    };
+
+    const toggleSpkStep = (stepId, customQty) => {
+        setSpkForm((prev) => {
+            const exists = prev.steps.find((s) => (typeof s === "object" ? s.id : s) === stepId);
+            if (exists) {
+                return { ...prev, steps: prev.steps.filter((s) => (typeof s === "object" ? s.id : s) !== stepId) };
+            }
+            const fallbackQty = parseInt(spkForm.qty, 10) || parseInt(items[parseInt(prev.item_index, 10)]?.qty, 10) || 1;
+            return { ...prev, steps: [...prev.steps, { id: stepId, qty: customQty || fallbackQty }] };
+        });
     };
 
     // Financial calculations
@@ -461,6 +533,16 @@ export default function Create({ initialType = "REGULAR" }) {
                 subtotal: Number(i.subtotal),
                 size_breakdown: i.size_breakdown || {},
                 description: i.description || "",
+            })),
+            assignments: spkDrafts.map((d) => ({
+                item_index: d.item_index,
+                user_id: d.user_id,
+                qty: Number(d.qty),
+                target_date: d.target_date || null,
+                steps: d.steps.map((s) => ({
+                    id: s.id,
+                    qty: Number(s.qty),
+                })),
             })),
         };
 
@@ -993,6 +1075,256 @@ export default function Create({ initialType = "REGULAR" }) {
                                     )}
                                 </div>
                             )}
+                        </div>
+
+                        <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
+                            <div className="p-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Scissors className="w-4 h-4 text-teal-600" />
+                                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                        Penugasan SPK Karyawan (Opsional)
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${spkDrafts.length > 0 ? 'bg-teal-100 text-teal-800' : 'bg-slate-200 text-slate-600'}`}>
+                                        {spkDrafts.length} Tugas
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSpkSection((prev) => !prev)}
+                                    className="flex items-center gap-1 text-xs text-teal-700 hover:text-teal-800 font-semibold cursor-pointer"
+                                >
+                                    <span>{showSpkSection ? "Sembunyikan Form" : "+ Tambah SPK"}</span>
+                                    {showSpkSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
+                            </div>
+
+                            {showSpkSection && (
+                                <div className="p-3.5 bg-teal-50/30 border-b border-teal-100/60 space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                Pilih Item Pesanan <span className="text-rose-500">*</span>
+                                            </label>
+                                            <select
+                                                value={spkForm.item_index}
+                                                onChange={(e) => {
+                                                    const idx = e.target.value;
+                                                    const selLine = items[idx];
+                                                    setSpkForm((prev) => ({
+                                                        ...prev,
+                                                        item_index: idx,
+                                                        qty: selLine ? selLine.qty : 1,
+                                                        steps: [],
+                                                    }));
+                                                }}
+                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-medium text-slate-800 focus:border-teal-500"
+                                            >
+                                                <option value="">-- Pilih Item --</option>
+                                                {items.map((it, iIdx) => (
+                                                    <option key={iIdx} value={iIdx}>
+                                                        {it.item_name || `Item #${iIdx + 1}`} ({it.qty} {it.unit})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                Karyawan / Penjahit <span className="text-rose-500">*</span>
+                                            </label>
+                                            <select
+                                                value={spkForm.user_id}
+                                                onChange={(e) => setSpkForm((prev) => ({ ...prev, user_id: e.target.value }))}
+                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-medium text-slate-800 focus:border-teal-500"
+                                            >
+                                                <option value="">-- Pilih Karyawan --</option>
+                                                {users.map((u) => (
+                                                    <option key={u.id} value={u.id}>
+                                                        {u.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                Target Qty
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={spkForm.qty}
+                                                onChange={(e) => setSpkForm((prev) => ({ ...prev, qty: e.target.value }))}
+                                                placeholder="Kuantitas"
+                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-medium focus:border-teal-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                Target Selesai
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={spkForm.target_date}
+                                                onChange={(e) => setSpkForm((prev) => ({ ...prev, target_date: e.target.value }))}
+                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white focus:border-teal-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {selectedSpkProduct?.production_steps && selectedSpkProduct.production_steps.length > 0 && (
+                                        <div className="bg-white p-2.5 rounded border border-slate-200">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                                                    Pilih Langkah Produksi yang Ditugaskan:
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const allSteps = selectedSpkProduct.production_steps.map((ps) => ({
+                                                            id: ps.id,
+                                                            qty: parseInt(spkForm.qty, 10) || parseInt(items[parseInt(spkForm.item_index, 10)]?.qty, 10) || 1,
+                                                        }));
+                                                        setSpkForm((prev) => ({
+                                                            ...prev,
+                                                            steps: prev.steps.length === allSteps.length ? [] : allSteps,
+                                                        }));
+                                                    }}
+                                                    className="text-[10px] text-teal-700 hover:text-teal-800 font-semibold cursor-pointer"
+                                                >
+                                                    {spkForm.steps.length === selectedSpkProduct.production_steps.length ? "Batal Semua" : "Pilih Semua Langkah"}
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                {selectedSpkProduct.production_steps.map((ps) => {
+                                                    const isChecked = spkForm.steps.some((s) => (typeof s === "object" ? s.id : s) === ps.id);
+                                                    const curStep = spkForm.steps.find((s) => (typeof s === "object" ? s.id : s) === ps.id);
+                                                    const curQty = typeof curStep === "object" ? curStep.qty : (spkForm.qty || 1);
+
+                                                    return (
+                                                        <div
+                                                            key={ps.id}
+                                                            className={`p-2 rounded border text-xs transition-colors ${
+                                                                isChecked
+                                                                    ? "bg-teal-50 border-teal-300 text-teal-950"
+                                                                    : "bg-slate-50 border-slate-200 text-slate-700"
+                                                            }`}
+                                                        >
+                                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={() => toggleSpkStep(ps.id, curQty)}
+                                                                    className="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
+                                                                />
+                                                                <span className="font-semibold text-xs truncate">
+                                                                    {ps.production_step?.name || ps.custom_name}
+                                                                </span>
+                                                            </label>
+                                                            <div className="flex items-center justify-between mt-1.5 pl-5.5 text-[10px] text-slate-500">
+                                                                <span>Upah: {formatCurrency(ps.wage)}</span>
+                                                                {isChecked && (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span>Qty:</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            min="1"
+                                                                            value={curQty}
+                                                                            onChange={(e) => {
+                                                                                const nQ = e.target.value;
+                                                                                setSpkForm((prev) => ({
+                                                                                    ...prev,
+                                                                                    steps: prev.steps.map((s) => {
+                                                                                        const sId = typeof s === "object" ? s.id : s;
+                                                                                        if (sId === ps.id) return { id: ps.id, qty: nQ };
+                                                                                        return s;
+                                                                                    }),
+                                                                                }));
+                                                                            }}
+                                                                            className="w-14 px-1 py-0.5 text-[11px] border border-slate-300 rounded text-right bg-white font-mono"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleAddSpkDraft}
+                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Tambahkan Penugasan</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="p-3.5">
+                                {spkDrafts.length === 0 ? (
+                                    <div className="text-center py-4 px-2 border border-dashed border-slate-200 rounded text-slate-400 text-xs">
+                                        <Scissors className="w-6 h-6 mx-auto mb-1 opacity-40 text-slate-400" />
+                                        <span>Belum ada penugasan SPK dibuat (opsional, bisa dibuat nanti di detail invoice).</span>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {spkDrafts.map((draft) => (
+                                            <div
+                                                key={draft.id}
+                                                className="p-3 rounded-md bg-white border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                                            >
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-teal-600 text-white font-bold text-[10px] flex items-center justify-center">
+                                                            {(draft.user_name || "K").charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <span className="font-bold text-xs text-slate-900">{draft.user_name}</span>
+                                                        <span className="text-slate-400 text-[11px]">&bull;</span>
+                                                        <span className="font-medium text-xs text-slate-700">{draft.item_name}</span>
+                                                        <span className="text-slate-400 text-[11px]">({draft.qty} Qty)</span>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                                                        {draft.steps.map((st, sI) => (
+                                                            <span
+                                                                key={sI}
+                                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200"
+                                                            >
+                                                                <span>{st.name} ({st.qty}x)</span>
+                                                                <span className="text-indigo-600 font-semibold">{formatCurrency(st.wage * st.qty)}</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] text-slate-400 block">Est. Upah:</span>
+                                                        <span className="font-bold text-xs text-teal-800 font-mono">
+                                                            {formatCurrency(draft.total_wage || 0)}
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveSpkDraft(draft.id)}
+                                                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded border border-rose-200 transition-colors cursor-pointer"
+                                                        title="Hapus draft penugasan ini"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                     </div>

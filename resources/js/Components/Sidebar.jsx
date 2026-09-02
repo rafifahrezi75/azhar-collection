@@ -24,7 +24,8 @@ import {
     Tags,
     Scissors,
     Ruler,
-    ShoppingBag
+    ShoppingBag,
+    Wallet,
 } from "lucide-react";
 
 const Sidebar = memo(function Sidebar({
@@ -104,6 +105,7 @@ const Sidebar = memo(function Sidebar({
         if (name.includes("master") || name.includes("box")) return <FolderKanban className="w-4.5 h-4.5 shrink-0" />;
         if (name.includes("langkah") || name.includes("produksi") || name.includes("scissors")) return <Scissors className="w-4.5 h-4.5 shrink-0" />;
         if (name.includes("ukuran") || name.includes("ruler") || name.includes("size")) return <Ruler className="w-4.5 h-4.5 shrink-0" />;
+        if (name.includes("gaji") || name.includes("payroll") || name.includes("wallet")) return <Wallet className="w-4.5 h-4.5 shrink-0" />;
         return <CircleDot className="w-3.5 h-3.5 shrink-0" />;
     }, []);
 

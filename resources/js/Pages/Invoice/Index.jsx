@@ -5,7 +5,6 @@ import DashboardLayout from "@/Layouts/DashboardLayout";
 import PageHeaderBar from "@/Components/PageHeaderBar";
 import Pagination from "@/Components/Pagination";
 import InvoiceFilterModal from "@/Components/InvoiceFilterModal";
-import InvoicePrintModal from "@/Components/InvoicePrintModal";
 import { hasPermission } from "@/utils/permissions";
 import { Toast, confirmDialog } from "@/utils/sweetalert";
 import {
@@ -47,8 +46,6 @@ export default function Index() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     // Modals
-    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-    const [selectedInvoice, setSelectedInvoice] = useState(null);
 
     const canCreate = useMemo(() => hasPermission(permissions, "invoice.create"), [permissions]);
     const canDelete = useMemo(() => hasPermission(permissions, "invoice.delete"), [permissions]);
@@ -89,15 +86,7 @@ export default function Index() {
 
     const handleOpenPrint = async (invoice) => {
         closeFilter();
-
-        try {
-            const res = await axios.get(`/api/invoices/${invoice.id}`);
-            setSelectedInvoice(res.data?.data || invoice);
-            setIsPrintModalOpen(true);
-        } catch {
-            setSelectedInvoice(invoice);
-            setIsPrintModalOpen(true);
-        }
+        router.visit(`/dashboard/invoice/${invoice.id}/print-preview`);
     };
 
     const handleDelete = async (invoice) => {
@@ -491,15 +480,6 @@ export default function Index() {
                 </div>
             </div>
 
-            {/* Dedicated Invoice Print Modal */}
-            <InvoicePrintModal
-                isOpen={isPrintModalOpen}
-                invoice={selectedInvoice}
-                onClose={() => {
-                    setIsPrintModalOpen(false);
-                    setSelectedInvoice(null);
-                }}
-            />
         </DashboardLayout>
     );
 }

@@ -6,8 +6,11 @@ use App\Models\InvoiceItemProductionStep;
 use App\Models\ProductionAssignment;
 use App\Models\ProductionAssignmentStep;
 use App\Models\ProductProductionStep;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ProductionAssignmentController extends Controller
 {
@@ -114,5 +117,39 @@ class ProductionAssignmentController extends Controller
         return response()->json([
             'message' => 'Surat Perintah Kerja (SPK) berhasil dihapus.',
         ]);
+    }
+
+    public function payrollPreviewPage(ProductionAssignment $assignment): Response
+    {
+        $assignment->load([
+            'assignee',
+            'invoiceItem.invoice.customer',
+            'steps.productionStep',
+        ]);
+
+        return Inertia::render('Invoice/PayrollPreview', [
+            'invoice' => $assignment->invoiceItem->invoice,
+            'assignment' => $assignment,
+            'assignmentId' => $assignment->id,
+        ]);
+    }
+
+    public function printPayrollPDF(ProductionAssignment $assignment)
+    {
+        $assignment->load([
+            'assignee',
+            'invoiceItem.invoice.customer',
+            'steps.productionStep',
+        ]);
+
+        $invoice = $assignment->invoiceItem->invoice;
+        $targetAssignment = $assignment;
+
+        $pdf = Pdf::loadView('payroll-pdf', compact('invoice', 'targetAssignment'))
+            ->setPaper('a5', 'landscape');
+
+        $fileName = 'Slip-Gaji-'.($assignment->assignee?->name ?? 'Karyawan').'-'.$invoice->invoice_number.'.pdf';
+
+        return $pdf->stream($fileName);
     }
 }

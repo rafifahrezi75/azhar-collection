@@ -108,15 +108,14 @@ export default function Index({ purchases }) {
                                                     </Link>
 
                                                     {/* Cetak PDF (Indigo) - matching preview/print theme */}
-                                                    <a
-                                                        href={route('purchases.pdf', purchase.id)}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => router.visit(route('purchases.preview', purchase.id))}
                                                         className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
                                                         title="PDF"
                                                     >
                                                         <Printer className="w-3.5 h-3.5" />
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>

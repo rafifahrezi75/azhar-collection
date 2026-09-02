@@ -8,6 +8,7 @@ use App\Http\Controllers\HakAksesController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceItemProductionStepController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionAssignmentController;
@@ -45,6 +46,14 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:invoice.create')
         ->name('invoice.input-lama');
 
+    Route::get('/dashboard/invoice/{invoice}/print-preview', [InvoiceController::class, 'printPreviewPage'])
+        ->middleware('permission:invoice.view')
+        ->name('invoice.print-preview');
+
+    Route::get('/dashboard/invoice/{invoice}/production-preview', [InvoiceController::class, 'productionPreviewPage'])
+        ->middleware('permission:invoice.view')
+        ->name('invoice.production-preview');
+
     Route::get('/dashboard/invoice/{invoice}', [InvoiceController::class, 'showPage'])
         ->name('invoice.show')
         ->middleware('permission:invoice.view');
@@ -57,10 +66,36 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:invoice.view')
         ->name('invoice.production-pdf');
 
+    Route::get('/dashboard/invoice/{invoice}/payroll-preview', [InvoiceController::class, 'payrollPreviewPage'])
+        ->middleware('permission:invoice.view')
+        ->name('invoice.payroll-preview');
+
+    Route::get('/dashboard/invoice/{invoice}/payroll-pdf', [InvoiceController::class, 'printPayrollPDF'])
+        ->middleware('permission:invoice.view')
+        ->name('invoice.payroll-pdf');
+
+    Route::get('/dashboard/production-assignments/{assignment}/payroll-preview', [ProductionAssignmentController::class, 'payrollPreviewPage'])
+        ->middleware('permission:invoice.view')
+        ->name('production-assignments.payroll-preview');
+
+    Route::get('/dashboard/production-assignments/{assignment}/payroll-pdf', [ProductionAssignmentController::class, 'printPayrollPDF'])
+        ->middleware('permission:invoice.view')
+        ->name('production-assignments.payroll-pdf');
+
+    Route::get('/dashboard/payroll', [PayrollController::class, 'index'])
+        ->name('payroll.index');
+
+    Route::get('/dashboard/payroll/preview', [PayrollController::class, 'previewPage'])
+        ->name('payroll.preview');
+
+    Route::get('/dashboard/payroll/pdf', [PayrollController::class, 'printPdf'])
+        ->name('payroll.pdf');
+
     // Pembelian
     Route::get('/dashboard/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/dashboard/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
     Route::post('/dashboard/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+    Route::get('/dashboard/purchases/{purchase}/preview', [PurchaseController::class, 'previewPage'])->name('purchases.preview');
     Route::get('/dashboard/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::get('/dashboard/purchases/{purchase}/pdf', [PurchaseController::class, 'printPdf'])->name('purchases.pdf');
 
