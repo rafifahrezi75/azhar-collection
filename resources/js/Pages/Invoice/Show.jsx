@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Head, router } from "@inertiajs/react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
+import SearchableSelect from "@/Components/SearchableSelect";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
@@ -82,6 +83,24 @@ export default function Show({
     const updateInvoiceState = useCallback((updater) => {
         setInvoice((prev) => (prev ? updater(prev) : prev));
     }, []);
+
+    const spkItemOptions = useMemo(() => {
+        return (invoice?.items || []).map((i) => ({
+            value: String(i.id),
+            label: i.item_name,
+            sublabel: `${i.qty} ${i.unit}`,
+            searchKey: `${i.item_name} ${i.qty} ${i.unit}`,
+        }));
+    }, [invoice?.items]);
+
+    const spkUserOptions = useMemo(() => {
+        return users.map((u) => ({
+            value: String(u.id),
+            label: u.name,
+            sublabel: u.email,
+            searchKey: `${u.name} ${u.email || ""}`,
+        }));
+    }, [users]);
 
     const formatCurrency = useCallback((val) => {
         return new Intl.NumberFormat("id-ID", {
@@ -602,10 +621,10 @@ export default function Show({
                                             )
                                         }
                                         className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-semibold rounded-lg border border-teal-200 shadow-2xs transition-all cursor-pointer"
-                                        title="Cetak Nota Dokumen"
+                                        title="Cetak Nota"
                                     >
                                         <Receipt className="w-3.5 h-3.5 text-teal-600" />
-                                        <span>Cetak Nota</span>
+                                        <span className="mt-0.5">Cetak Nota</span>
                                     </button>
                                 </div>
                             </div>
@@ -1419,47 +1438,38 @@ export default function Show({
                             <label className="block text-xs font-semibold text-slate-700 mb-1">
                                 Pilih Item Pesanan <span className="text-rose-500">*</span>
                             </label>
-                            <select
+                            <SearchableSelect
                                 value={spkForm.invoice_item_id}
-                                onChange={(e) => {
-                                    const itemId = e.target.value;
-                                    const selected = items.find((i) => i.id == itemId);
+                                onChange={(val) => {
+                                    const selected = items.find((i) => String(i.id) === String(val));
                                     setSpkForm((prev) => ({
                                         ...prev,
-                                        invoice_item_id: itemId,
+                                        invoice_item_id: val,
                                         qty: selected?.qty || "",
                                         steps: [],
                                     }));
                                 }}
-                                className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded-lg bg-white font-medium text-slate-800 shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                            >
-                                <option value="">-- Pilih Item Pesanan --</option>
-                                {items.map((i) => (
-                                    <option key={i.id} value={i.id}>
-                                        {i.item_name} ({i.qty} {i.unit})
-                                    </option>
-                                ))}
-                            </select>
+                                options={spkItemOptions}
+                                placeholder="-- Pilih Item Pesanan --"
+                                searchPlaceholder="Cari item pesanan..."
+                                required
+                            />
                         </div>
 
                         <div>
                             <label className="block text-xs font-semibold text-slate-700 mb-1">
                                 Karyawan / Penjahit <span className="text-rose-500">*</span>
                             </label>
-                            <select
+                            <SearchableSelect
                                 value={spkForm.user_id}
-                                onChange={(e) =>
-                                    setSpkForm((prev) => ({ ...prev, user_id: e.target.value }))
+                                onChange={(val) =>
+                                    setSpkForm((prev) => ({ ...prev, user_id: val }))
                                 }
-                                className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded-lg bg-white font-medium text-slate-800 shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                            >
-                                <option value="">-- Pilih Karyawan --</option>
-                                {users.map((u) => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.name}
-                                    </option>
-                                ))}
-                            </select>
+                                options={spkUserOptions}
+                                placeholder="-- Pilih Karyawan --"
+                                searchPlaceholder="Ketik nama karyawan..."
+                                required
+                            />
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">

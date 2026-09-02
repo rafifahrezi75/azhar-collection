@@ -152,6 +152,18 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('permission:pelanggan.view')
         ->name('pelanggan.index');
 
+    Route::get('/dashboard/pelanggan/create', [CustomerController::class, 'createPage'])
+        ->middleware('permission:pelanggan.create')
+        ->name('pelanggan.create');
+
+    Route::get('/dashboard/pelanggan/{customer}/edit', [CustomerController::class, 'editPage'])
+        ->middleware('permission:pelanggan.update')
+        ->name('pelanggan.edit');
+
+    Route::get('/dashboard/pelanggan/{customer}', [CustomerController::class, 'showPage'])
+        ->middleware('permission:pelanggan.view')
+        ->name('pelanggan.show');
+
     Route::get('/dashboard/langkah-produksi', [ProductionStepController::class, 'page'])
         ->middleware('permission:produk.view')
         ->name('langkah-produksi.index');

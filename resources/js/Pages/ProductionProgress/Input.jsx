@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Head, router } from "@inertiajs/react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import CalendarMonth from "@/Components/CalendarMonth";
+import SearchableSelect from "@/Components/SearchableSelect";
 import { formatDate, formatDateWithDay, todayLocal } from "@/utils/format";
 import {
     ArrowLeft,
@@ -9,7 +10,6 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
-    Filter,
     Plus,
     Save,
     Trash2,
@@ -18,6 +18,7 @@ import {
     Layers,
     User,
     X,
+    Check,
 } from "lucide-react";
 import { Toast } from "@/utils/sweetalert";
 
@@ -37,7 +38,7 @@ const MONTH_NAMES = [
 ];
 
 const emptyLine = () => ({ step_id: "", qty: "", notes: "" });
-const emptyBaju = () => ({ product: "", open: false, lines: [emptyLine()] });
+const emptyBaju = () => ({ product: "", open: true, lines: [emptyLine()] });
 const emptyCard = (date) => ({
     user_id: "",
     date: date || todayLocal(),
@@ -55,9 +56,6 @@ export default function Input({ invoice, work, calendar, history, filters }) {
 
     const [globalDate, setGlobalDate] = useState(selectedDate || todayLocal());
     const [applyToAll, setApplyToAll] = useState(false);
-    const [filterOpen, setFilterOpen] = useState(false);
-    const [tempDate, setTempDate] = useState(selectedDate || todayLocal());
-    const [tempApply, setTempApply] = useState(false);
 
     const workByUser = {};
     (work || []).forEach((a) => {
@@ -71,23 +69,23 @@ export default function Input({ invoice, work, calendar, history, filters }) {
         }
         (a.steps || []).forEach((s) => {
             const remaining = Math.max(0, s.qty - s.done_qty);
-            if (remaining > 0 && !bucket.steps.some((x) => x.id === s.id))
-                bucket.steps.push({ id: s.id, name: s.name, remaining });
+            if (!bucket.steps.some((x) => x.id === s.id))
+                bucket.steps.push({ id: s.id, name: s.name, remaining, qty: s.qty, done_qty: s.done_qty });
         });
     });
 
-    const makeCard = () => {
-        const uid = people.length === 1 ? String(people[0].id) : "";
+    const makeCard = (customUid = "") => {
+        const uid = customUid;
         const items = uid ? workByUser[uid] || [] : [];
-        const autoProduct = items.length === 1 ? items[0].product : "";
+        const autoProduct = items.length === 1 ? items[0].product : (items[0]?.product || "");
         return {
             ...emptyCard(applyToAll ? globalDate : selectedDate || todayLocal()),
             user_id: uid,
-            bajuList: [{ product: autoProduct, open: false, lines: [emptyLine()] }],
+            bajuList: [{ product: autoProduct, open: true, lines: [emptyLine()] }],
         };
     };
 
-    const [cards, setCards] = useState(() => [makeCard()]);
+    const [cards, setCards] = useState([]);
     const [submitting, setSubmitting] = useState(false);
 
     const backUrl = route("production-progress.show", invoice.id);
@@ -97,21 +95,21 @@ export default function Input({ invoice, work, calendar, history, filters }) {
 
     const setCardUser = (ci, uid) => {
         const items = workByUser[uid] || [];
-        const autoProduct = items.length === 1 ? items[0].product : "";
+        const autoProduct = items.length === 1 ? items[0].product : (items[0]?.product || "");
         setCards((prev) =>
             prev.map((c, i) =>
                 i === ci
                     ? {
                           ...c,
                           user_id: uid,
-                          bajuList: [{ product: autoProduct, open: false, lines: [emptyLine()] }],
+                          bajuList: [{ product: autoProduct, open: true, lines: [emptyLine()] }],
                       }
                     : c
             )
         );
     };
 
-    const addCard = () => setCards((prev) => [...prev, makeCard()]);
+    const addCardWithUser = (uid) => setCards((prev) => [...prev, makeCard(uid)]);
     const removeCard = (ci) => setCards((prev) => prev.filter((_, i) => i !== ci));
 
     const updateBaju = (ci, bi, patch) =>
@@ -192,6 +190,11 @@ export default function Input({ invoice, work, calendar, history, filters }) {
 
     const handleAddSubmit = (e) => {
         e.preventDefault();
+        if (cards.length === 0) {
+            Toast.error("Tambahkan minimal satu penjahit terlebih dahulu.");
+            return;
+        }
+
         let invalidBaju = null;
         for (const [ci, card] of cards.entries()) {
             const cardDate = applyToAll ? globalDate : card.date;
@@ -292,15 +295,9 @@ export default function Input({ invoice, work, calendar, history, filters }) {
             setGlobalDate={setGlobalDate}
             applyToAll={applyToAll}
             setApplyToAll={setApplyToAll}
-            filterOpen={filterOpen}
-            setFilterOpen={setFilterOpen}
-            tempDate={tempDate}
-            setTempDate={setTempDate}
-            tempApply={tempApply}
-            setTempApply={setTempApply}
             updateCard={updateCard}
             setCardUser={setCardUser}
-            addCard={addCard}
+            addCardWithUser={addCardWithUser}
             removeCard={removeCard}
             setBajuProduct={setBajuProduct}
             toggleBaju={toggleBaju}
@@ -384,7 +381,6 @@ function CalendarView({
 
             <div className="space-y-4 max-w-7xl mx-auto">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    {/* HEADER AREA */}
                     <div className="p-4 sm:p-5 border-b border-slate-100">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -429,10 +425,8 @@ function CalendarView({
                         </div>
                     </div>
 
-                    {/* CONTENT SECTION */}
                     <div className="p-4 sm:p-5">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                            {/* KOLOM KIRI: Kalender */}
                             <div className="lg:col-span-5 space-y-4">
                                 <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 shadow-2xs space-y-3">
                                     <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
@@ -489,7 +483,6 @@ function CalendarView({
                                 </div>
                             </div>
 
-                            {/* KOLOM KANAN: Rekap Bulan Ini & Riwayat Input */}
                             <div className="lg:col-span-7 space-y-4">
                                 <div className="p-4 rounded-lg bg-gradient-to-br from-slate-50 via-teal-50/30 to-emerald-50/30 border border-slate-200 shadow-2xs space-y-3">
                                     <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
@@ -539,7 +532,6 @@ function CalendarView({
                                     </div>
                                 </div>
 
-                                {/* Log Catatan Input */}
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
@@ -612,15 +604,9 @@ function InputForm({
     setGlobalDate,
     applyToAll,
     setApplyToAll,
-    filterOpen,
-    setFilterOpen,
-    tempDate,
-    setTempDate,
-    tempApply,
-    setTempApply,
     updateCard,
     setCardUser,
-    addCard,
+    addCardWithUser,
     removeCard,
     setBajuProduct,
     toggleBaju,
@@ -634,12 +620,34 @@ function InputForm({
     backUrl,
     setCards,
 }) {
+    const [popoverUserOpen, setPopoverUserOpen] = useState(false);
+    const [selectedNewUser, setSelectedNewUser] = useState("");
+
+    const peopleOptions = useMemo(() => {
+        return people.map((p) => ({
+            value: String(p.id),
+            label: p.name,
+            sublabel: p.email,
+            searchKey: `${p.name} ${p.email || ""}`,
+        }));
+    }, [people]);
+
+    const handleConfirmAddPerson = () => {
+        if (!selectedNewUser) {
+            Toast.error("Pilih karyawan terlebih dahulu.");
+            return;
+        }
+        addCardWithUser(selectedNewUser);
+        setSelectedNewUser("");
+        setPopoverUserOpen(false);
+    };
+
     return (
         <DashboardLayout>
             <Head title={`Input Progress #${invoice.invoice_number} - Azhar Collection`} />
 
             <form onSubmit={handleAddSubmit} className="space-y-4 max-w-7xl mx-auto">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
                     {/* HEADER AREA */}
                     <div className="p-4 sm:p-5 border-b border-slate-100">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -672,41 +680,126 @@ function InputForm({
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setTempDate(globalDate);
-                                        setTempApply(applyToAll);
-                                        setFilterOpen(true);
-                                    }}
-                                    className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold rounded-lg border border-slate-300 shadow-2xs transition-all cursor-pointer"
-                                >
-                                    <Filter className="w-3.5 h-3.5 text-slate-500" />
-                                    <span>Filter Tanggal</span>
-                                    {applyToAll && (
-                                        <span className="ml-0.5 px-1.5 py-0.2 text-[9px] font-mono font-bold bg-teal-100 text-teal-800 rounded-full">
-                                            Semua
+                            {/* Toolbar: Tanggal (Klik Area Penuh) + Popover Tambah Karyawan + Tombol Simpan Icon Only */}
+                            <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2.5 shrink-0">
+                                {/* Field Tanggal dengan Area Klik Penuh & Checkbox */}
+                                <div className="flex items-center h-8 px-2 bg-slate-50/80 border border-slate-300 rounded-lg shadow-2xs focus-within:border-teal-600 focus-within:ring-1 focus-within:ring-teal-600 transition-all">
+                                    <label
+                                        htmlFor="toolbar-global-date"
+                                        className="flex items-center gap-1.5 cursor-pointer pr-2"
+                                        onClick={(e) => {
+                                            const input = document.getElementById("toolbar-global-date");
+                                            if (input && typeof input.showPicker === "function") {
+                                                input.showPicker();
+                                            }
+                                        }}
+                                    >
+                                        <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0 pointer-events-none" />
+                                        <input
+                                            id="toolbar-global-date"
+                                            type="date"
+                                            required
+                                            min={invoice.order_date || ""}
+                                            value={globalDate}
+                                            onChange={(e) => {
+                                                const newDate = e.target.value;
+                                                setGlobalDate(newDate);
+                                                if (applyToAll) {
+                                                    setCards((prev) =>
+                                                        prev.map((c) => ({ ...c, date: newDate }))
+                                                    );
+                                                }
+                                            }}
+                                            className="bg-transparent text-xs font-mono font-medium text-slate-800 border-none outline-none ring-0 focus:ring-0 p-0 cursor-pointer w-auto"
+                                        />
+                                    </label>
+
+                                    <span className="h-3.5 w-px bg-slate-300 shrink-0" />
+
+                                    <label className="inline-flex items-center gap-1.5 pl-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={applyToAll}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                setApplyToAll(checked);
+                                                if (checked) {
+                                                    setCards((prev) =>
+                                                        prev.map((c) => ({ ...c, date: globalDate }))
+                                                    );
+                                                }
+                                            }}
+                                            className="w-3.5 h-3.5 rounded border-slate-300 text-teal-600 focus:ring-teal-600 cursor-pointer"
+                                        />
+                                        <span className="text-[11px] font-medium text-slate-600 whitespace-nowrap">
+                                            Terapkan ke semua
                                         </span>
+                                    </label>
+                                </div>
+
+                                {/* Popover Dropdown Tambah Karyawan */}
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPopoverUserOpen((prev) => !prev)}
+                                        className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold rounded-lg border border-slate-300 shadow-2xs transition-all cursor-pointer"
+                                    >
+                                        <UserPlus className="w-3.5 h-3.5 text-slate-500" />
+                                        <span className="mt-0.5">Karyawan</span>
+                                    </button>
+
+                                    {popoverUserOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => setPopoverUserOpen(false)}
+                                            />
+                                            <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-2.5">
+                                                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                                    <span className="text-xs font-bold text-slate-800">
+                                                        Pilih Penjahit
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPopoverUserOpen(false)}
+                                                        className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <SearchableSelect
+                                                        value={selectedNewUser}
+                                                        onChange={(val) => setSelectedNewUser(val)}
+                                                        options={peopleOptions}
+                                                        placeholder="-- Pilih Penjahit --"
+                                                        searchPlaceholder="Ketik nama penjahit..."
+                                                        className="flex-1"
+                                                    />
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleConfirmAddPerson}
+                                                        title="Tambahkan Penjahit"
+                                                        className="h-8 w-8 inline-flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-2xs transition-all cursor-pointer shrink-0"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
                                     )}
-                                </button>
+                                </div>
 
-                                <button
-                                    type="button"
-                                    onClick={addCard}
-                                    className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold rounded-lg border border-slate-300 shadow-2xs transition-all cursor-pointer"
-                                >
-                                    <UserPlus className="w-3.5 h-3.5 text-slate-500" />
-                                    <span>Tambah Karyawan</span>
-                                </button>
-
+                                {/* Tombol Simpan Progress (Logo Saja) */}
                                 <button
                                     type="submit"
-                                    disabled={submitting || people.length === 0}
-                                    className="inline-flex items-center gap-1.5 h-8 px-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-[11px] font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
+                                    disabled={submitting || cards.length === 0}
+                                    title={submitting ? "Menyimpan..." : "Simpan Progress"}
+                                    className="h-8 w-8 inline-flex items-center justify-center bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white rounded-lg shadow-sm transition-all cursor-pointer shrink-0"
                                 >
-                                    <Save className="w-3.5 h-3.5" />
-                                    <span>{submitting ? "Menyimpan..." : "Simpan Progress"}</span>
+                                    <Save className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -714,9 +807,27 @@ function InputForm({
 
                     {/* CONTENT SECTION */}
                     <div className="p-4 sm:p-5">
-                        {people.length === 0 ? (
-                            <div className="p-8 text-center text-slate-500 text-xs bg-slate-50/50 rounded-lg border border-slate-200">
-                                Tidak ada penugasan kerja karyawan aktif pada invoice ini.
+                        {cards.length === 0 ? (
+                            <div className="p-10 text-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200 space-y-2.5">
+                                <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-400 mx-auto flex items-center justify-center">
+                                    <User className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-800">
+                                        Belum Ada Penjahit Ditambahkan
+                                    </h4>
+                                    <p className="text-[11px] text-slate-500 mt-0.5 max-w-sm mx-auto">
+                                        Pilih dan tambahkan karyawan penjahit di atas untuk mulai mencatat kuantitas hasil produksi.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setPopoverUserOpen(true)}
+                                    className="inline-flex items-center gap-1.5 h-8 px-3 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold rounded-lg border border-teal-200 shadow-2xs transition-all cursor-pointer"
+                                >
+                                    <UserPlus className="w-3.5 h-3.5 text-teal-600" />
+                                    <span>Pilih Penjahit Sekarang</span>
+                                </button>
                             </div>
                         ) : (
                             <div
@@ -735,30 +846,36 @@ function InputForm({
                                                 <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center border border-teal-200/80 shadow-2xs shrink-0">
                                                     <User className="w-3.5 h-3.5" />
                                                 </div>
-                                                <select
-                                                    required
+                                                <SearchableSelect
                                                     value={card.user_id}
-                                                    onChange={(e) => setCardUser(ci, e.target.value)}
-                                                    className="flex-1 min-w-0 h-8 px-2.5 text-xs font-semibold text-slate-800 border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                                                >
-                                                    <option value="">-- Pilih Penjahit --</option>
-                                                    {people.map((p) => (
-                                                        <option key={p.id} value={p.id}>
-                                                            {p.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    onChange={(val) => setCardUser(ci, val)}
+                                                    options={peopleOptions}
+                                                    placeholder="-- Pilih Penjahit --"
+                                                    searchPlaceholder="Ketik nama penjahit..."
+                                                    className="flex-1 min-w-0"
+                                                    required
+                                                />
                                             </div>
 
                                             {!applyToAll && (
-                                                <input
-                                                    type="date"
-                                                    required
-                                                    min={invoice.order_date || ""}
-                                                    value={card.date}
-                                                    onChange={(e) => updateCard(ci, "date", e.target.value)}
-                                                    className="h-8 px-2 text-xs border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                                                />
+                                                <label
+                                                    className="flex items-center h-8 px-2 border border-slate-300 rounded-lg bg-white shadow-2xs cursor-pointer focus-within:border-teal-600 focus-within:ring-1 focus-within:ring-teal-600"
+                                                    onClick={(e) => {
+                                                        const targetInput = e.currentTarget.querySelector("input[type='date']");
+                                                        if (targetInput && typeof targetInput.showPicker === "function") {
+                                                            targetInput.showPicker();
+                                                        }
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="date"
+                                                        required
+                                                        min={invoice.order_date || ""}
+                                                        value={card.date}
+                                                        onChange={(e) => updateCard(ci, "date", e.target.value)}
+                                                        className="text-xs font-mono font-medium text-slate-800 border-none outline-none ring-0 focus:ring-0 p-0 cursor-pointer bg-transparent"
+                                                    />
+                                                </label>
                                             )}
 
                                             {applyToAll && (
@@ -767,16 +884,14 @@ function InputForm({
                                                 </span>
                                             )}
 
-                                            {cards.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeCard(ci)}
-                                                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md border border-rose-200 transition-colors cursor-pointer shrink-0"
-                                                    title="Hapus form karyawan ini"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeCard(ci)}
+                                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md border border-rose-200 transition-colors cursor-pointer shrink-0"
+                                                title="Hapus form karyawan ini"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
 
                                         {/* Card Body: Daftar Baju & Langkah */}
@@ -905,7 +1020,7 @@ function InputForm({
                                                                                                         <option value="">-- Pilih Langkah --</option>
                                                                                                         {entrySteps.map((s) => (
                                                                                                             <option key={s.id} value={s.id}>
-                                                                                                                {s.name} (sisa: {s.remaining} pcs)
+                                                                                                                {s.name} {s.remaining > 0 ? `(sisa: ${s.remaining} pcs)` : `(selesai)`}
                                                                                                             </option>
                                                                                                         ))}
                                                                                                     </select>
@@ -982,94 +1097,6 @@ function InputForm({
                     </div>
                 </div>
             </form>
-
-            {/* MODAL FILTER TANGGAL */}
-            {filterOpen && (
-                <div
-                    className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 transition-all"
-                    onClick={() => setFilterOpen(false)}
-                >
-                    <div
-                        className="relative max-w-sm w-full bg-white rounded-xl border border-slate-200 shadow-2xl p-4 sm:p-5 space-y-4"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 border border-teal-100/60 flex items-center justify-center shadow-2xs font-bold shrink-0">
-                                    <Filter className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-900 text-sm leading-tight">
-                                        Pengaturan Tanggal
-                                    </h3>
-                                    <p className="text-[11px] text-slate-500">
-                                        Atur tanggal serentak untuk semua kartu.
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setFilterOpen(false)}
-                                className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-3 text-xs">
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                    Pilih Tanggal Pengerjaan
-                                </label>
-                                <input
-                                    type="date"
-                                    required
-                                    min={invoice.order_date || ""}
-                                    value={tempDate}
-                                    onChange={(e) => setTempDate(e.target.value)}
-                                    className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600 font-mono"
-                                />
-                            </div>
-
-                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                                <input
-                                    type="checkbox"
-                                    checked={tempApply}
-                                    onChange={(e) => setTempApply(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-slate-300 text-teal-600 focus:ring-teal-600 cursor-pointer"
-                                />
-                                <span className="text-xs font-medium text-slate-700">
-                                    Terapkan ke seluruh kartu penjahit
-                                </span>
-                            </label>
-                        </div>
-
-                        <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
-                            <button
-                                type="button"
-                                onClick={() => setFilterOpen(false)}
-                                className="inline-flex items-center h-8 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setGlobalDate(tempDate);
-                                    setApplyToAll(tempApply);
-                                    if (tempApply) {
-                                        setCards((prev) => prev.map((c) => ({ ...c, date: tempDate })));
-                                    }
-                                    setFilterOpen(false);
-                                }}
-                                className="inline-flex items-center h-8 px-3.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
-                            >
-                                Terapkan
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </DashboardLayout>
     );
 }

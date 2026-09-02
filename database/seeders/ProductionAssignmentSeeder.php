@@ -20,111 +20,186 @@ class ProductionAssignmentSeeder extends Seeder
 
         $ahmad = User::where('email', 'ahmad@azhar.test')->first() ?? User::where('name', 'like', '%Ahmad%')->first();
         $budi = User::where('email', 'budi@azhar.test')->first() ?? User::where('name', 'like', '%Budi%')->first();
-        $agus = User::where('email', 'agus@azhar.test')->first() ?? User::where('name', 'like', '%Agus%')->first();
         $dewi = User::where('email', 'dewi@azhar.test')->first() ?? User::where('name', 'like', '%Dewi%')->first();
         $siti = User::where('email', 'siti@azhar.test')->first() ?? User::where('name', 'like', '%Siti%')->first();
+        $rudi = User::where('email', 'rudi@azhar.test')->first() ?? User::where('name', 'like', '%Rudi%')->first();
 
         $fallbackUser = User::first();
         $ahmad = $ahmad ?? $fallbackUser;
         $budi = $budi ?? $fallbackUser;
-        $agus = $agus ?? $fallbackUser;
         $dewi = $dewi ?? $fallbackUser;
         $siti = $siti ?? $fallbackUser;
+        $rudi = $rudi ?? $fallbackUser;
 
         $invSD = Invoice::with(['items.product.productionSteps.productionStep'])->where('invoice_number', 'like', '%-0001')->first();
         if ($invSD && $invSD->items->isNotEmpty()) {
-            $item = $invSD->items->first();
-            $pSteps = $item->product?->productionSteps ?? collect();
+            $itemSD = $invSD->items->first();
+            $pSteps = $itemSD->product?->productionSteps ?? collect();
 
-            $assignAhmad = ProductionAssignment::create([
-                'invoice_item_id' => $item->id,
+            $potongStep = $pSteps->first(fn ($s) => str_contains(strtolower($s->productionStep?->name ?? ''), 'potong'));
+            $jahitSteps = $pSteps->filter(fn ($s) => str_contains(strtolower($s->productionStep?->name ?? ''), 'jahit') || str_contains(strtolower($s->productionStep?->name ?? ''), 'obras'));
+            $finishingSteps = $pSteps->filter(fn ($s) => str_contains(strtolower($s->productionStep?->name ?? ''), 'kerah') || str_contains(strtolower($s->productionStep?->name ?? ''), 'kancing') || str_contains(strtolower($s->productionStep?->name ?? ''), 'gosok') || str_contains(strtolower($s->productionStep?->name ?? ''), 'packing'));
+
+            $asgnAhmad = ProductionAssignment::create([
+                'invoice_item_id' => $itemSD->id,
                 'user_id' => $ahmad->id,
-                'qty' => 20,
-                'target_date' => Carbon::parse($invSD->order_date)->addDays(10)->format('Y-m-d'),
-                'status' => 'in_progress',
+                'qty' => 40,
+                'target_date' => Carbon::parse($invSD->order_date)->addDays(4)->format('Y-m-d'),
+                'status' => 'completed',
             ]);
 
-            $assignBudi = ProductionAssignment::create([
-                'invoice_item_id' => $item->id,
+            if ($potongStep) {
+                ProductionAssignmentStep::create([
+                    'production_assignment_id' => $asgnAhmad->id,
+                    'production_step_id' => $potongStep->production_step_id,
+                    'step_name' => $potongStep->custom_name ?? $potongStep->productionStep?->name ?? 'Potong Kain (Cutting)',
+                    'wage' => $potongStep->wage ?? 1500,
+                    'qty' => 40,
+                    'status' => 'completed',
+                    'completed_at' => Carbon::parse($invSD->order_date)->addDays(3),
+                ]);
+            }
+
+            $asgnBudi = ProductionAssignment::create([
+                'invoice_item_id' => $itemSD->id,
                 'user_id' => $budi->id,
                 'qty' => 20,
                 'target_date' => Carbon::parse($invSD->order_date)->addDays(10)->format('Y-m-d'),
                 'status' => 'in_progress',
             ]);
 
-            foreach ([$assignAhmad, $assignBudi] as $asgn) {
-                foreach ($pSteps as $idx => $ps) {
-                    ProductionAssignmentStep::create([
-                        'production_assignment_id' => $asgn->id,
-                        'production_step_id' => $ps->production_step_id,
-                        'step_name' => $ps->custom_name ?? $ps->productionStep?->name ?? 'Langkah Produksi',
-                        'wage' => $ps->wage ?? 3000,
-                        'qty' => 20,
-                        'status' => $idx === 0 ? 'completed' : ($idx === 1 ? 'in_progress' : 'pending'),
-                        'completed_at' => $idx === 0 ? Carbon::now()->subDays(5) : null,
-                    ]);
-                }
+            foreach ($jahitSteps as $idx => $js) {
+                ProductionAssignmentStep::create([
+                    'production_assignment_id' => $asgnBudi->id,
+                    'production_step_id' => $js->production_step_id,
+                    'step_name' => $js->custom_name ?? $js->productionStep?->name ?? 'Jahit',
+                    'wage' => $js->wage ?? 3000,
+                    'qty' => 20,
+                    'status' => $idx === 0 ? 'completed' : 'in_progress',
+                    'completed_at' => $idx === 0 ? Carbon::parse($invSD->order_date)->addDays(6) : null,
+                ]);
+            }
+
+            $asgnDewi = ProductionAssignment::create([
+                'invoice_item_id' => $itemSD->id,
+                'user_id' => $dewi->id,
+                'qty' => 20,
+                'target_date' => Carbon::parse($invSD->order_date)->addDays(10)->format('Y-m-d'),
+                'status' => 'in_progress',
+            ]);
+
+            foreach ($jahitSteps as $idx => $js) {
+                ProductionAssignmentStep::create([
+                    'production_assignment_id' => $asgnDewi->id,
+                    'production_step_id' => $js->production_step_id,
+                    'step_name' => $js->custom_name ?? $js->productionStep?->name ?? 'Jahit',
+                    'wage' => $js->wage ?? 3000,
+                    'qty' => 20,
+                    'status' => $idx === 0 ? 'completed' : 'in_progress',
+                    'completed_at' => $idx === 0 ? Carbon::parse($invSD->order_date)->addDays(7) : null,
+                ]);
+            }
+
+            $asgnSiti = ProductionAssignment::create([
+                'invoice_item_id' => $itemSD->id,
+                'user_id' => $siti->id,
+                'qty' => 40,
+                'target_date' => Carbon::parse($invSD->order_date)->addDays(14)->format('Y-m-d'),
+                'status' => 'pending',
+            ]);
+
+            foreach ($finishingSteps as $fs) {
+                ProductionAssignmentStep::create([
+                    'production_assignment_id' => $asgnSiti->id,
+                    'production_step_id' => $fs->production_step_id,
+                    'step_name' => $fs->custom_name ?? $fs->productionStep?->name ?? 'Finishing',
+                    'wage' => $fs->wage ?? 1000,
+                    'qty' => 40,
+                    'status' => 'pending',
+                    'completed_at' => null,
+                ]);
             }
         }
 
         $invSMP = Invoice::with(['items.product.productionSteps.productionStep'])->where('invoice_number', 'like', '%-0002')->first();
         if ($invSMP && $invSMP->items->isNotEmpty()) {
-            $item = $invSMP->items->first();
-            $pSteps = $item->product?->productionSteps ?? collect();
+            $itemSMP = $invSMP->items->first();
+            $pSteps = $itemSMP->product?->productionSteps ?? collect();
 
-            $assignAgus = ProductionAssignment::create([
-                'invoice_item_id' => $item->id,
-                'user_id' => $agus->id,
-                'qty' => 30,
+            $potongStep = $pSteps->first(fn ($s) => str_contains(strtolower($s->productionStep?->name ?? ''), 'potong'));
+            $otherSteps = $pSteps->filter(fn ($s) => ! str_contains(strtolower($s->productionStep?->name ?? ''), 'potong'));
+
+            $asgnAhmadSMP = ProductionAssignment::create([
+                'invoice_item_id' => $itemSMP->id,
+                'user_id' => $ahmad->id,
+                'qty' => 50,
+                'target_date' => Carbon::parse($invSMP->order_date)->addDays(4)->format('Y-m-d'),
+                'status' => 'completed',
+            ]);
+
+            if ($potongStep) {
+                ProductionAssignmentStep::create([
+                    'production_assignment_id' => $asgnAhmadSMP->id,
+                    'production_step_id' => $potongStep->production_step_id,
+                    'step_name' => $potongStep->custom_name ?? $potongStep->productionStep?->name ?? 'Potong Kain (Cutting)',
+                    'wage' => $potongStep->wage ?? 1500,
+                    'qty' => 50,
+                    'status' => 'completed',
+                    'completed_at' => Carbon::parse($invSMP->order_date)->addDays(3),
+                ]);
+            }
+
+            $asgnRudi = ProductionAssignment::create([
+                'invoice_item_id' => $itemSMP->id,
+                'user_id' => $rudi->id,
+                'qty' => 50,
                 'target_date' => Carbon::parse($invSMP->order_date)->addDays(12)->format('Y-m-d'),
                 'status' => 'in_progress',
             ]);
 
-            $assignDewi = ProductionAssignment::create([
-                'invoice_item_id' => $item->id,
-                'user_id' => $dewi->id,
-                'qty' => 30,
-                'target_date' => Carbon::parse($invSMP->order_date)->addDays(12)->format('Y-m-d'),
-                'status' => 'in_progress',
-            ]);
-
-            foreach ([$assignAgus, $assignDewi] as $asgn) {
-                foreach ($pSteps as $idx => $ps) {
-                    ProductionAssignmentStep::create([
-                        'production_assignment_id' => $asgn->id,
-                        'production_step_id' => $ps->production_step_id,
-                        'step_name' => $ps->custom_name ?? $ps->productionStep?->name ?? 'Langkah Produksi',
-                        'wage' => $ps->wage ?? 3000,
-                        'qty' => 30,
-                        'status' => $idx === 0 ? 'completed' : 'pending',
-                        'completed_at' => $idx === 0 ? Carbon::now()->subDays(2) : null,
-                    ]);
-                }
+            foreach ($otherSteps as $idx => $os) {
+                ProductionAssignmentStep::create([
+                    'production_assignment_id' => $asgnRudi->id,
+                    'production_step_id' => $os->production_step_id,
+                    'step_name' => $os->custom_name ?? $os->productionStep?->name ?? 'Tahapan Produksi',
+                    'wage' => $os->wage ?? 2500,
+                    'qty' => 50,
+                    'status' => $idx === 0 ? 'completed' : ($idx === 1 ? 'in_progress' : 'pending'),
+                    'completed_at' => $idx === 0 ? Carbon::parse($invSMP->order_date)->addDays(5) : null,
+                ]);
             }
         }
 
         $invSMA = Invoice::with(['items.product.productionSteps.productionStep'])->where('invoice_number', 'like', '%-0003')->first();
         if ($invSMA && $invSMA->items->isNotEmpty()) {
-            $item = $invSMA->items->first();
-            $pSteps = $item->product?->productionSteps ?? collect();
+            $itemSMA = $invSMA->items->first();
+            $pSteps = $itemSMA->product?->productionSteps ?? collect();
 
-            $assignSiti = ProductionAssignment::create([
-                'invoice_item_id' => $item->id,
-                'user_id' => $siti->id,
-                'qty' => 50,
-                'target_date' => Carbon::parse($invSMA->order_date)->addDays(18)->format('Y-m-d'),
+            $asgnAhmadSMA = ProductionAssignment::create([
+                'invoice_item_id' => $itemSMA->id,
+                'user_id' => $ahmad->id,
+                'qty' => 30,
+                'target_date' => Carbon::parse($invSMA->order_date)->addDays(4)->format('Y-m-d'),
+                'status' => 'completed',
+            ]);
+
+            $asgnBudiSMA = ProductionAssignment::create([
+                'invoice_item_id' => $itemSMA->id,
+                'user_id' => $budi->id,
+                'qty' => 30,
+                'target_date' => Carbon::parse($invSMA->order_date)->addDays(12)->format('Y-m-d'),
                 'status' => 'completed',
             ]);
 
             foreach ($pSteps as $ps) {
                 ProductionAssignmentStep::create([
-                    'production_assignment_id' => $assignSiti->id,
+                    'production_assignment_id' => $asgnBudiSMA->id,
                     'production_step_id' => $ps->production_step_id,
-                    'step_name' => $ps->custom_name ?? $ps->productionStep?->name ?? 'Langkah Produksi',
-                    'wage' => $ps->wage ?? 3500,
-                    'qty' => 50,
+                    'step_name' => $ps->custom_name ?? $ps->productionStep?->name ?? 'Tahapan Produksi',
+                    'wage' => $ps->wage ?? 3000,
+                    'qty' => 30,
                     'status' => 'completed',
-                    'completed_at' => Carbon::now()->subDays(4),
+                    'completed_at' => Carbon::parse($invSMA->order_date)->addDays(10),
                 ]);
             }
         }

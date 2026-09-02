@@ -565,7 +565,7 @@ export default function Create({ categories = [], units = [] }) {
                                             className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-md text-xs font-semibold shadow-xs transition-all cursor-pointer"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
-                                            <span>Tambah Kemasan</span>
+                                            <span>Kemasan</span>
                                         </button>
                                     </div>
 

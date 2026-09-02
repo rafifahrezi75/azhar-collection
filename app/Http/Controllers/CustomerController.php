@@ -14,6 +14,13 @@ class CustomerController extends Controller
         return Inertia::render('Pelanggan/Index');
     }
 
+    public function createPage()
+    {
+        return Inertia::render('Pelanggan/Create', [
+            'nextCode' => $this->getGeneratedNextCode(),
+        ]);
+    }
+
     public function index()
     {
         $customers = Customer::latest()->get();
@@ -38,7 +45,7 @@ class CustomerController extends Controller
         $maxNumber = 0;
         foreach ($codes as $code) {
             if (preg_match('/CUST-(\d+)/i', $code, $matches)) {
-                $num = (int)$matches[1];
+                $num = (int) $matches[1];
                 if ($num > $maxNumber) {
                     $maxNumber = $num;
                 }
@@ -46,7 +53,8 @@ class CustomerController extends Controller
         }
 
         $nextNumber = $maxNumber + 1;
-        return 'CUST-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
+        return 'CUST-'.str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
     }
 
     public function store(Request $request)
@@ -68,18 +76,53 @@ class CustomerController extends Controller
             'code' => strtoupper(trim($validated['code'])),
             'name' => trim($validated['name']),
             'type' => trim($validated['type']),
-            'institution_name' => !empty($validated['institution_name']) ? trim($validated['institution_name']) : null,
-            'contact_person' => !empty($validated['contact_person']) ? trim($validated['contact_person']) : null,
-            'phone' => !empty($validated['phone']) ? trim($validated['phone']) : null,
-            'email' => !empty($validated['email']) ? trim($validated['email']) : null,
-            'address' => !empty($validated['address']) ? trim($validated['address']) : null,
-            'notes' => !empty($validated['notes']) ? trim($validated['notes']) : null,
+            'institution_name' => ! empty($validated['institution_name']) ? trim($validated['institution_name']) : null,
+            'contact_person' => ! empty($validated['contact_person']) ? trim($validated['contact_person']) : null,
+            'phone' => ! empty($validated['phone']) ? trim($validated['phone']) : null,
+            'email' => ! empty($validated['email']) ? trim($validated['email']) : null,
+            'address' => ! empty($validated['address']) ? trim($validated['address']) : null,
+            'notes' => ! empty($validated['notes']) ? trim($validated['notes']) : null,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
-        return response()->json([
-            'message' => "Data pelanggan '{$customer->name}' berhasil ditambahkan.",
-            'data' => $customer,
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+            return response()->json([
+                'message' => "Data pelanggan '{$customer->name}' berhasil ditambahkan.",
+                'data' => $customer,
+            ]);
+        }
+
+        return redirect()->route('pelanggan.show', $customer->id);
+    }
+
+    public function showPage(Customer $customer)
+    {
+        $customer->load(['invoices' => function ($q) {
+            $q->with('items')->latest();
+        }]);
+
+        $totalInvoices = $customer->invoices->count();
+        $totalSpent = (float) $customer->invoices->sum('grand_total');
+        $totalItems = (int) $customer->invoices->flatMap->items->sum('qty');
+        $completedInvoices = $customer->invoices->filter(fn ($inv) => in_array(strtolower($inv->status), ['completed', 'selesai', 'paid']))->count();
+
+        $stats = [
+            'total_invoices' => $totalInvoices,
+            'total_spent' => $totalSpent,
+            'total_items' => $totalItems,
+            'completed_invoices' => $completedInvoices,
+        ];
+
+        return Inertia::render('Pelanggan/Show', [
+            'customer' => $customer,
+            'stats' => $stats,
+        ]);
+    }
+
+    public function editPage(Customer $customer)
+    {
+        return Inertia::render('Pelanggan/Edit', [
+            'customer' => $customer,
         ]);
     }
 
@@ -102,19 +145,23 @@ class CustomerController extends Controller
             'code' => strtoupper(trim($validated['code'])),
             'name' => trim($validated['name']),
             'type' => trim($validated['type']),
-            'institution_name' => !empty($validated['institution_name']) ? trim($validated['institution_name']) : null,
-            'contact_person' => !empty($validated['contact_person']) ? trim($validated['contact_person']) : null,
-            'phone' => !empty($validated['phone']) ? trim($validated['phone']) : null,
-            'email' => !empty($validated['email']) ? trim($validated['email']) : null,
-            'address' => !empty($validated['address']) ? trim($validated['address']) : null,
-            'notes' => !empty($validated['notes']) ? trim($validated['notes']) : null,
+            'institution_name' => ! empty($validated['institution_name']) ? trim($validated['institution_name']) : null,
+            'contact_person' => ! empty($validated['contact_person']) ? trim($validated['contact_person']) : null,
+            'phone' => ! empty($validated['phone']) ? trim($validated['phone']) : null,
+            'email' => ! empty($validated['email']) ? trim($validated['email']) : null,
+            'address' => ! empty($validated['address']) ? trim($validated['address']) : null,
+            'notes' => ! empty($validated['notes']) ? trim($validated['notes']) : null,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
-        return response()->json([
-            'message' => "Data pelanggan '{$customer->name}' berhasil diperbarui.",
-            'data' => $customer,
-        ]);
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+            return response()->json([
+                'message' => "Data pelanggan '{$customer->name}' berhasil diperbarui.",
+                'data' => $customer,
+            ]);
+        }
+
+        return redirect()->route('pelanggan.show', $customer->id);
     }
 
     public function destroy(Customer $customer)

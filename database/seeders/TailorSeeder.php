@@ -15,13 +15,10 @@ class TailorSeeder extends Seeder
 
         $tailors = [
             ['name' => 'Ahmad Fauzi', 'email' => 'ahmad@azhar.test'],
-            ['name' => 'Agus Setiawan', 'email' => 'agus@azhar.test'],
             ['name' => 'Budi Santoso', 'email' => 'budi@azhar.test'],
             ['name' => 'Dewi Lestari', 'email' => 'dewi@azhar.test'],
             ['name' => 'Siti Rahayu', 'email' => 'siti@azhar.test'],
             ['name' => 'Rudi Hartono', 'email' => 'rudi@azhar.test'],
-            ['name' => 'Eka Putri', 'email' => 'eka@azhar.test'],
-            ['name' => 'Joko Prasetyo', 'email' => 'joko@azhar.test'],
         ];
 
         foreach ($tailors as $t) {

@@ -448,7 +448,7 @@ const ItemModal = memo(function ItemModal({
                                         className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-md text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
                                     >
                                         <Plus className="w-3 h-3" />
-                                        <span>Tambah Kemasan</span>
+                                        <span className="mt-0.5">Kemasan</span>
                                     </button>
                                 </div>
 
@@ -771,7 +771,7 @@ const ItemModal = memo(function ItemModal({
                         <button
                             type="submit"
                             disabled={submitting}
-                            title={submitting ? "Memproses..." : isEditing ? "Simpan Perubahan" : "Simpan Bahan Baku"}
+                            title={submitting ? "Memproses..." : isEditing ? "Simpan" : "Simpan"}
                             className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-2xs hover:shadow-xs transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                             <Save className="w-4 h-4" />

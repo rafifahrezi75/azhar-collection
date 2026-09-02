@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\Item;
-use App\Models\ItemConversion;
 use App\Models\StockMutation;
 use App\Models\Unit;
 use App\Models\User;
@@ -18,13 +17,12 @@ class RawMaterialSeeder extends Seeder
         $adminUser = User::first();
         $adminId = $adminUser ? $adminUser->id : 1;
 
-        // Categories
         $categoriesData = [
             ['name' => 'Kain & Tekstil Utama', 'slug' => 'kain-tekstil-utama', 'description' => 'Bahan kain utama'],
-            ['name' => 'Benang Jahit & Obras', 'slug' => 'benang-jahit-obras', 'description' => 'Benang jahit'],
-            ['name' => 'Aksesoris Seragam', 'slug' => 'aksesoris-seragam', 'description' => 'Bet, topi, dasi'],
-            ['name' => 'Kancing & Ritsleting', 'slug' => 'kancing-ritsleting', 'description' => 'Kancing seragam, zipper'],
-            ['name' => 'Karet & Pelapis', 'slug' => 'karet-pelapis', 'description' => 'Karet elastis celana, kain keras kerah'],
+            ['name' => 'Benang Jahit & Obras', 'slug' => 'benang-jahit-obras', 'description' => 'Benang jahit dan obras'],
+            ['name' => 'Aksesoris Seragam', 'slug' => 'aksesoris-seragam', 'description' => 'Bet logo, bordir, aksesoris'],
+            ['name' => 'Kancing & Ritsleting', 'slug' => 'kancing-ritsleting', 'description' => 'Kancing kemeja dan zipper'],
+            ['name' => 'Karet & Pelapis', 'slug' => 'karet-pelapis', 'description' => 'Karet celana dan kain keras kerah'],
         ];
 
         $categories = [];
@@ -32,11 +30,9 @@ class RawMaterialSeeder extends Seeder
             $categories[$c['name']] = Category::firstOrCreate(['slug' => $c['slug']], $c);
         }
 
-        // Units
         $unitsData = [
             ['name' => 'Meter', 'symbol' => 'm'],
             ['name' => 'Roll', 'symbol' => 'roll'],
-            ['name' => 'Yard', 'symbol' => 'yd'],
             ['name' => 'Pcs', 'symbol' => 'pcs'],
             ['name' => 'Gross', 'symbol' => 'grs'],
             ['name' => 'Lusin', 'symbol' => 'lsn'],
@@ -48,114 +44,169 @@ class RawMaterialSeeder extends Seeder
         }
 
         $itemsData = [
-            // Kain
             [
-                'code' => 'KAIN-OXF-WHT', 'name' => 'Kain Oxford Putih (Atasan)',
+                'code' => 'KAIN-OXF-WHT',
+                'name' => 'Kain Oxford Super Putih',
                 'category_id' => $categories['Kain & Tekstil Utama']->id,
-                'unit_id' => $units['m']->id, 'price' => 28000,
-                'is_active' => true, 'description' => 'Bahan kemeja SD, SMP, SMA',
+                'unit_id' => $units['m']->id,
+                'price' => 28000,
+                'is_active' => true,
+                'description' => 'Bahan kemeja seragam SD, SMP, SMA',
+                'stock' => 350,
             ],
             [
-                'code' => 'KAIN-FAM-RED', 'name' => 'Kain Famatex Merah Hati (Bawahan SD)',
+                'code' => 'KAIN-FAM-RED',
+                'name' => 'Kain Famatex Merah SD',
                 'category_id' => $categories['Kain & Tekstil Utama']->id,
-                'unit_id' => $units['m']->id, 'price' => 35000,
-                'is_active' => true, 'description' => 'Bahan celana/rok SD',
+                'unit_id' => $units['m']->id,
+                'price' => 35000,
+                'is_active' => true,
+                'description' => 'Bahan celana dan rok seragam SD',
+                'stock' => 220,
             ],
             [
-                'code' => 'KAIN-FAM-BLU', 'name' => 'Kain Famatex Biru Dongker (Bawahan SMP)',
+                'code' => 'KAIN-FAM-BLU',
+                'name' => 'Kain Famatex Biru Dongker SMP',
                 'category_id' => $categories['Kain & Tekstil Utama']->id,
-                'unit_id' => $units['m']->id, 'price' => 35000,
-                'is_active' => true, 'description' => 'Bahan celana/rok SMP',
+                'unit_id' => $units['m']->id,
+                'price' => 35000,
+                'is_active' => true,
+                'description' => 'Bahan celana dan rok seragam SMP',
+                'stock' => 280,
             ],
             [
-                'code' => 'KAIN-FAM-GRY', 'name' => 'Kain Famatex Abu-Abu (Bawahan SMA)',
+                'code' => 'KAIN-FAM-GRY',
+                'name' => 'Kain Famatex Abu SMA',
                 'category_id' => $categories['Kain & Tekstil Utama']->id,
-                'unit_id' => $units['m']->id, 'price' => 35000,
-                'is_active' => true, 'description' => 'Bahan celana/rok SMA',
+                'unit_id' => $units['m']->id,
+                'price' => 35000,
+                'is_active' => true,
+                'description' => 'Bahan celana dan rok seragam SMA',
+                'stock' => 190,
             ],
             [
-                'code' => 'KAIN-OXF-PRM', 'name' => 'Kain Oxford Coklat Muda (Pramuka)',
+                'code' => 'KAIN-FAM-PRM',
+                'name' => 'Kain Famatex Coklat Tua Pramuka',
                 'category_id' => $categories['Kain & Tekstil Utama']->id,
-                'unit_id' => $units['m']->id, 'price' => 30000,
-                'is_active' => true, 'description' => 'Atasan pramuka',
+                'unit_id' => $units['m']->id,
+                'price' => 36000,
+                'is_active' => true,
+                'description' => 'Bahan seragam pramuka penegak dan penggalang',
+                'stock' => 160,
             ],
             [
-                'code' => 'KAIN-FAM-PRM', 'name' => 'Kain Famatex Coklat Tua (Pramuka)',
-                'category_id' => $categories['Kain & Tekstil Utama']->id,
-                'unit_id' => $units['m']->id, 'price' => 35000,
-                'is_active' => true, 'description' => 'Bawahan pramuka',
-            ],
-            // Benang
-            [
-                'code' => 'BNG-WHT', 'name' => 'Benang Jahit Putih',
+                'code' => 'BNG-WHT',
+                'name' => 'Benang Jahit Astra Putih',
                 'category_id' => $categories['Benang Jahit & Obras']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 2000,
-                'is_active' => true, 'description' => 'Benang jahit atasan',
+                'unit_id' => $units['pcs']->id,
+                'price' => 2000,
+                'is_active' => true,
+                'description' => 'Benang jahit kemeja putih',
+                'stock' => 85,
             ],
             [
-                'code' => 'BNG-OBR-WHT', 'name' => 'Benang Obras Putih',
+                'code' => 'BNG-OBR-WHT',
+                'name' => 'Benang Obras Putih',
                 'category_id' => $categories['Benang Jahit & Obras']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 15000,
-                'is_active' => true, 'description' => 'Benang obras dalam',
+                'unit_id' => $units['pcs']->id,
+                'price' => 15000,
+                'is_active' => true,
+                'description' => 'Benang obras sambungan kain',
+                'stock' => 25,
             ],
-            // Aksesoris
             [
-                'code' => 'BADGE-SD', 'name' => 'Badge / Bet SD',
+                'code' => 'BADGE-SD',
+                'name' => 'Badge Bordir Logo SD',
                 'category_id' => $categories['Aksesoris Seragam']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 1500,
-                'is_active' => true, 'description' => 'Logo SD di saku',
+                'unit_id' => $units['pcs']->id,
+                'price' => 1500,
+                'is_active' => true,
+                'description' => 'Logo saku kemeja SD',
+                'stock' => 450,
             ],
             [
-                'code' => 'BADGE-SMP', 'name' => 'Badge / Bet SMP',
+                'code' => 'BADGE-SMP',
+                'name' => 'Badge Bordir Logo SMP',
                 'category_id' => $categories['Aksesoris Seragam']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 1500,
-                'is_active' => true, 'description' => 'Logo SMP di saku',
+                'unit_id' => $units['pcs']->id,
+                'price' => 1500,
+                'is_active' => true,
+                'description' => 'Logo saku kemeja SMP',
+                'stock' => 380,
             ],
             [
-                'code' => 'BADGE-SMA', 'name' => 'Badge / Bet SMA',
+                'code' => 'BADGE-SMA',
+                'name' => 'Badge Bordir Logo SMA',
                 'category_id' => $categories['Aksesoris Seragam']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 1500,
-                'is_active' => true, 'description' => 'Logo SMA di saku',
+                'unit_id' => $units['pcs']->id,
+                'price' => 1500,
+                'is_active' => true,
+                'description' => 'Logo saku kemeja SMA',
+                'stock' => 260,
             ],
             [
-                'code' => 'BADGE-PRM', 'name' => 'Badge / Bet Tunas Kelapa Pramuka',
+                'code' => 'BADGE-PRM',
+                'name' => 'Badge Tunas Kelapa Pramuka',
                 'category_id' => $categories['Aksesoris Seragam']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 1000,
-                'is_active' => true, 'description' => 'Tanda Pramuka',
+                'unit_id' => $units['pcs']->id,
+                'price' => 1000,
+                'is_active' => true,
+                'description' => 'Bet tanda pramuka',
+                'stock' => 320,
             ],
-            // Kancing & Karet
             [
-                'code' => 'KNC-WHT', 'name' => 'Kancing Kemeja Putih (14L)',
+                'code' => 'KNC-WHT',
+                'name' => 'Kancing Kemeja Putih 14L',
                 'category_id' => $categories['Kancing & Ritsleting']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 50,
-                'is_active' => true, 'description' => 'Kancing atasan putih',
+                'unit_id' => $units['pcs']->id,
+                'price' => 50,
+                'is_active' => true,
+                'description' => 'Kancing 4 lubang putih kemeja',
+                'stock' => 2500,
             ],
             [
-                'code' => 'KNC-PRM', 'name' => 'Kancing Kemeja Coklat (14L)',
+                'code' => 'KNC-PRM',
+                'name' => 'Kancing Kemeja Coklat 14L',
                 'category_id' => $categories['Kancing & Ritsleting']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 50,
-                'is_active' => true, 'description' => 'Kancing atasan pramuka',
+                'unit_id' => $units['pcs']->id,
+                'price' => 50,
+                'is_active' => true,
+                'description' => 'Kancing seragam pramuka',
+                'stock' => 1200,
             ],
             [
-                'code' => 'ZIP-YKK-N1', 'name' => 'Ritsleting YKK Celana (Besi)',
+                'code' => 'ZIP-YKK-N1',
+                'name' => 'Ritsleting YKK Celana',
                 'category_id' => $categories['Kancing & Ritsleting']->id,
-                'unit_id' => $units['pcs']->id, 'price' => 2500,
-                'is_active' => true, 'description' => 'Ritsleting celana sekolah',
+                'unit_id' => $units['pcs']->id,
+                'price' => 2500,
+                'is_active' => true,
+                'description' => 'Zipper celana sekolah',
+                'stock' => 300,
             ],
             [
-                'code' => 'KRT-ELS-3CM', 'name' => 'Karet Elastis Celana 3cm',
+                'code' => 'KRT-ELS-3CM',
+                'name' => 'Karet Elastis Celana 3cm',
                 'category_id' => $categories['Karet & Pelapis']->id,
-                'unit_id' => $units['m']->id, 'price' => 2000,
-                'is_active' => true, 'description' => 'Karet pinggang celana/rok',
+                'unit_id' => $units['m']->id,
+                'price' => 2000,
+                'is_active' => true,
+                'description' => 'Karet pinggang elastis celana dan rok',
+                'stock' => 180,
             ],
             [
-                'code' => 'KAIN-KRS-KRH', 'name' => 'Kain Keras Kerah (Staplek)',
+                'code' => 'KAIN-KRS-KRH',
+                'name' => 'Kain Keras Kerah Staplek',
                 'category_id' => $categories['Karet & Pelapis']->id,
-                'unit_id' => $units['m']->id, 'price' => 8000,
-                'is_active' => true, 'description' => 'Pengeras kerah kemeja',
+                'unit_id' => $units['m']->id,
+                'price' => 8000,
+                'is_active' => true,
+                'description' => 'Pelapis keras kerah kemeja',
+                'stock' => 75,
             ],
         ];
 
+        DB::table('stock_mutations')->delete();
         DB::table('items')->delete();
 
         foreach ($itemsData as $data) {
@@ -167,21 +218,21 @@ class RawMaterialSeeder extends Seeder
                 'price' => $data['price'],
                 'is_active' => $data['is_active'],
                 'description' => $data['description'],
-                'estimated_stock' => rand(500, 2000),
-                'real_stock' => rand(480, 2000),
+                'estimated_stock' => $data['stock'],
+                'real_stock' => $data['stock'],
             ]);
 
             StockMutation::create([
                 'item_id' => $item->id,
                 'user_id' => $adminId,
                 'type' => 'in',
-                'quantity' => $item->real_stock,
+                'quantity' => $data['stock'],
                 'unit_id' => $item->unit_id,
                 'multiplier' => 1,
-                'total_base_quantity' => $item->real_stock,
+                'total_base_quantity' => $data['stock'],
                 'previous_stock' => 0,
-                'current_stock' => $item->real_stock,
-                'notes' => 'Initial stock setup via seeder',
+                'current_stock' => $data['stock'],
+                'notes' => 'Setup saldo awal stok bahan baku',
             ]);
         }
     }

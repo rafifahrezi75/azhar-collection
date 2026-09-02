@@ -4,12 +4,10 @@ import React, {
     useCallback,
     useMemo,
 } from "react";
-import { Head, usePage } from "@inertiajs/react";
+import { Head, usePage, router } from "@inertiajs/react";
 import axios from "axios";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import PageHeaderBar from "@/Components/PageHeaderBar";
-import CustomerModal from "@/Components/CustomerModal";
-import CustomerDetailModal from "@/Components/CustomerDetailModal";
 import CustomerTable from "@/Components/CustomerTable";
 import CustomerFilterModal from "@/Components/CustomerFilterModal";
 import { hasPermission } from "@/utils/permissions";
@@ -17,19 +15,6 @@ import {
     Toast,
     confirmDialog,
 } from "@/utils/sweetalert";
-
-const INITIAL_FORM_STATE = {
-    code: "",
-    name: "",
-    type: "Perorangan",
-    institution_name: "",
-    contact_person: "",
-    phone: "",
-    email: "",
-    address: "",
-    notes: "",
-    is_active: true,
-};
 
 export default function Index() {
     const { auth } = usePage().props;
@@ -52,27 +37,6 @@ export default function Index() {
         useState(1);
     const [itemsPerPage, setItemsPerPage] =
         useState(10);
-
-    const [isModalOpen, setIsModalOpen] =
-        useState(false);
-    const [editingId, setEditingId] =
-        useState(null);
-    const [submitting, setSubmitting] =
-        useState(false);
-
-    const [
-        selectedCustomer,
-        setSelectedCustomer,
-    ] = useState(null);
-
-    const [
-        isDetailModalOpen,
-        setIsDetailModalOpen,
-    ] = useState(false);
-
-    const [form, setForm] = useState({
-        ...INITIAL_FORM_STATE,
-    });
 
     const canCreate = useMemo(
         () =>
@@ -253,160 +217,17 @@ export default function Index() {
         currentPage,
     ]);
 
-    const handleOpenCreateModal =
-        useCallback(() => {
-            closeFilter();
+    const handleOpenCreateModal = useCallback(() => {
+        router.visit("/dashboard/pelanggan/create");
+    }, []);
 
-            setEditingId(null);
+    const handleOpenEditModal = useCallback((item) => {
+        router.visit(`/dashboard/pelanggan/${item.id}/edit`);
+    }, []);
 
-            setForm({
-                ...INITIAL_FORM_STATE,
-            });
-
-            setIsModalOpen(true);
-        }, [closeFilter]);
-
-    const handleOpenEditModal =
-        useCallback(
-            (item) => {
-                closeFilter();
-
-                setEditingId(item.id);
-
-                setForm({
-                    code: item.code || "",
-                    name: item.name || "",
-                    type:
-                        item.type ||
-                        "Perorangan",
-                    institution_name:
-                        item.institution_name ||
-                        "",
-                    contact_person:
-                        item.contact_person ||
-                        "",
-                    phone:
-                        item.phone || "",
-                    email:
-                        item.email || "",
-                    address:
-                        item.address || "",
-                    notes:
-                        item.notes || "",
-                    is_active: Boolean(
-                        item.is_active,
-                    ),
-                });
-
-                setIsModalOpen(true);
-            },
-            [closeFilter],
-        );
-
-    const handleCloseModal =
-        useCallback(() => {
-            setIsModalOpen(false);
-            setEditingId(null);
-
-            setForm({
-                ...INITIAL_FORM_STATE,
-            });
-        }, []);
-
-    const handleOpenDetailModal =
-        useCallback(
-            (item) => {
-                closeFilter();
-
-                setSelectedCustomer(item);
-                setIsDetailModalOpen(true);
-            },
-            [closeFilter],
-        );
-
-    const handleCloseDetailModal =
-        useCallback(() => {
-            setSelectedCustomer(null);
-            setIsDetailModalOpen(false);
-        }, []);
-
-    const handleFormChange =
-        useCallback((e) => {
-            const {
-                name,
-                value,
-                type,
-                checked,
-            } = e.target;
-
-            setForm((prev) => ({
-                ...prev,
-                [name]:
-                    type === "checkbox"
-                        ? checked
-                        : value,
-            }));
-        }, []);
-
-    const handleSubmit = useCallback(
-        async (e) => {
-            e.preventDefault();
-
-            setSubmitting(true);
-
-            try {
-                if (editingId) {
-                    const res =
-                        await axios.put(
-                            `/api/customers/${editingId}`,
-                            form,
-                        );
-
-                    Toast.success(
-                        res.data.message ||
-                            "Data pelanggan berhasil diperbarui.",
-                    );
-                } else {
-                    const res =
-                        await axios.post(
-                            "/api/customers",
-                            form,
-                        );
-
-                    Toast.success(
-                        res.data.message ||
-                            "Data pelanggan berhasil ditambahkan.",
-                    );
-                }
-
-                handleCloseModal();
-                loadData();
-            } catch (err) {
-                Toast.error(
-                    err.response?.data
-                        ?.message ||
-                        (err.response?.data
-                            ?.errors
-                            ? Object.values(
-                                  err.response
-                                      .data
-                                      .errors,
-                              )
-                                  .flat()
-                                  .join(", ")
-                            : "Terjadi kesalahan saat menyimpan data pelanggan."),
-                );
-            } finally {
-                setSubmitting(false);
-            }
-        },
-        [
-            editingId,
-            form,
-            handleCloseModal,
-            loadData,
-        ],
-    );
+    const handleOpenDetailModal = useCallback((item) => {
+        router.visit(`/dashboard/pelanggan/${item.id}`);
+    }, []);
 
     const handleDelete = useCallback(
         async (item) => {
@@ -566,44 +387,6 @@ export default function Index() {
                     }
                     onDelete={
                         handleDelete
-                    }
-                />
-
-                <CustomerDetailModal
-                    isOpen={
-                        isDetailModalOpen
-                    }
-                    customer={
-                        selectedCustomer
-                    }
-                    canEdit={canUpdate}
-                    onClose={
-                        handleCloseDetailModal
-                    }
-                    onEdit={
-                        handleOpenEditModal
-                    }
-                />
-
-                <CustomerModal
-                    isOpen={
-                        isModalOpen
-                    }
-                    isEditing={Boolean(
-                        editingId,
-                    )}
-                    form={form}
-                    submitting={
-                        submitting
-                    }
-                    onClose={
-                        handleCloseModal
-                    }
-                    onChange={
-                        handleFormChange
-                    }
-                    onSubmit={
-                        handleSubmit
                     }
                 />
             </div>

@@ -107,10 +107,10 @@ export default function Show({ purchase }) {
                                     type="button"
                                     onClick={() => router.visit(route("purchases.preview", purchase.id))}
                                     className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-semibold rounded-lg border border-teal-200 shadow-2xs transition-all cursor-pointer"
-                                    title="Cetak Nota Resmi Pembelian"
+                                    title="Cetak Nota"
                                 >
                                     <Receipt className="w-3.5 h-3.5 text-teal-600" />
-                                    <span>Cetak Nota</span>
+                                    <span className="mt-0.5">Cetak Nota</span>
                                 </button>
                             </div>
                         </div>

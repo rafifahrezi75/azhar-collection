@@ -7,93 +7,133 @@ use App\Models\Purchase;
 use App\Models\StockMutation;
 use App\Models\User;
 use Carbon\Carbon;
-use Faker\Factory as Faker;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $faker = Faker::create('id_ID');
-        $user = User::first();
-        $items = Item::with(['unit', 'conversions.unit'])->where('is_active', true)->get();
+        DB::table('purchases')->delete();
+        DB::table('purchase_items')->delete();
 
-        if ($items->count() < 2) {
-            return;
-        }
+        $admin = User::first();
+        $adminId = $admin ? $admin->id : 1;
 
-        $suppliers = ['Toko Bahan Sejahtera', 'Grosir Kain Abadi', 'Mitra Benang Utama', 'Pabrik Kancing Nusantara', 'CV Mandiri Garment'];
+        $kainOxf = Item::where('code', 'KAIN-OXF-WHT')->first();
+        $kainFamRed = Item::where('code', 'KAIN-FAM-RED')->first();
+        $kainFamBlu = Item::where('code', 'KAIN-FAM-BLU')->first();
+        $benang = Item::where('code', 'BNG-WHT')->first();
+        $kancing = Item::where('code', 'KNC-WHT')->first();
+        $zipper = Item::where('code', 'ZIP-YKK-N1')->first();
 
-        for ($i = 1; $i <= 15; $i++) {
-            $purchaseDate = Carbon::now()->subDays(rand(1, 60));
-            $referenceNo = 'PUR-'.$purchaseDate->format('Ymd').'-'.str_pad($i, 4, '0', STR_PAD_LEFT);
+        $purchasesData = [
+            [
+                'supplier_name' => 'CV Tekstil Bandung Utama',
+                'days_ago' => 25,
+                'notes' => 'Kulaan kain gelombang awal untuk persiapan semester baru',
+                'items' => [
+                    [
+                        'item' => $kainOxf,
+                        'qty' => 100,
+                        'unit_price' => 24000,
+                    ],
+                    [
+                        'item' => $kainFamRed,
+                        'qty' => 80,
+                        'unit_price' => 30000,
+                    ],
+                ],
+            ],
+            [
+                'supplier_name' => 'Grosir Kain & Bahan Abadi Cirebon',
+                'days_ago' => 15,
+                'notes' => 'Restock kain famatex biru SMP',
+                'items' => [
+                    [
+                        'item' => $kainFamBlu,
+                        'qty' => 100,
+                        'unit_price' => 30000,
+                    ],
+                ],
+            ],
+            [
+                'supplier_name' => 'Toko Mitra Benang & Aksesoris',
+                'days_ago' => 8,
+                'notes' => 'Pembelian benang jahit putih dan kancing kemeja',
+                'items' => [
+                    [
+                        'item' => $benang,
+                        'qty' => 40,
+                        'unit_price' => 1500,
+                    ],
+                    [
+                        'item' => $kancing,
+                        'qty' => 1000,
+                        'unit_price' => 40,
+                    ],
+                    [
+                        'item' => $zipper,
+                        'qty' => 100,
+                        'unit_price' => 2000,
+                    ],
+                ],
+            ],
+        ];
+
+        foreach ($purchasesData as $idx => $pData) {
+            $pDate = Carbon::now()->subDays($pData['days_ago']);
+            $refNo = 'PUR-'.$pDate->format('Ymd').'-'.str_pad($idx + 1, 4, '0', STR_PAD_LEFT);
 
             $purchase = Purchase::create([
-                'reference_no' => $referenceNo,
-                'supplier_name' => $faker->randomElement($suppliers),
-                'date' => $purchaseDate->format('Y-m-d'),
-                'total_amount' => 0, // Will update later
-                'notes' => $faker->optional(0.7)->sentence(),
-                'created_by' => $user->id ?? 1,
+                'reference_no' => $refNo,
+                'supplier_name' => $pData['supplier_name'],
+                'date' => $pDate->format('Y-m-d'),
+                'total_amount' => 0,
+                'notes' => $pData['notes'],
+                'created_by' => $adminId,
             ]);
 
-            // Randomize how many items in this purchase (1 to 4)
-            $numItems = rand(1, min(4, $items->count()));
-            $selectedItems = $items->random($numItems);
-
-            $totalAmount = 0;
-
-            foreach ($selectedItems as $item) {
-                // Determine if we buy in base unit or conversion unit
-                $isBaseUnit = $faker->boolean(60); // 60% chance base unit
-                $unitId = $item->unit_id;
-                $multiplier = 1;
-
-                if (! $isBaseUnit && $item->conversions->count() > 0) {
-                    $conversion = $item->conversions->random();
-                    $unitId = $conversion->unit_id;
-                    $multiplier = $conversion->conversion_rate;
+            $total = 0;
+            foreach ($pData['items'] as $itemData) {
+                $item = $itemData['item'];
+                if (! $item) {
+                    continue;
                 }
 
-                $qty = rand(2, 20); // Quantity purchased
-                $basePrice = $item->price > 0 ? $item->price * 0.7 : rand(5000, 50000); // Assume cost is 70% of selling price
-                $unitPrice = $basePrice * $multiplier; // Adjust price based on unit
-                $subtotal = $qty * $unitPrice;
+                $qty = $itemData['qty'];
+                $price = $itemData['unit_price'];
+                $subtotal = $qty * $price;
+                $total += $subtotal;
 
                 $purchase->items()->create([
                     'item_id' => $item->id,
-                    'unit_id' => $unitId,
+                    'unit_id' => $item->unit_id,
                     'quantity' => $qty,
-                    'unit_price' => $unitPrice,
+                    'unit_price' => $price,
                     'subtotal' => $subtotal,
                 ]);
 
-                // Mutasi Item
-                $baseQty = $qty * $multiplier;
                 StockMutation::create([
                     'item_id' => $item->id,
-                    'user_id' => $user->id ?? 1,
+                    'user_id' => $adminId,
                     'type' => 'in',
                     'quantity' => $qty,
-                    'unit_id' => $unitId,
-                    'multiplier' => $multiplier,
-                    'total_base_quantity' => $baseQty,
-                    'previous_stock' => $item->stock,
-                    'current_stock' => (int) $item->stock + $baseQty,
-                    'notes' => 'Pembelian/Restock: '.$referenceNo,
-                    'reference_no' => $referenceNo,
-                    'mutation_date' => $purchaseDate,
+                    'unit_id' => $item->unit_id,
+                    'multiplier' => 1,
+                    'total_base_quantity' => $qty,
+                    'previous_stock' => $item->real_stock,
+                    'current_stock' => $item->real_stock + $qty,
+                    'notes' => 'Pembelian supplier: '.$refNo,
+                    'reference_no' => $refNo,
+                    'mutation_date' => $pDate->format('Y-m-d'),
                 ]);
-                $item->increment('stock', $baseQty);
 
-                $totalAmount += $subtotal;
+                $item->increment('real_stock', $qty);
+                $item->increment('estimated_stock', $qty);
             }
 
-            // Update total amount
-            $purchase->update(['total_amount' => $totalAmount]);
+            $purchase->update(['total_amount' => $total]);
         }
     }
 }

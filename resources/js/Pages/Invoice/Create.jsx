@@ -4,6 +4,7 @@ import axios from "axios";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import CustomerModal from "@/Components/CustomerModal";
 import SizeBreakdownModal from "@/Components/SizeBreakdownModal";
+import SearchableSelect from "@/Components/SearchableSelect";
 import { Toast } from "@/utils/sweetalert";
 import {
     Receipt,
@@ -14,41 +15,27 @@ import {
     Calendar,
     DollarSign,
     Layers,
-    Boxes,
     UserPlus,
     Clock,
-    CheckCircle2,
-    AlertCircle,
-    AlertTriangle,
-    Info,
-    History,
     Zap,
     Shirt,
     Ruler,
     ChevronDown,
-    ChevronUp,
-    Building,
-    Percent,
+    Building2,
     Scissors,
     User,
-    Wallet,
     X,
 } from "lucide-react";
 
 export default function Create({ initialType = "REGULAR", users: initialUsers = [] }) {
-    // Mode switcher: "REGULAR" (Pesanan Baru) vs "HISTORICAL" (Pesanan Lama)
     const [orderType, setOrderType] = useState(initialType || "REGULAR");
-
-    // Master data options
     const [customers, setCustomers] = useState([]);
     const [products, setProducts] = useState([]);
     const [loadingMasters, setLoadingMasters] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    // Collapsible BOM drawer state
     const [showBOMDrawer, setShowBOMDrawer] = useState(false);
 
-    // Quick add customer modal state
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
     const [customerForm, setCustomerForm] = useState({
         code: "",
@@ -63,10 +50,8 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         is_active: true,
     });
 
-    // Size Breakdown modal state
     const [activeItemIndexForSize, setActiveItemIndexForSize] = useState(null);
 
-    // Main Invoice Form State
     const [invoiceNumber, setInvoiceNumber] = useState("");
     const [customerId, setCustomerId] = useState("");
     const [customerName, setCustomerName] = useState("");
@@ -79,7 +64,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
     const [paidAmount, setPaidAmount] = useState(0);
     const [notes, setNotes] = useState("");
 
-    // Items array
     const [items, setItems] = useState([
         {
             product_id: "",
@@ -98,7 +82,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
     const [spkDrafts, setSpkDrafts] = useState([]);
     const [spkForm, setSpkForm] = useState({ item_index: "", user_id: "", qty: "", target_date: "", steps: [] });
 
-    // Handle Mode Switch
     const handleSwitchMode = (newType) => {
         setOrderType(newType);
         if (newType === "HISTORICAL") {
@@ -114,14 +97,12 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         }
     };
 
-    // Initialize mode defaults on mount
     useEffect(() => {
         if (initialType === "HISTORICAL") {
             handleSwitchMode("HISTORICAL");
         }
     }, [initialType]);
 
-    // Load Customers and Products
     const fetchMasters = useCallback(async () => {
         setLoadingMasters(true);
         try {
@@ -148,7 +129,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         fetchMasters();
     }, [fetchMasters]);
 
-    // Handle Customer Selection
     const handleCustomerChange = (e) => {
         const cId = e.target.value;
         setCustomerId(cId);
@@ -158,7 +138,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         }
     };
 
-    // Add new item row
     const handleAddItem = () => {
         setItems((prev) => [
             ...prev,
@@ -175,7 +154,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         ]);
     };
 
-    // Remove item row
     const handleRemoveItem = (index) => {
         if (items.length === 1) {
             Toast.warning("Minimal harus ada 1 item pesanan");
@@ -184,13 +162,11 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         setItems((prev) => prev.filter((_, i) => i !== index));
     };
 
-    // Update item line
     const handleItemChange = (index, field, value) => {
         setItems((prev) => {
             const copy = [...prev];
             const current = { ...copy[index], [field]: value };
 
-            // When product_id changes, auto-fill unit_price, default_unit, item_name
             if (field === "product_id") {
                 const prod = products.find((p) => String(p.id) === String(value));
                 if (prod) {
@@ -200,7 +176,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                 }
             }
 
-            // Recalculate subtotal
             const q = Number(current.qty) || 0;
             const p = Number(current.unit_price) || 0;
             current.subtotal = q * p;
@@ -210,14 +185,11 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         });
     };
 
-    // Update size breakdown from modal
     const handleSaveSizeBreakdown = (breakdownData, totalQty, calculatedSubtotal, effectiveUnitPrice, customPrices) => {
         if (activeItemIndexForSize !== null) {
             setItems((prev) => {
                 const copy = [...prev];
                 const current = { ...copy[activeItemIndexForSize] };
-                // Merge qty from breakdownData with price from customPrices
-                // breakdownData = {size: qty}, customPrices = {size: price}
                 const mergedBreakdown = {};
                 Object.entries(breakdownData || {}).forEach(([size, qty]) => {
                     const price = customPrices?.[size] !== undefined ? customPrices[size] : (current.unit_price || 0);
@@ -301,7 +273,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         });
     };
 
-    // Financial calculations
     const subtotal = useMemo(() => {
         return items.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
     }, [items]);
@@ -314,7 +285,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         return Math.max(0, totalAmount - (Number(paidAmount) || 0));
     }, [totalAmount, paidAmount]);
 
-    // Quick Payment percentage presets
     const handleSetPaymentPreset = (type) => {
         if (type === "FULL") {
             setPaymentStatus("LUNAS");
@@ -328,7 +298,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         }
     };
 
-    // Live Aggregated BOM Requirement calculation (2-Stage Yield & Conversion)
     const aggregatedBOM = useMemo(() => {
         const bomMap = {};
         items.forEach((line) => {
@@ -384,18 +353,13 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         return Object.values(bomMap);
     }, [items, products]);
 
-    // Helper: Render filtered BOM for an item - grouped by size as cards
     const renderFilteredBOM = (item, matchedProduct) => {
         if (!matchedProduct?.materials?.length) return null;
         const breakdown = item.size_breakdown || {};
         const hasBreakdown = Object.keys(breakdown).length > 0;
-        
-        // Helper to extract qty from breakdown value (supports both formats)
         const getBreakdownQty = (v) => typeof v === 'object' ? (Number(v.qty) || 0) : (Number(v) || 0);
-        
         const selectedSizes = hasBreakdown ? Object.keys(breakdown).filter(k => getBreakdownQty(breakdown[k]) > 0) : [];
 
-        // Group materials by size
         const materialsBySize = matchedProduct.materials.reduce((acc, mat) => {
             const sizeKey = mat.size_name || 'ALL';
             if (hasBreakdown && sizeKey !== 'ALL' && !selectedSizes.includes(sizeKey)) return acc;
@@ -407,11 +371,11 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         const sizeOrder = hasBreakdown ? selectedSizes : ['ALL', ...Object.keys(materialsBySize).filter(k => k !== 'ALL')];
 
         return (
-            <div key="bom-per-size">
-                <div className="text-[10px] text-slate-500 font-mono mb-2">
+            <div key="bom-per-size" className="space-y-3">
+                <div className="text-[10px] text-slate-500 font-mono">
                     Kebutuhan Bahan untuk {hasBreakdown ? selectedSizes.map(s => `${s}:${getBreakdownQty(breakdown[s])}`).join(', ') : item.qty} {item.unit}:
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                     {sizeOrder.map((sizeKey) => {
                         const sizeMaterials = materialsBySize[sizeKey];
                         if (!sizeMaterials || sizeMaterials.length === 0) return null;
@@ -420,48 +384,43 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
 
                         return (
                             <details key={sizeKey} open className="group bg-white rounded-lg border border-slate-200 overflow-hidden shadow-2xs">
-                                <summary className="bg-slate-50/80 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-slate-100/60 transition-colors">
+                                <summary className="bg-slate-50/80 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between cursor-pointer list-none hover:bg-slate-100/60 transition-colors">
                                     <div className="flex items-center gap-2">
-                                        <span className="w-6 h-6 rounded bg-teal-600 text-white font-bold text-xs flex items-center justify-center shadow-xs group-open:bg-teal-700 transition-colors">
+                                        <span className="w-5 h-5 rounded bg-teal-50 text-teal-700 border border-teal-200 text-[10px] font-bold flex items-center justify-center">
                                             {sizeKey === 'ALL' ? 'U' : sizeKey}
                                         </span>
-                                        <span className="text-xs font-bold text-slate-900">{sizeKey === 'ALL' ? 'Bahan Baku Umum (Semua Ukuran)' : `Bahan Ukuran ${sizeKey} (x${sizeQty})`}</span>
+                                        <span className="text-xs font-bold text-slate-800">
+                                            {sizeKey === 'ALL' ? 'Bahan Umum (Semua Ukuran)' : `Bahan Ukuran ${sizeKey} (${sizeQty} Pcs)`}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-slate-500 font-medium bg-slate-200/50 px-1.5 py-0.5 rounded">{sizeMaterials.length} Bahan</span>
-                                        <svg className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
+                                    <span className="text-[10px] text-slate-500 font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded">
+                                        {sizeMaterials.length} Bahan
+                                    </span>
                                 </summary>
-                                <div className="p-3 space-y-2">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                        {sizeMaterials.map((mat, mIdx) => {
-                                            const reqPerUnit = Number(mat.required_qty) || 0;
-                                            const totalReqForThisItem = reqPerUnit * sizeQty;
-                                            const currentStock = Number(mat.item?.real_stock) || 0;
-                                            const unit = mat.unit_name || mat.item?.unit?.name || "Unit";
-                                            const isSufficient = currentStock >= totalReqForThisItem;
-                                            return (
-                                                <div key={mat.id || mIdx} className="p-2 rounded-md bg-white border border-slate-200 text-xs space-y-1 shadow-2xs">
-                                                    <div className="flex items-start justify-between gap-1">
-                                                        <span className="font-bold text-slate-800 truncate" title={mat.item?.name}>{mat.item?.name || "Bahan Baku"}</span>
-                                                        <span className="text-[10px] text-slate-500 shrink-0 font-mono">@{reqPerUnit} {unit}/{item.unit}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
-                                                        <div>
-                                                            <span className="text-slate-400 text-[10px]">Stok: </span>
-                                                            <span className={`font-mono font-semibold ${isSufficient ? "text-slate-700" : "text-amber-600 font-bold"}`}>{currentStock.toLocaleString("id-ID")} {unit}</span>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <span className="text-slate-400 text-[10px]">Perlu: </span>
-                                                            <span className="font-bold text-teal-700 font-mono">{totalReqForThisItem.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {unit}</span>
-                                                        </div>
-                                                    </div>
+                                <div className="p-2.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                    {sizeMaterials.map((mat, mIdx) => {
+                                        const reqPerUnit = Number(mat.required_qty) || 0;
+                                        const totalReqForThisItem = reqPerUnit * sizeQty;
+                                        const currentStock = Number(mat.item?.real_stock) || 0;
+                                        const unit = mat.unit_name || mat.item?.unit?.name || "Unit";
+                                        const isSufficient = currentStock >= totalReqForThisItem;
+                                        return (
+                                            <div key={mat.id || mIdx} className="p-2 rounded bg-slate-50/70 border border-slate-200 text-xs space-y-1">
+                                                <div className="flex items-start justify-between gap-1">
+                                                    <span className="font-bold text-slate-800 truncate" title={mat.item?.name}>{mat.item?.name || "Bahan Baku"}</span>
+                                                    <span className="text-[10px] text-slate-500 shrink-0 font-mono">@{reqPerUnit} {unit}</span>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/80">
+                                                    <span className="text-[10px] text-slate-500">
+                                                        Stok: <strong className={`font-mono ${isSufficient ? "text-slate-700" : "text-amber-600"}`}>{currentStock.toLocaleString("id-ID")}</strong>
+                                                    </span>
+                                                    <span className="font-bold text-teal-700 font-mono">
+                                                        {totalReqForThisItem.toLocaleString("id-ID", { maximumFractionDigits: 2 })} {unit}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </details>
                         );
@@ -471,7 +430,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         );
     };
 
-    // Quick Add Customer Handler
     const handleQuickCreateCustomer = async (e) => {
         e.preventDefault();
         try {
@@ -489,7 +447,6 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         }
     };
 
-    // Submit Handler
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -568,490 +525,506 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
 
     const selectedCustomerData = customers.find((c) => String(c.id) === String(customerId));
 
+    const customerOptions = useMemo(() => {
+        return customers.map((c) => ({
+            value: String(c.id),
+            label: c.name,
+            sublabel: c.institution_name ? `${c.institution_name} • ${c.phone || ""}` : (c.phone || ""),
+            badge: c.code,
+            searchKey: `${c.name} ${c.institution_name || ""} ${c.code || ""} ${c.phone || ""}`,
+        }));
+    }, [customers]);
+
+    const productOptions = useMemo(() => {
+        return [
+            {
+                value: "",
+                label: "",
+                sublabel: "Input nama & harga bebas tanpa resep bahan",
+            },
+            ...products.map((p) => ({
+                value: String(p.id),
+                label: p.name,
+                sublabel: `${p.category?.name || "Pakaian"} • ${formatCurrency(p.base_price)}`,
+                badge: p.code,
+                searchKey: `${p.name} ${p.code || ""} ${p.category?.name || ""}`,
+            })),
+        ];
+    }, [products]);
+
+    const userOptions = useMemo(() => {
+        return users.map((u) => ({
+            value: String(u.id),
+            label: u.name,
+            sublabel: u.email,
+            searchKey: `${u.name} ${u.email || ""}`,
+        }));
+    }, [users]);
+
     return (
         <DashboardLayout>
-            <Head title={orderType === "HISTORICAL" ? "Input Pesanan Lama (Historis)" : "Buat Pesanan Baru"} />
+            <Head title={orderType === "HISTORICAL" ? "Input Pesanan Lama - Azhar Collection" : "Buat Pesanan Baru - Azhar Collection"} />
 
             <form onSubmit={handleSubmit} className="space-y-4 max-w-7xl mx-auto pb-16">
                 
-                {/* Modern Sleek Top Header Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-md border border-slate-200 shadow-2xs">
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => router.visit("/dashboard/invoice")}
-                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors cursor-pointer border border-slate-200 shadow-2xs"
-                            title="Kembali ke Daftar Invoice"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                        </button>
-                        <div>
-                            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                <Receipt className="w-5 h-5 text-teal-600" />
-                                <span>{orderType === "HISTORICAL" ? "Input Pesanan Lama (Arsip Historis)" : "Buat Pesanan Baru (Konveksi)"}</span>
-                            </h1>
-                            <p className="text-xs text-slate-500">
-                                {orderType === "HISTORICAL"
-                                    ? "Pencatatan nota pembukuan lampau (bypass stok gudang)."
-                                    : "Order seragam & pakaian berjalan dengan alokasi bahan baku otomatis."}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Minimalist Interactive Mode Switcher Pill */}
-                    <div className="flex items-center p-1 bg-slate-100/90 rounded-md border border-slate-200/80 self-start sm:self-center">
-                        <button
-                            type="button"
-                            onClick={() => handleSwitchMode("REGULAR")}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer ${
-                                orderType === "REGULAR"
-                                    ? "bg-white text-teal-800 shadow-2xs border border-slate-200"
-                                    : "text-slate-600 hover:text-slate-900"
-                            }`}
-                        >
-                            <Zap className="w-3.5 h-3.5 text-teal-600" />
-                            <span>Pesanan Baru</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => handleSwitchMode("HISTORICAL")}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded transition-all cursor-pointer ${
-                                orderType === "HISTORICAL"
-                                    ? "bg-white text-amber-900 shadow-2xs border border-slate-200"
-                                    : "text-slate-600 hover:text-slate-900"
-                            }`}
-                        >
-                            <History className="w-3.5 h-3.5 text-amber-700" />
-                            <span>Pesanan Lama</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Main 2-Column Responsive Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                {/* 1 CARD UTUH MENGISI HALAMAN */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     
-                    {/* Left Column: Form Details (8 Cols) */}
-                    <div className="lg:col-span-8 space-y-4">
-                        
-                        {/* 1. Customer & General Meta Card */}
-                        <div className="bg-white p-4 rounded-md border border-slate-200 shadow-2xs space-y-3.5">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                    <Building className="w-4 h-4 text-teal-600" />
-                                    <span>Identitas Pemesan & Nomor Nota</span>
-                                </span>
+                    {/* TOP HEADER AREA */}
+                    <div className="p-4 sm:p-5 border-b border-slate-100">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <button
+                                    type="button"
+                                    onClick={() => router.visit("/dashboard/invoice")}
+                                    className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
+                                    title="Kembali ke Daftar Invoice"
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                </button>
+
+                                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 border border-teal-100/60 flex items-center justify-center shadow-2xs shrink-0 font-bold">
+                                    <Receipt className="w-4 h-4" />
+                                </div>
+
+                                <div className="min-w-0">
+                                    <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight truncate">
+                                        {orderType === "HISTORICAL" ? "Input Pesanan Lama (Arsip Historis)" : "Buat Pesanan Baru (Konveksi)"}
+                                    </h1>
+                                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                                        {orderType === "HISTORICAL"
+                                            ? "Pencatatan nota pembukuan lampau (bypass pemotongan stok bahan baku)."
+                                            : "Order seragam & pakaian berjalan dengan alokasi otomatis bahan baku gudang."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Interactive Mode Switcher Pill */}
+                            <div className="flex items-center p-1 bg-slate-100/90 rounded-lg border border-slate-200 shrink-0 self-start sm:self-auto">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSwitchMode("REGULAR")}
+                                    className={`inline-flex items-center gap-1.5 px-3 h-7 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                                        orderType === "REGULAR"
+                                            ? "bg-white text-teal-800 shadow-2xs font-bold border border-slate-200"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                                >
+                                    <Zap className="w-3.5 h-3.5 text-teal-600" />
+                                    <span>Pesanan Baru</span>
+                                </button>
 
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setCustomerForm({
-                                            code: "",
-                                            name: "",
-                                            type: "Sekolah / Pendidikan",
-                                            institution_name: "",
-                                            contact_person: "",
-                                            phone: "",
-                                            email: "",
-                                            address: "",
-                                            notes: "",
-                                            is_active: true,
-                                        });
-                                        setIsCustomerModalOpen(true);
-                                    }}
-                                    className="text-xs font-semibold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1 cursor-pointer bg-teal-50 px-2 py-1 rounded border border-teal-200"
+                                    onClick={() => handleSwitchMode("HISTORICAL")}
+                                    className={`inline-flex items-center gap-1.5 px-3 h-7 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                                        orderType === "HISTORICAL"
+                                            ? "bg-white text-amber-900 shadow-2xs font-bold border border-slate-200"
+                                            : "text-slate-500 hover:text-slate-800"
+                                    }`}
                                 >
-                                    <UserPlus className="w-3.5 h-3.5" />
-                                    <span>+ Pelanggan Baru</span>
+                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>Pesanan Lama</span>
                                 </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {/* No Invoice */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        No. Invoice <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={invoiceNumber}
-                                        onChange={(e) => setInvoiceNumber(e.target.value)}
-                                        placeholder="INV-2024-001"
-                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 font-mono font-bold text-slate-900 bg-white"
-                                        required
-                                    />
-                                </div>
-
-                                {/* Customer Select */}
-                                <div className="sm:col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Pelanggan / Instansi <span className="text-rose-500">*</span>
-                                    </label>
-                                    <select
-                                        value={customerId}
-                                        onChange={handleCustomerChange}
-                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 bg-white font-medium text-slate-800"
-                                        required
-                                    >
-                                        <option value="">-- Pilih Pelanggan --</option>
-                                        {customers.map((c) => (
-                                            <option key={c.id} value={c.id}>
-                                                {c.name} {c.institution_name ? `(${c.institution_name})` : ""} - [{c.code}]
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Customer Fast Info Badge if selected */}
-                            {selectedCustomerData && (
-                                <div className="p-2.5 rounded bg-slate-50 border border-slate-200/80 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-600">
-                                    <div>
-                                        <span className="font-semibold text-slate-800">{selectedCustomerData.name}</span>
-                                        {selectedCustomerData.institution_name && (
-                                            <span className="text-slate-500"> • {selectedCustomerData.institution_name}</span>
-                                        )}
-                                        {selectedCustomerData.phone && (
-                                            <span className="text-slate-500"> • Telp/WA: {selectedCustomerData.phone}</span>
-                                        )}
-                                    </div>
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">
-                                        {selectedCustomerData.type || "Pelanggan"}
-                                    </span>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                {/* Order Date */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Tanggal Pesanan <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={orderDate}
-                                        onChange={(e) => setOrderDate(e.target.value)}
-                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 bg-white"
-                                        required
-                                    />
-                                </div>
-
-                                {/* Completion Date */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                        Target Selesai
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={completionDate}
-                                        onChange={(e) => setCompletionDate(e.target.value)}
-                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 bg-white"
-                                    />
-                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* 2. Order Items List Card */}
-                        <div className="bg-white p-4 rounded-md border border-slate-200 shadow-2xs space-y-3">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                <div>
-                                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                        <Shirt className="w-4 h-4 text-teal-600" />
-                                        <span>Daftar Item Pesanan ({items.length} Item)</span>
-                                    </span>
-                                    <p className="text-[11px] text-slate-400">Pilih dari master model pakaian atau isi item kustom.</p>
+                    {/* MAIN CONTENT INSIDE CARD */}
+                    <div className="p-4 sm:p-5 space-y-5">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                            
+                            {/* KOLOM KIRI: Form Utama (8 Cols) */}
+                            <div className="lg:col-span-8 space-y-4">
+                                
+                                {/* 1. Customer & General Meta Card */}
+                                <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 shadow-2xs space-y-3.5">
+                                    <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                            <Building2 className="w-4 h-4 text-teal-600" />
+                                            <span>Identitas Pemesan & Nomor Nota</span>
+                                        </span>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setCustomerForm({
+                                                    code: "",
+                                                    name: "",
+                                                    type: "Sekolah / Pendidikan",
+                                                    institution_name: "",
+                                                    contact_person: "",
+                                                    phone: "",
+                                                    email: "",
+                                                    address: "",
+                                                    notes: "",
+                                                    is_active: true,
+                                                });
+                                                setIsCustomerModalOpen(true);
+                                            }}
+                                            className="inline-flex items-center gap-1.5 h-7 px-2.5 text-[11px] font-semibold text-teal-700 bg-white hover:bg-teal-50 border border-teal-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                                        >
+                                            <UserPlus className="w-3.5 h-3.5 text-teal-600" />
+                                            <span className="mt-0.5">Pelanggan</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                                No. Invoice <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={invoiceNumber}
+                                                onChange={(e) => setInvoiceNumber(e.target.value)}
+                                                placeholder="INV-2024-001"
+                                                className="w-full h-8 px-2.5 text-xs font-mono font-bold border border-slate-300 rounded-lg focus:border-teal-600 focus:ring-1 focus:ring-teal-600 text-slate-900 bg-white shadow-2xs"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                                Pelanggan / Instansi <span className="text-rose-500">*</span>
+                                            </label>
+                                            <SearchableSelect
+                                                value={customerId}
+                                                onChange={(val) => {
+                                                    setCustomerId(val);
+                                                    const cust = customers.find((c) => String(c.id) === String(val));
+                                                    if (cust) setCustomerName(cust.name);
+                                                }}
+                                                options={customerOptions}
+                                                placeholder="Cari / Pilih Pelanggan"
+                                                searchPlaceholder="Ketik nama pelanggan, sekolah, atau no WA..."
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {selectedCustomerData && (
+                                        <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-2xs text-xs flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <span className="font-bold text-slate-800">{selectedCustomerData.name}</span>
+                                                {selectedCustomerData.institution_name && (
+                                                    <span className="text-slate-500"> &bull; {selectedCustomerData.institution_name}</span>
+                                                )}
+                                                {selectedCustomerData.phone && (
+                                                    <span className="text-slate-500 font-mono"> &bull; {selectedCustomerData.phone}</span>
+                                                )}
+                                            </div>
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                                                {selectedCustomerData.type || "Pelanggan"}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                                Tanggal Pesanan <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={orderDate}
+                                                onChange={(e) => setOrderDate(e.target.value)}
+                                                className="w-full h-8 px-2.5 text-xs font-mono border border-slate-300 rounded-lg focus:border-teal-600 focus:ring-1 focus:ring-teal-600 bg-white shadow-2xs"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                                Target Selesai
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={completionDate}
+                                                onChange={(e) => setCompletionDate(e.target.value)}
+                                                className="w-full h-8 px-2.5 text-xs font-mono border border-slate-300 rounded-lg focus:border-teal-600 focus:ring-1 focus:ring-teal-600 bg-white shadow-2xs"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={handleAddItem}
-                                    className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded transition-colors cursor-pointer shadow-2xs"
-                                >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>Tambah Baris</span>
-                                </button>
-                            </div>
+                                {/* 2. Order Items List Card */}
+                                <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 shadow-2xs space-y-3.5">
+                                    <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                                <Shirt className="w-4 h-4 text-teal-600" />
+                                                <span>Daftar Item Pesanan ({items.length} Item)</span>
+                                            </span>
+                                            <p className="text-[11px] text-slate-500">Pilih dari katalog model pakaian atau masukkan item kustom.</p>
+                                        </div>
 
-                            {/* Item Rows */}
-                            <div className="space-y-3">
-                                {items.map((item, idx) => {
-                                    const breakdownEntries = Object.entries(item.size_breakdown || {});
-                                    const matchedProduct = products.find((p) => String(p.id) === String(item.product_id));
-
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className="p-3 rounded-md border border-slate-200 bg-slate-50/50 hover:bg-white transition-all space-y-2.5"
+                                        <button
+                                            type="button"
+                                            onClick={handleAddItem}
+                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 text-[11px] font-semibold text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-300 rounded-lg shadow-2xs transition-all cursor-pointer"
                                         >
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center">
-                                                        {idx + 1}
-                                                    </span>
-                                                    <span className="text-xs font-bold text-slate-800">
-                                                        {item.item_name || "Item Pesanan"}
-                                                    </span>
+                                            <Plus className="w-3.5 h-3.5 text-emerald-700" />
+                                            <span className="mt-0.5">Item</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {items.map((item, idx) => {
+                                            const breakdownEntries = Object.entries(item.size_breakdown || {});
+                                            const matchedProduct = products.find((p) => String(p.id) === String(item.product_id));
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className="p-3.5 rounded-lg border border-slate-200 bg-white shadow-2xs space-y-3"
+                                                >
+                                                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className="w-5 h-5 rounded bg-teal-50 border border-teal-200 text-teal-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                                                {idx + 1}
+                                                            </span>
+                                                            <span className="text-xs font-bold text-slate-800 truncate">
+                                                                {item.item_name || "Item Pesanan Baru"}
+                                                            </span>
+                                                            {matchedProduct && (
+                                                                <span className="text-[10px] font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 shrink-0">
+                                                                    BOM: {matchedProduct.materials?.length || 0} Bahan
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveItem(idx)}
+                                                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
+                                                            title="Hapus baris item ini"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
+                                                        <div className="sm:col-span-5">
+                                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                                Katalog Model Produk
+                                                            </label>
+                                                            <SearchableSelect
+                                                                value={item.product_id}
+                                                                onChange={(val) => handleItemChange(idx, "product_id", val)}
+                                                                options={productOptions}
+                                                                placeholder="-- Tanpa Katalog (Item Bebas) --"
+                                                                searchPlaceholder="Cari model baju, kode, atau kategori..."
+                                                            />
+                                                        </div>
+
+                                                        <div className="sm:col-span-7">
+                                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                                Nama Item di Nota <span className="text-rose-500">*</span>
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={item.item_name}
+                                                                onChange={(e) => handleItemChange(idx, "item_name", e.target.value)}
+                                                                placeholder="Contoh: Seragam Olahraga SD (Baju + Celana)"
+                                                                className="w-full h-8 px-2.5 text-xs font-semibold border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                                                required
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 text-xs">
+                                                        <div className="sm:col-span-2">
+                                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                                Satuan
+                                                            </label>
+                                                            <select
+                                                                value={item.unit}
+                                                                onChange={(e) => handleItemChange(idx, "unit", e.target.value)}
+                                                                className="w-full h-8 px-2 text-xs border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600 font-medium"
+                                                            >
+                                                                <option value="Stel">Stel</option>
+                                                                <option value="Pcs">Pcs</option>
+                                                                <option value="Lusin">Lusin</option>
+                                                                <option value="Kodi">Kodi</option>
+                                                                <option value="Set">Set</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div className="sm:col-span-4">
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <label className="block text-[11px] font-semibold text-slate-700">
+                                                                    Kuantitas
+                                                                </label>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setActiveItemIndexForSize(idx)}
+                                                                    className="text-[10px] font-bold text-teal-700 hover:text-teal-800 cursor-pointer inline-flex items-center gap-1"
+                                                                >
+                                                                    <Ruler className="w-2.5 h-2.5" />
+                                                                    <span>{breakdownEntries.length > 0 ? "Edit Ukuran" : "+ Rincian Size"}</span>
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    value={item.qty}
+                                                                    onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
+                                                                    readOnly={breakdownEntries.length > 0}
+                                                                    className={`w-20 h-8 px-2 text-xs font-mono font-bold text-center border rounded-lg shadow-2xs ${
+                                                                        breakdownEntries.length > 0
+                                                                            ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                                                                            : "border-slate-300 bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 text-slate-900"
+                                                                    }`}
+                                                                    required
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setActiveItemIndexForSize(idx)}
+                                                                    className={`flex-1 h-8 inline-flex items-center justify-center gap-1 px-2 text-[11px] font-semibold rounded-lg border shadow-2xs transition-all cursor-pointer truncate ${
+                                                                        breakdownEntries.length > 0
+                                                                            ? "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100"
+                                                                            : "bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100"
+                                                                    }`}
+                                                                >
+                                                                    <Ruler className="w-3 h-3 text-teal-600 shrink-0" />
+                                                                    <span className="truncate">
+                                                                        {breakdownEntries.length > 0 ? `${breakdownEntries.length} Ukuran` : "Atur Size"}
+                                                                    </span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="sm:col-span-3">
+                                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                                Harga Satuan
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={item.unit_price}
+                                                                onChange={(e) => handleItemChange(idx, "unit_price", e.target.value)}
+                                                                className="w-full h-8 px-2.5 text-xs text-right font-mono border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                                                required
+                                                            />
+                                                        </div>
+
+                                                        <div className="sm:col-span-3 text-right">
+                                                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                                                                Subtotal
+                                                            </label>
+                                                            <div className="h-8 flex items-center justify-end font-bold text-slate-900 font-mono text-xs">
+                                                                {formatCurrency(item.subtotal)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {breakdownEntries.length > 0 && (
+                                                        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/70 text-xs">
+                                                            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                                <Ruler className="w-3 h-3 text-teal-600" />
+                                                                <span>Rincian Size ({breakdownEntries.reduce((s, [, v]) => s + (typeof v === 'object' ? parseInt(v.qty) || 0 : parseInt(v) || 0), 0)} Pcs):</span>
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-1">
+                                                                {breakdownEntries.map(([sz, v]) => {
+                                                                    const qty = typeof v === 'object' ? v.qty || 0 : v;
+                                                                    return (
+                                                                        <span
+                                                                            key={sz}
+                                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200/80 shadow-2xs"
+                                                                        >
+                                                                            <span>{sz}:</span>
+                                                                            <strong className="font-mono">{qty}</strong>
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     {matchedProduct && (
-                                                        <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
-                                                            Resep BOM Terhubung ({matchedProduct.materials?.length || 0} Bahan)
-                                                        </span>
+                                                        <details className="mt-2 pt-2 border-t border-slate-200/70 group">
+                                                            <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold text-slate-700 hover:text-teal-700 transition-colors">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Layers className="w-3.5 h-3.5 text-teal-600" />
+                                                                    <span>Detail BOM & Produksi Model</span>
+                                                                </div>
+                                                                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform" />
+                                                            </summary>
+                                                            <div className="mt-3 space-y-3">
+                                                                {renderFilteredBOM(item, matchedProduct)}
+
+                                                                {matchedProduct.production_steps && matchedProduct.production_steps.length > 0 && (
+                                                                    <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
+                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                                                                            <Zap className="w-3 h-3 text-teal-600" /> Langkah Produksi & Upah Borongan:
+                                                                        </span>
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                            {matchedProduct.production_steps.map((step, sIdx) => (
+                                                                                <div key={sIdx} className="flex justify-between items-center bg-white p-2 rounded-md border border-slate-200 text-[11px] shadow-2xs">
+                                                                                    <span className="font-semibold text-slate-800 truncate">
+                                                                                        {sIdx + 1}. {step.production_step?.name || step.custom_name}
+                                                                                    </span>
+                                                                                    <span className="font-mono text-teal-700 font-bold shrink-0">
+                                                                                        {formatCurrency(step.wage)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </details>
                                                     )}
                                                 </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveItem(idx)}
-                                                    className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                                                    title="Hapus baris item ini"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
-                                                {/* Product Catalog Picker */}
-                                                <div className="sm:col-span-5">
-                                                    <label className="block text-[11px] font-medium text-slate-500 mb-0.5">
-                                                        Katalog Model Produk
-                                                    </label>
-                                                    <select
-                                                        value={item.product_id}
-                                                        onChange={(e) => handleItemChange(idx, "product_id", e.target.value)}
-                                                        className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 bg-white"
-                                                    >
-                                                        <option value="">-- Pilih Model Produk --</option>
-                                                        {products.map((p) => (
-                                                            <option key={p.id} value={p.id}>
-                                                                {p.name} [{p.code}] - {formatCurrency(p.base_price)}/{p.default_unit || "Stel"}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                {/* Item Name / Description */}
-                                                <div className="sm:col-span-7">
-                                                    <label className="block text-[11px] font-medium text-slate-500 mb-0.5">
-                                                        Nama / Deskripsi Item di Nota <span className="text-rose-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={item.item_name}
-                                                        onChange={(e) => handleItemChange(idx, "item_name", e.target.value)}
-                                                        placeholder="Contoh: Seragam Olahraga SD (Baju + Celana)"
-                                                        className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 font-semibold"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 text-xs pt-1">
-                                                {/* Unit */}
-                                                <div className="sm:col-span-2">
-                                                    <label className="block text-[11px] font-medium text-slate-500 mb-0.5">
-                                                        Satuan
-                                                    </label>
-                                                    <select
-                                                        value={item.unit}
-                                                        onChange={(e) => handleItemChange(idx, "unit", e.target.value)}
-                                                        className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 bg-white"
-                                                    >
-                                                        <option value="Stel">Stel</option>
-                                                        <option value="Pcs">Pcs</option>
-                                                        <option value="Lusin">Lusin</option>
-                                                        <option value="Kodi">Kodi</option>
-                                                        <option value="Set">Set</option>
-                                                    </select>
-                                                </div>
-
-                                                {/* Qty & Size Breakdown Modal Trigger */}
-                                                <div className="sm:col-span-4">
-                                                    <label className="block text-[11px] font-medium text-slate-500 mb-0.5 flex items-center justify-between">
-                                                        <span>Kuantitas (Qty)</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setActiveItemIndexForSize(idx)}
-                                                            className="text-[10px] font-semibold text-teal-700 hover:text-teal-900 cursor-pointer inline-flex items-center gap-1"
-                                                        >
-                                                            <Ruler className="w-2.5 h-2.5" />
-                                                            <span>{breakdownEntries.length > 0 ? "Edit Ukuran" : "+ Rincian Size"}</span>
-                                                        </button>
-                                                    </label>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={item.qty}
-                                                            onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
-                                                            readOnly={breakdownEntries.length > 0}
-                                                            className={`w-20 px-2.5 py-1.5 text-xs border rounded-md font-bold font-mono text-center ${
-                                                                breakdownEntries.length > 0
-                                                                    ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
-                                                                    : "border-slate-300 bg-white focus:border-teal-500"
-                                                            }`}
-                                                            title={breakdownEntries.length > 0 ? "Kuantitas dikontrol oleh Rincian Ukuran. Edit lewat tombol 'Atur Size'" : undefined}
-                                                            required
-                                                        />
-                                                        {breakdownEntries.length > 0 && (
-                                                            <span className="text-slate-400 cursor-not-allowed" title="Kuantitas dikontrol oleh Rincian Ukuran">
-                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                                            </span>
-                                                        )}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setActiveItemIndexForSize(idx)}
-                                                            className={`flex-1 inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer truncate border ${
-                                                                breakdownEntries.length > 0
-                                                                    ? "bg-teal-50 text-teal-900 border-teal-200 hover:bg-teal-100/80 shadow-2xs"
-                                                                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                                                            }`}
-                                                        >
-                                                            <Ruler className={`w-3 h-3 shrink-0 ${breakdownEntries.length > 0 ? "text-teal-600" : "text-slate-400"}`} />
-                                                            <span>
-                                                                {breakdownEntries.length > 0
-                                                                    ? `${breakdownEntries.length} Ukuran`
-                                                                    : "Atur Size"}
-                                                            </span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Unit Price */}
-                                                <div className="sm:col-span-3">
-                                                    <label className="block text-[11px] font-medium text-slate-500 mb-0.5">
-                                                        Harga Satuan (Rp)
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        value={item.unit_price}
-                                                        onChange={(e) => handleItemChange(idx, "unit_price", e.target.value)}
-                                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-md font-mono focus:border-teal-500 text-right"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                {/* Line Subtotal */}
-                                                <div className="sm:col-span-3 text-right">
-                                                    <label className="block text-[11px] font-medium text-slate-500 mb-0.5">
-                                                        Subtotal
-                                                    </label>
-                                                    <div className="py-1.5 font-bold text-slate-900 font-mono text-xs">
-                                                        {formatCurrency(item.subtotal)}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Size Preview Badges if populated */}
-                                            {breakdownEntries.length > 0 && (
-                                                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/70 text-xs">
-                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                                        <Ruler className="w-3 h-3 text-teal-600" />
-                                                        <span>Rincian Size ({breakdownEntries.reduce((s, [, v]) => s + (typeof v === 'object' ? (parseInt(v.qty) || 0) : (parseInt(v) || 0)), 0)} Qty):</span>
-                                                    </div>
-<div className="flex flex-wrap items-center gap-1">
-                                                            {breakdownEntries.map(([sz, v]) => {
-                                                                const qty = typeof v === 'object' ? (v.qty || 0) : v;
-                                                                return (
-                                                                    <span
-                                                                        key={sz}
-                                                                        className="inline-flex items-baseline gap-0.5 px-2 py-0.5 rounded text-[11px] font-medium bg-teal-50/80 text-teal-950 border border-teal-200 shadow-2xs"
-                                                                    >
-                                                                        <span className="font-semibold text-teal-800">{sz}:</span>
-                                                                        <span className="font-mono font-semibold text-teal-700">{qty}</span>
-                                                                    </span>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                </div>
-                                            )}
-
-                                            {/* Sub Kebutuhan Bahan Gudang & Langkah Produksi per Item */}
-                                            {matchedProduct && (
-                                                <details className="mt-2.5 pt-2.5 border-t border-slate-200/70 group">
-                                                    <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold text-slate-700 hover:text-teal-700 transition-colors">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Layers className="w-3.5 h-3.5 text-teal-600" />
-                                                            <span>Detail BOM & Produksi</span>
-                                                        </div>
-                                                        <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
-                                                    </summary>
-                                                    <div className="mt-3 space-y-3">
-                                                        {/* BOM Table/Grid - Filter by selected sizes */}
-                                                        {renderFilteredBOM(item, matchedProduct)}
-
-                                                        {/* Production Steps */}
-                                                        {matchedProduct.production_steps && matchedProduct.production_steps.length > 0 && (
-                                                            <div className="pt-2 border-t border-slate-200/50">
-                                                                <div className="text-[10px] font-bold uppercase text-slate-600 flex items-center gap-1 mb-1.5">
-                                                                    <Zap className="w-3 h-3" /> Langkah Produksi / Upah:
-                                                                </div>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                                    {matchedProduct.production_steps.map((step, sIdx) => (
-                                                                        <div key={sIdx} className="flex justify-between items-center bg-white p-1.5 rounded-md border border-slate-200 text-[11px]">
-                                                                            <span className="font-semibold text-slate-700">{sIdx + 1}. {step.production_step?.name || step.custom_name}</span>
-                                                                            <span className="font-mono text-indigo-600 font-bold">{formatCurrency(step.wage)}</span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </details>
-                                            )}
+                                {/* 3. Smart Collapsible Live BOM Preview */}
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBOMDrawer((prev) => !prev)}
+                                        className="w-full flex items-center justify-between p-3.5 bg-slate-50/80 hover:bg-slate-100/70 transition-colors text-left cursor-pointer border-b border-slate-100"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Layers className="w-4 h-4 text-teal-600" />
+                                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                                Rekapitulasi Kebutuhan Bahan Gudang (BOM)
+                                            </span>
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-teal-100/80 text-teal-800 border border-teal-200/80">
+                                                {aggregatedBOM.length} Bahan
+                                            </span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                        <div className="flex items-center gap-1 text-xs text-slate-500 font-semibold">
+                                            <span>{showBOMDrawer ? "Tutup" : "Lihat"}</span>
+                                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showBOMDrawer ? "rotate-180" : ""}`} />
+                                        </div>
+                                    </button>
 
-                        {/* 3. Smart Collapsible Live BOM Preview */}
-                        <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
-                            <button
-                                type="button"
-                                onClick={() => setShowBOMDrawer((prev) => !prev)}
-                                className="w-full flex items-center justify-between p-3.5 bg-slate-50/80 hover:bg-slate-100/80 transition-colors text-left cursor-pointer border-b border-slate-100"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Layers className="w-4 h-4 text-teal-600" />
-                                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                        Rekapitulasi Kebutuhan Bahan Gudang (BOM)
-                                    </span>
-                                    <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
-                                        {aggregatedBOM.length} Bahan
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-                                    <span>{showBOMDrawer ? "Sembunyikan" : "Tampilkan"}</span>
-                                    {showBOMDrawer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                </div>
-                            </button>
-
-                            {showBOMDrawer && (
-                                <div className="p-3.5 space-y-3">
-                                    {aggregatedBOM.length === 0 ? (
-                                        <p className="text-xs text-slate-400 italic">
-                                            Pilih katalog model produk yang memiliki resep bahan untuk melihat estimasi alokasi stok gudang.
-                                        </p>
-                                    ) : (
-                                        <>
-                                            {/* Grand Total Aggregation ONLY to avoid double info */}
-                                            <div className="pt-2 border-t border-slate-200">
-                                                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                                    Total Akumulasi Pemotongan Stok Gudang (Semua Item):
-                                                </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {showBOMDrawer && (
+                                        <div className="p-4 space-y-3">
+                                            {aggregatedBOM.length === 0 ? (
+                                                <p className="text-xs text-slate-400 italic text-center py-2">
+                                                    Pilih katalog model produk yang memiliki resep bahan untuk melihat estimasi alokasi stok gudang.
+                                                </p>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                                     {aggregatedBOM.map((mat) => (
                                                         <div
                                                             key={mat.id}
-                                                            className="p-2.5 rounded bg-teal-50/50 border border-teal-200 text-xs flex items-center justify-between"
+                                                            className="p-3 rounded-lg bg-teal-50/40 border border-teal-200/90 text-xs flex items-center justify-between shadow-2xs"
                                                         >
                                                             <div>
                                                                 <div className="font-bold text-slate-800">{mat.name}</div>
-                                                                <div className="text-[10px] text-slate-500 font-mono">
+                                                                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
                                                                     Stok Gudang: {mat.currentStock.toLocaleString("id-ID")} {mat.warehouseUnit}
                                                                 </div>
                                                                 {mat.convRate > 1 && (
-                                                                    <div className="text-[9px] text-teal-700">
+                                                                    <div className="text-[9px] text-teal-700 mt-0.5">
                                                                         1 {mat.warehouseUnit} = {mat.convRate} {mat.usageUnit}
                                                                     </div>
                                                                 )}
@@ -1070,454 +1043,443 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        </>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
 
-                        <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
-                            <div className="p-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Scissors className="w-4 h-4 text-teal-600" />
-                                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                        Penugasan SPK Karyawan (Opsional)
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${spkDrafts.length > 0 ? 'bg-teal-100 text-teal-800' : 'bg-slate-200 text-slate-600'}`}>
-                                        {spkDrafts.length} Tugas
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSpkSection((prev) => !prev)}
-                                    className="flex items-center gap-1 text-xs text-teal-700 hover:text-teal-800 font-semibold cursor-pointer"
-                                >
-                                    <span>{showSpkSection ? "Sembunyikan Form" : "+ Tambah SPK"}</span>
-                                    {showSpkSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                </button>
-                            </div>
-
-                            {showSpkSection && (
-                                <div className="p-3.5 bg-teal-50/30 border-b border-teal-100/60 space-y-3">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                                                Pilih Item Pesanan <span className="text-rose-500">*</span>
-                                            </label>
-                                            <select
-                                                value={spkForm.item_index}
-                                                onChange={(e) => {
-                                                    const idx = e.target.value;
-                                                    const selLine = items[idx];
-                                                    setSpkForm((prev) => ({
-                                                        ...prev,
-                                                        item_index: idx,
-                                                        qty: selLine ? selLine.qty : 1,
-                                                        steps: [],
-                                                    }));
-                                                }}
-                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-medium text-slate-800 focus:border-teal-500"
-                                            >
-                                                <option value="">-- Pilih Item --</option>
-                                                {items.map((it, iIdx) => (
-                                                    <option key={iIdx} value={iIdx}>
-                                                        {it.item_name || `Item #${iIdx + 1}`} ({it.qty} {it.unit})
-                                                    </option>
-                                                ))}
-                                            </select>
+                                {/* 4. SPK Drafts Section */}
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                                    <div className="p-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Scissors className="w-4 h-4 text-teal-600" />
+                                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                                Penugasan SPK Karyawan (Opsional)
+                                            </span>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${spkDrafts.length > 0 ? "bg-teal-100/80 text-teal-800 border border-teal-200/80" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
+                                                {spkDrafts.length} Tugas
+                                            </span>
                                         </div>
-
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                                                Karyawan / Penjahit <span className="text-rose-500">*</span>
-                                            </label>
-                                            <select
-                                                value={spkForm.user_id}
-                                                onChange={(e) => setSpkForm((prev) => ({ ...prev, user_id: e.target.value }))}
-                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-medium text-slate-800 focus:border-teal-500"
-                                            >
-                                                <option value="">-- Pilih Karyawan --</option>
-                                                {users.map((u) => (
-                                                    <option key={u.id} value={u.id}>
-                                                        {u.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                                                Target Qty
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={spkForm.qty}
-                                                onChange={(e) => setSpkForm((prev) => ({ ...prev, qty: e.target.value }))}
-                                                placeholder="Kuantitas"
-                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-medium focus:border-teal-500"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                                                Target Selesai
-                                            </label>
-                                            <input
-                                                type="date"
-                                                value={spkForm.target_date}
-                                                onChange={(e) => setSpkForm((prev) => ({ ...prev, target_date: e.target.value }))}
-                                                className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white focus:border-teal-500"
-                                            />
-                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowSpkSection((prev) => !prev)}
+                                            className="flex items-center gap-1 text-xs text-teal-700 hover:text-teal-800 font-semibold cursor-pointer"
+                                        >
+                                            <span>{showSpkSection ? "Tutup Form" : "+ Tambah SPK"}</span>
+                                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showSpkSection ? "rotate-180" : ""}`} />
+                                        </button>
                                     </div>
 
-                                    {selectedSpkProduct?.production_steps && selectedSpkProduct.production_steps.length > 0 && (
-                                        <div className="bg-white p-2.5 rounded border border-slate-200">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                                                    Pilih Langkah Produksi yang Ditugaskan:
-                                                </span>
+                                    {showSpkSection && (
+                                        <div className="p-4 bg-teal-50/20 border-b border-teal-100/60 space-y-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                                <div>
+                                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                        Pilih Item Pesanan <span className="text-rose-500">*</span>
+                                                    </label>
+                                                    <select
+                                                        value={spkForm.item_index}
+                                                        onChange={(e) => {
+                                                            const idx = e.target.value;
+                                                            const selLine = items[idx];
+                                                            setSpkForm((prev) => ({
+                                                                ...prev,
+                                                                item_index: idx,
+                                                                qty: selLine ? selLine.qty : 1,
+                                                                steps: [],
+                                                            }));
+                                                        }}
+                                                        className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded-lg bg-white font-medium text-slate-800 shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                                    >
+                                                        <option value="">-- Pilih Item --</option>
+                                                        {items.map((it, iIdx) => (
+                                                            <option key={iIdx} value={iIdx}>
+                                                                {it.item_name || `Item #${iIdx + 1}`} ({it.qty} {it.unit})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                        Karyawan / Penjahit <span className="text-rose-500">*</span>
+                                                    </label>
+                                                    <SearchableSelect
+                                                        value={spkForm.user_id}
+                                                        onChange={(val) => setSpkForm((prev) => ({ ...prev, user_id: val }))}
+                                                        options={userOptions}
+                                                        placeholder="-- Pilih Karyawan --"
+                                                        searchPlaceholder="Ketik nama karyawan..."
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                        Target Qty
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={spkForm.qty}
+                                                        onChange={(e) => setSpkForm((prev) => ({ ...prev, qty: e.target.value }))}
+                                                        placeholder="Kuantitas"
+                                                        className="w-full h-8 px-2.5 text-xs font-mono font-bold border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                        Target Selesai
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={spkForm.target_date}
+                                                        onChange={(e) => setSpkForm((prev) => ({ ...prev, target_date: e.target.value }))}
+                                                        className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {selectedSpkProduct?.production_steps && selectedSpkProduct.production_steps.length > 0 && (
+                                                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                                                            Pilih Langkah Produksi yang Ditugaskan:
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const allSteps = selectedSpkProduct.production_steps.map((ps) => ({
+                                                                    id: ps.id,
+                                                                    qty: parseInt(spkForm.qty, 10) || parseInt(items[parseInt(spkForm.item_index, 10)]?.qty, 10) || 1,
+                                                                }));
+                                                                setSpkForm((prev) => ({
+                                                                    ...prev,
+                                                                    steps: prev.steps.length === allSteps.length ? [] : allSteps,
+                                                                }));
+                                                            }}
+                                                            className="text-[10px] text-teal-700 hover:text-teal-800 font-bold cursor-pointer"
+                                                        >
+                                                            {spkForm.steps.length === selectedSpkProduct.production_steps.length ? "Batal Semua" : "Pilih Semua Langkah"}
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                        {selectedSpkProduct.production_steps.map((ps) => {
+                                                            const isChecked = spkForm.steps.some((s) => (typeof s === "object" ? s.id : s) === ps.id);
+                                                            const curStep = spkForm.steps.find((s) => (typeof s === "object" ? s.id : s) === ps.id);
+                                                            const curQty = typeof curStep === "object" ? curStep.qty : (spkForm.qty || 1);
+
+                                                            return (
+                                                                <div
+                                                                    key={ps.id}
+                                                                    className={`p-2.5 rounded-lg border text-xs transition-colors shadow-2xs ${
+                                                                        isChecked
+                                                                            ? "bg-teal-50/70 border-teal-300 text-teal-950"
+                                                                            : "bg-slate-50/50 border-slate-200 text-slate-700"
+                                                                    }`}
+                                                                >
+                                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isChecked}
+                                                                            onChange={() => toggleSpkStep(ps.id, curQty)}
+                                                                            className="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 focus:ring-teal-600"
+                                                                        />
+                                                                        <span className="font-bold text-xs truncate">
+                                                                            {ps.production_step?.name || ps.custom_name}
+                                                                        </span>
+                                                                    </label>
+                                                                    <div className="flex items-center justify-between mt-1.5 pl-5.5 text-[10px] text-slate-500">
+                                                                        <span>Upah: {formatCurrency(ps.wage)}</span>
+                                                                        {isChecked && (
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span>Qty:</span>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="1"
+                                                                                    value={curQty}
+                                                                                    onChange={(e) => {
+                                                                                        const nQ = e.target.value;
+                                                                                        setSpkForm((prev) => ({
+                                                                                            ...prev,
+                                                                                            steps: prev.steps.map((s) => {
+                                                                                                const sId = typeof s === "object" ? s.id : s;
+                                                                                                if (sId === ps.id) return { id: ps.id, qty: nQ };
+                                                                                                return s;
+                                                                                            }),
+                                                                                        }));
+                                                                                    }}
+                                                                                    className="w-14 px-1 py-0.5 text-[11px] border border-slate-300 rounded text-right bg-white font-mono"
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-end pt-1">
                                                 <button
                                                     type="button"
-                                                    onClick={() => {
-                                                        const allSteps = selectedSpkProduct.production_steps.map((ps) => ({
-                                                            id: ps.id,
-                                                            qty: parseInt(spkForm.qty, 10) || parseInt(items[parseInt(spkForm.item_index, 10)]?.qty, 10) || 1,
-                                                        }));
-                                                        setSpkForm((prev) => ({
-                                                            ...prev,
-                                                            steps: prev.steps.length === allSteps.length ? [] : allSteps,
-                                                        }));
-                                                    }}
-                                                    className="text-[10px] text-teal-700 hover:text-teal-800 font-semibold cursor-pointer"
+                                                    onClick={handleAddSpkDraft}
+                                                    className="inline-flex items-center gap-1.5 h-8 px-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
                                                 >
-                                                    {spkForm.steps.length === selectedSpkProduct.production_steps.length ? "Batal Semua" : "Pilih Semua Langkah"}
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    <span>Tambahkan Penugasan</span>
                                                 </button>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                                {selectedSpkProduct.production_steps.map((ps) => {
-                                                    const isChecked = spkForm.steps.some((s) => (typeof s === "object" ? s.id : s) === ps.id);
-                                                    const curStep = spkForm.steps.find((s) => (typeof s === "object" ? s.id : s) === ps.id);
-                                                    const curQty = typeof curStep === "object" ? curStep.qty : (spkForm.qty || 1);
-
-                                                    return (
-                                                        <div
-                                                            key={ps.id}
-                                                            className={`p-2 rounded border text-xs transition-colors ${
-                                                                isChecked
-                                                                    ? "bg-teal-50 border-teal-300 text-teal-950"
-                                                                    : "bg-slate-50 border-slate-200 text-slate-700"
-                                                            }`}
-                                                        >
-                                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isChecked}
-                                                                    onChange={() => toggleSpkStep(ps.id, curQty)}
-                                                                    className="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
-                                                                />
-                                                                <span className="font-semibold text-xs truncate">
-                                                                    {ps.production_step?.name || ps.custom_name}
-                                                                </span>
-                                                            </label>
-                                                            <div className="flex items-center justify-between mt-1.5 pl-5.5 text-[10px] text-slate-500">
-                                                                <span>Upah: {formatCurrency(ps.wage)}</span>
-                                                                {isChecked && (
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span>Qty:</span>
-                                                                        <input
-                                                                            type="number"
-                                                                            min="1"
-                                                                            value={curQty}
-                                                                            onChange={(e) => {
-                                                                                const nQ = e.target.value;
-                                                                                setSpkForm((prev) => ({
-                                                                                    ...prev,
-                                                                                    steps: prev.steps.map((s) => {
-                                                                                        const sId = typeof s === "object" ? s.id : s;
-                                                                                        if (sId === ps.id) return { id: ps.id, qty: nQ };
-                                                                                        return s;
-                                                                                    }),
-                                                                                }));
-                                                                            }}
-                                                                            className="w-14 px-1 py-0.5 text-[11px] border border-slate-300 rounded text-right bg-white font-mono"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
                                             </div>
                                         </div>
                                     )}
 
-                                    <div className="flex justify-end pt-1">
-                                        <button
-                                            type="button"
-                                            onClick={handleAddSpkDraft}
-                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                                        >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>Tambahkan Penugasan</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="p-3.5">
-                                {spkDrafts.length === 0 ? (
-                                    <div className="text-center py-4 px-2 border border-dashed border-slate-200 rounded text-slate-400 text-xs">
-                                        <Scissors className="w-6 h-6 mx-auto mb-1 opacity-40 text-slate-400" />
-                                        <span>Belum ada penugasan SPK dibuat (opsional, bisa dibuat nanti di detail invoice).</span>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {spkDrafts.map((draft) => (
-                                            <div
-                                                key={draft.id}
-                                                className="p-3 rounded-md bg-white border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-                                            >
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 rounded-full bg-teal-600 text-white font-bold text-[10px] flex items-center justify-center">
-                                                            {(draft.user_name || "K").charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <span className="font-bold text-xs text-slate-900">{draft.user_name}</span>
-                                                        <span className="text-slate-400 text-[11px]">&bull;</span>
-                                                        <span className="font-medium text-xs text-slate-700">{draft.item_name}</span>
-                                                        <span className="text-slate-400 text-[11px]">({draft.qty} Qty)</span>
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                                                        {draft.steps.map((st, sI) => (
-                                                            <span
-                                                                key={sI}
-                                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200"
-                                                            >
-                                                                <span>{st.name} ({st.qty}x)</span>
-                                                                <span className="text-indigo-600 font-semibold">{formatCurrency(st.wage * st.qty)}</span>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                                                    <div className="text-right">
-                                                        <span className="text-[10px] text-slate-400 block">Est. Upah:</span>
-                                                        <span className="font-bold text-xs text-teal-800 font-mono">
-                                                            {formatCurrency(draft.total_wage || 0)}
-                                                        </span>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveSpkDraft(draft.id)}
-                                                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded border border-rose-200 transition-colors cursor-pointer"
-                                                        title="Hapus draft penugasan ini"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
+                                    <div className="p-4">
+                                        {spkDrafts.length === 0 ? (
+                                            <div className="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-xs">
+                                                <Scissors className="w-6 h-6 mx-auto mb-1.5 opacity-40 text-slate-400" />
+                                                <span>Belum ada penugasan SPK dibuat (opsional, bisa dibuat nanti di detail invoice).</span>
                                             </div>
-                                        ))}
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {spkDrafts.map((draft) => (
+                                                    <div
+                                                        key={draft.id}
+                                                        className="p-3 rounded-lg bg-white border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                                                    >
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <div className="w-6 h-6 rounded-md bg-teal-50 border border-teal-200/80 text-teal-700 font-bold text-[10px] flex items-center justify-center shadow-2xs">
+                                                                    {(draft.user_name || "K").charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <span className="font-bold text-xs text-slate-900">{draft.user_name}</span>
+                                                                <span className="text-slate-400 text-[11px]">&bull;</span>
+                                                                <span className="font-semibold text-xs text-slate-700">{draft.item_name}</span>
+                                                                <span className="font-mono text-slate-500 text-[11px]">({draft.qty} Qty)</span>
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                                                                {draft.steps.map((st, sI) => (
+                                                                    <span
+                                                                        key={sI}
+                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200 font-mono"
+                                                                    >
+                                                                        <span>{st.name} ({st.qty}x)</span>
+                                                                        <span className="text-teal-700 font-bold">{formatCurrency(st.wage * st.qty)}</span>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                                            <div className="text-right">
+                                                                <span className="text-[10px] text-slate-400 block">Est. Upah Borongan:</span>
+                                                                <span className="font-bold text-xs text-teal-800 font-mono">
+                                                                    {formatCurrency(draft.total_wage || 0)}
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveSpkDraft(draft.id)}
+                                                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md border border-rose-200 transition-colors cursor-pointer"
+                                                                title="Hapus draft penugasan ini"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        </div>
-
-                    </div>
-
-                    {/* Right Column: Sticky Summary & Actions (4 Cols) */}
-                    <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-4">
-                        
-                        {/* Financial & Status Card */}
-                        <div className="bg-white p-4 rounded-md border border-slate-200 shadow-2xs space-y-4">
-                            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                    <DollarSign className="w-4 h-4 text-teal-600" />
-                                    <span>Ringkasan Transaksi</span>
-                                </span>
-                                <span
-                                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                        paymentStatus === "LUNAS"
-                                            ? "bg-emerald-100 text-emerald-800"
-                                            : paymentStatus === "DP"
-                                            ? "bg-amber-100 text-amber-800"
-                                            : "bg-rose-100 text-rose-800"
-                                    }`}
-                                >
-                                    {paymentStatus}
-                                </span>
-                            </div>
-
-                            {/* Status Produksi & Sakelar Potong Stok */}
-                            <div className="space-y-3 text-xs bg-slate-50 p-3 rounded-md border border-slate-200/80">
-                                <div>
-                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                                        Status Pengerjaan Produksi
-                                    </label>
-                                    <select
-                                        value={productionStatus}
-                                        onChange={(e) => setProductionStatus(e.target.value)}
-                                        className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 bg-white font-medium"
-                                    >
-                                        <option value="PROSES">DALAM PROSES</option>
-                                        <option value="SELESAI">SELESAI</option>
-                                        <option value="PENDING">PENDING</option>
-                                        <option value="DIKIRIM">SUDAH DISERAHKAN</option>
-                                    </select>
                                 </div>
 
-                                <div className="pt-1 border-t border-slate-200/80">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={cutStock}
-                                            onChange={(e) => setCutStock(e.target.checked)}
-                                            className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
-                                        />
+                            </div>
+
+                            {/* KOLOM KANAN: Ringkasan Sticky & Aksi (4 Cols) */}
+                            <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-4">
+                                <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 shadow-2xs space-y-4">
+                                    <div className="border-b border-slate-200/80 pb-2.5 flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                            <DollarSign className="w-4 h-4 text-teal-600" />
+                                            <span>Ringkasan Transaksi</span>
+                                        </span>
+                                        <span
+                                            className={`px-2.5 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                                paymentStatus === "LUNAS"
+                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                    : paymentStatus === "DP"
+                                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                                            }`}
+                                        >
+                                            {paymentStatus}
+                                        </span>
+                                    </div>
+
+                                    {/* Status Produksi & Sakelar Potong Stok */}
+                                    <div className="space-y-3 text-xs bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
                                         <div>
-                                            <span className="text-xs font-bold text-slate-800 block">
-                                                {cutStock ? "Potong Stok Gudang (Aktif)" : "Bypass Stok (Tidak Memotong)"}
-                                            </span>
-                                            <span className="text-[10px] text-slate-500 block">
-                                                {cutStock ? "Resep BOM akan dialokasikan dari stok." : "Arsip historis nota lama tanpa ganggu stok."}
+                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                Status Pengerjaan Produksi
+                                            </label>
+                                            <select
+                                                value={productionStatus}
+                                                onChange={(e) => setProductionStatus(e.target.value)}
+                                                className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded-lg bg-white font-medium shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                            >
+                                                <option value="PROSES">DALAM PROSES</option>
+                                                <option value="SELESAI">SELESAI</option>
+                                                <option value="PENDING">PENDING</option>
+                                                <option value="DIKIRIM">SUDAH DISERAHKAN</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-slate-200/80">
+                                            <label className="flex items-start gap-2 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={cutStock}
+                                                    onChange={(e) => setCutStock(e.target.checked)}
+                                                    className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-600 mt-0.5"
+                                                />
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-800 block">
+                                                        {cutStock ? "Potong Stok Gudang (Aktif)" : "Bypass Stok (Tidak Memotong)"}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
+                                                        {cutStock ? "Resep BOM bahan baku otomatis dikurangi dari stok." : "Arsip historis nota lama tanpa mempengaruhi stok fisik."}
+                                                    </span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Financial Breakdown */}
+                                    <div className="space-y-2.5 text-xs">
+                                        <div className="flex justify-between items-center text-slate-600">
+                                            <span>Subtotal:</span>
+                                            <span className="font-bold font-mono text-slate-900">
+                                                {formatCurrency(subtotal)}
                                             </span>
                                         </div>
-                                    </label>
-                                </div>
-                            </div>
 
-                            {/* Financial Calculations */}
-                            <div className="space-y-2.5 text-xs">
-                                <div className="flex justify-between items-center text-slate-600">
-                                    <span>Subtotal:</span>
-                                    <span className="font-bold font-mono text-slate-900">
-                                        {formatCurrency(subtotal)}
-                                    </span>
-                                </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-600">Diskon / Potongan:</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={discount}
+                                                onChange={(e) => setDiscount(e.target.value)}
+                                                className="w-28 h-8 px-2 text-xs text-right border border-slate-300 rounded-lg font-mono focus:border-teal-600 focus:ring-1 focus:ring-teal-600 bg-white shadow-2xs"
+                                            />
+                                        </div>
 
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">Diskon / Potongan:</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={discount}
-                                        onChange={(e) => setDiscount(e.target.value)}
-                                        className="w-28 px-2 py-1 text-xs text-right border border-slate-300 rounded font-mono focus:border-teal-500"
-                                    />
-                                </div>
+                                        <div className="flex justify-between items-center py-2.5 px-3 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-lg shadow-sm">
+                                            <span className="font-bold text-xs uppercase tracking-wider">Total Tagihan:</span>
+                                            <span className="font-extrabold font-mono text-base text-teal-300">
+                                                {formatCurrency(totalAmount)}
+                                            </span>
+                                        </div>
 
-                                <div className="flex justify-between items-center py-2.5 px-3 bg-slate-900 text-white rounded-md">
-                                    <span className="font-bold text-xs uppercase tracking-wider">Total Tagihan:</span>
-                                    <span className="font-black font-mono text-base text-teal-300">
-                                        {formatCurrency(totalAmount)}
-                                    </span>
-                                </div>
+                                        <div>
+                                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                                                Preset Status Bayar:
+                                            </span>
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSetPaymentPreset("FULL")}
+                                                    className={`py-1 text-[10px] font-bold rounded-md border transition-all cursor-pointer ${
+                                                        paymentStatus === "LUNAS"
+                                                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-bold shadow-2xs"
+                                                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                                                    }`}
+                                                >
+                                                    100% Lunas
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSetPaymentPreset("DP50")}
+                                                    className={`py-1 text-[10px] font-bold rounded-md border transition-all cursor-pointer ${
+                                                        paymentStatus === "DP"
+                                                            ? "bg-amber-50 text-amber-800 border-amber-300 font-bold shadow-2xs"
+                                                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                                                    }`}
+                                                >
+                                                    DP 50%
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSetPaymentPreset("ZERO")}
+                                                    className={`py-1 text-[10px] font-bold rounded-md border transition-all cursor-pointer ${
+                                                        paymentStatus === "BELUM_LUNAS"
+                                                            ? "bg-rose-50 text-rose-800 border-rose-300 font-bold shadow-2xs"
+                                                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                                                    }`}
+                                                >
+                                                    Belum Bayar
+                                                </button>
+                                            </div>
+                                        </div>
 
-                                {/* Fast Payment Preset Buttons */}
-                                <div>
-                                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                                        Pilihan Cepat Bayar:
-                                    </span>
-                                    <div className="grid grid-cols-3 gap-1">
+                                        <div className="flex justify-between items-center pt-1">
+                                            <span className="text-slate-600 font-medium">Uang Terbayar:</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={paidAmount}
+                                                onChange={(e) => setPaidAmount(e.target.value)}
+                                                className="w-28 h-8 px-2 text-xs text-right border border-slate-300 rounded-lg font-mono text-emerald-700 font-bold focus:border-teal-600 focus:ring-1 focus:ring-teal-600 bg-white shadow-2xs"
+                                            />
+                                        </div>
+
+                                        <div className="flex justify-between items-center py-2 px-2.5 bg-white rounded-lg border border-slate-200">
+                                            <span className="font-bold text-slate-800">Sisa Piutang:</span>
+                                            <span className={`font-extrabold font-mono text-sm ${remainingBalance > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                                {remainingBalance > 0 ? formatCurrency(remainingBalance) : "LUNAS"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Notes */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                            Catatan / Instruksi Khusus
+                                        </label>
+                                        <textarea
+                                            rows={2}
+                                            value={notes}
+                                            onChange={(e) => setNotes(e.target.value)}
+                                            placeholder="Contoh: Bordir logo dada kiri, sablon nama sekolah..."
+                                            className="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:border-teal-600 focus:ring-1 focus:ring-teal-600 bg-white shadow-2xs"
+                                        />
+                                    </div>
+
+                                    {/* Submit & Cancel Actions */}
+                                    <div className="pt-2 space-y-2">
                                         <button
-                                            type="button"
-                                            onClick={() => handleSetPaymentPreset("FULL")}
-                                            className={`py-1 text-[10px] font-bold rounded border transition-all cursor-pointer ${
-                                                paymentStatus === "LUNAS"
-                                                    ? "bg-emerald-600 text-white border-emerald-600"
-                                                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                                            }`}
+                                            type="submit"
+                                            disabled={submitting}
+                                            className="w-full h-9 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
-                                            100% Lunas
+                                            <Save className="w-4 h-4" />
+                                            <span>{submitting ? "Menyimpan Transaksi..." : "Simpan & Terbitkan Invoice"}</span>
                                         </button>
+
                                         <button
                                             type="button"
-                                            onClick={() => handleSetPaymentPreset("DP50")}
-                                            className={`py-1 text-[10px] font-bold rounded border transition-all cursor-pointer ${
-                                                paymentStatus === "DP"
-                                                    ? "bg-amber-600 text-white border-amber-600"
-                                                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                                            }`}
+                                            onClick={() => router.visit("/dashboard/invoice")}
+                                            className="w-full h-8 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-50 rounded-lg border border-slate-300 transition-colors cursor-pointer"
                                         >
-                                            DP 50%
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSetPaymentPreset("ZERO")}
-                                            className={`py-1 text-[10px] font-bold rounded border transition-all cursor-pointer ${
-                                                paymentStatus === "BELUM_LUNAS"
-                                                    ? "bg-rose-600 text-white border-rose-600"
-                                                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                                            }`}
-                                        >
-                                            Belum Bayar
+                                            Batal
                                         </button>
                                     </div>
                                 </div>
-
-                                <div className="flex justify-between items-center pt-1">
-                                    <span className="text-slate-600 font-medium">Jumlah Terbayar (Rp):</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={paidAmount}
-                                        onChange={(e) => setPaidAmount(e.target.value)}
-                                        className="w-28 px-2 py-1 text-xs text-right border border-slate-300 rounded font-mono text-emerald-700 font-bold focus:border-teal-500"
-                                    />
-                                </div>
-
-                                <div className="flex justify-between items-center py-2 px-2.5 bg-slate-50 rounded border border-slate-200">
-                                    <span className="font-bold text-slate-800">Sisa Piutang:</span>
-                                    <span className={`font-black font-mono text-sm ${remainingBalance > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                                        {remainingBalance > 0 ? formatCurrency(remainingBalance) : "LUNAS"}
-                                    </span>
-                                </div>
                             </div>
-
-                            {/* Notes */}
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                                    Catatan Nota
-                                </label>
-                                <textarea
-                                    rows={2}
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    placeholder="Contoh: Bordir logo dada kiri, sablon nama sekolah..."
-                                    className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:border-teal-500 bg-white"
-                                />
-                            </div>
-
-                            {/* Submit Button */}
-                            <div className="pt-2 space-y-2">
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="w-full py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-all shadow-xs hover:shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    <Save className="w-4 h-4" />
-                                    <span>{submitting ? "Menyimpan Transaksi..." : "Simpan & Terbitkan Invoice"}</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => router.visit("/dashboard/invoice")}
-                                    className="w-full py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                            </div>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </form>
 
             {/* Quick Add Customer Modal */}

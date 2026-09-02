@@ -26,16 +26,15 @@ class ProductionProgressSeeder extends Seeder
             $stepQty = (int) ($step->qty ?: 20);
 
             if ($step->status === 'completed') {
-                $date1 = Carbon::now()->subDays(6)->format('Y-m-d');
-                $date2 = Carbon::now()->subDays(4)->format('Y-m-d');
+                $targetDate = $step->completed_at ? Carbon::parse($step->completed_at) : Carbon::now()->subDays(4);
                 $half = (int) ceil($stepQty / 2);
 
                 ProductionProgressLog::create([
                     'production_assignment_step_id' => $step->id,
                     'user_id' => $tailorId,
-                    'date' => $date1,
+                    'date' => $targetDate->copy()->subDays(1)->format('Y-m-d'),
                     'qty' => $half,
-                    'notes' => 'Pengerjaan batch 1 selesai',
+                    'notes' => 'Pengerjaan bagian pertama selesai',
                     'created_by' => $tailorId,
                 ]);
 
@@ -43,20 +42,20 @@ class ProductionProgressSeeder extends Seeder
                     ProductionProgressLog::create([
                         'production_assignment_step_id' => $step->id,
                         'user_id' => $tailorId,
-                        'date' => $date2,
+                        'date' => $targetDate->format('Y-m-d'),
                         'qty' => $stepQty - $half,
-                        'notes' => 'Penyelesaian seluruh target langkah',
+                        'notes' => 'Penyelesaian sisa target langkah kerja',
                         'created_by' => $tailorId,
                     ]);
                 }
             } elseif ($step->status === 'in_progress') {
-                $portion = max(1, (int) round($stepQty * 0.4));
+                $portion = max(1, (int) round($stepQty * 0.5));
                 ProductionProgressLog::create([
                     'production_assignment_step_id' => $step->id,
                     'user_id' => $tailorId,
                     'date' => Carbon::now()->subDays(1)->format('Y-m-d'),
                     'qty' => $portion,
-                    'notes' => 'Progres pengerjaan berjalan',
+                    'notes' => 'Progres pengerjaan bertahap sedang berjalan',
                     'created_by' => $tailorId,
                 ]);
             }
