@@ -14,6 +14,7 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Poppins', ...defaultTheme.fontFamily.sans],
+                mono: ['"JetBrains Mono"', ...defaultTheme.fontFamily.mono],
             },
             colors: {
                 clinova: {
@@ -50,9 +51,10 @@ export default {
                 }
             },
             borderRadius: {
-                'xl': '0.625rem',
-                '2xl': '1rem',
-                '3xl': '1.5rem',
+                'lg': '0.375rem',
+                'xl': '0.5rem',
+                '2xl': '0.75rem',
+                '3xl': '1rem',
             },
             boxShadow: {
                 'soft-2xs': '0 1px 2px rgba(0,0,0,0.04)',

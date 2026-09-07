@@ -67,7 +67,7 @@ const KpiCards = memo(function KpiCards({ kpi, loading = false }) {
                             <c.icon className="w-4 h-4" />
                         </div>
                     </div>
-                    <div className="text-base sm:text-lg font-bold text-slate-900 font-mono leading-tight truncate" title={c.value}>
+                    <div className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate" title={c.value}>
                         {c.value}
                     </div>
                     <div>{c.sub}</div>

@@ -66,25 +66,32 @@ export const GrowthChip = memo(function GrowthChip({ growth, suffix = "%" }) {
     );
 });
 
-export function Card({ title, subtitle, right, children, className = "" }) {
+export function Card({ title, subtitle, icon: Icon, right, children, className = "" }) {
     return (
-        <div className={`bg-white rounded-xl border border-slate-200/60 shadow-soft-xs ${className}`}>
-            {(title || right) && (
-                <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
-                    <div>
-                        {title && <h3 className="text-sm font-bold text-slate-800">{title}</h3>}
-                        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+        <div className={`bg-white rounded-md border border-slate-200 shadow-2xs flex flex-col justify-between ${className}`}>
+            {(title || right || Icon) && (
+                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        {Icon && (
+                            <div className="w-7 h-7 rounded-md bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+                                <Icon className="w-3.5 h-3.5" />
+                            </div>
+                        )}
+                        <div className="min-w-0">
+                            {title && <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider truncate">{title}</h3>}
+                            {subtitle && <p className="text-[11px] text-slate-500 mt-0.5 truncate">{subtitle}</p>}
+                        </div>
                     </div>
                     {right}
                 </div>
             )}
-            <div className={title ? "px-4 pb-4" : "p-4"}>{children}</div>
+            <div className={title || Icon ? "p-4 flex-1 flex flex-col justify-between" : "p-4 flex-1"}>{children}</div>
         </div>
     );
 }
 
 export function Skeleton({ className = "" }) {
-    return <div className={`animate-pulse rounded-lg bg-slate-200/70 ${className}`} />;
+    return <div className={`animate-pulse rounded-md bg-slate-200/70 ${className}`} />;
 }
 
 export function EmptyState({ message }) {

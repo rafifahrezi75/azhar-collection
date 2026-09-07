@@ -190,15 +190,15 @@ export default function CustomerYearlyTrendChart() {
                     <div className="grid grid-cols-3 gap-3 mb-4">
                         <div className="bg-slate-50 rounded-lg p-2.5 text-center">
                             <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Omzet</div>
-                            <div className="text-sm font-bold text-slate-800 font-mono">{fmtRp(totalRevenue)}</div>
+                            <div className="text-sm font-bold text-slate-800">{fmtRp(totalRevenue)}</div>
                         </div>
                         <div className="bg-slate-50 rounded-lg p-2.5 text-center">
                             <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Qty</div>
-                            <div className="text-sm font-bold text-slate-800 font-mono">{fmtNum(totalQty)} <span className="text-[10px] text-slate-400">pcs</span></div>
+                            <div className="text-sm font-bold text-slate-800">{fmtNum(totalQty)} <span className="text-[10px] text-slate-400">pcs</span></div>
                         </div>
                         <div className="bg-slate-50 rounded-lg p-2.5 text-center">
                             <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Invoice</div>
-                            <div className="text-sm font-bold text-slate-800 font-mono">{fmtNum(totalInvoices)}</div>
+                            <div className="text-sm font-bold text-slate-800">{fmtNum(totalInvoices)}</div>
                         </div>
                     </div>
 
@@ -245,9 +245,9 @@ export default function CustomerYearlyTrendChart() {
                                             <div className="absolute bottom-full mb-2 bg-slate-900 text-white rounded-lg p-2.5 shadow-xl text-[10px] z-50 pointer-events-none min-w-[160px]">
                                                 <div className="font-bold text-xs mb-1.5 border-b border-slate-700 pb-1">{d.label}</div>
                                                 <div className="space-y-0.5">
-                                                    <div className="flex justify-between"><span className="text-slate-400">Omzet:</span><span className="font-bold text-teal-300 font-mono">{fmtRp(d.revenue)}</span></div>
-                                                    <div className="flex justify-between"><span className="text-slate-400">Qty:</span><span className="font-bold text-white font-mono">{fmtNum(d.qty)} pcs</span></div>
-                                                    <div className="flex justify-between"><span className="text-slate-400">Invoice:</span><span className="font-bold text-white font-mono">{d.invoices}</span></div>
+                                                    <div className="flex justify-between"><span className="text-slate-400">Omzet:</span><span className="font-bold text-teal-300">{fmtRp(d.revenue)}</span></div>
+                                                    <div className="flex justify-between"><span className="text-slate-400">Qty:</span><span className="font-bold text-white">{fmtNum(d.qty)} pcs</span></div>
+                                                    <div className="flex justify-between"><span className="text-slate-400">Invoice:</span><span className="font-bold text-white">{d.invoices}</span></div>
                                                 </div>
                                             </div>
                                         )}

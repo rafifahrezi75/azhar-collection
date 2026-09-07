@@ -111,7 +111,7 @@ export default function Index({ purchases }) {
                                                     <button
                                                         type="button"
                                                         onClick={() => router.visit(route('purchases.preview', purchase.id))}
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-md transition-colors border border-teal-200/80 cursor-pointer shadow-2xs"
                                                         title="PDF"
                                                     >
                                                         <Printer className="w-3.5 h-3.5" />

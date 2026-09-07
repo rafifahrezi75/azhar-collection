@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Item;
-use App\Models\Role;
+use App\Models\ProductionAssignment;
+use App\Models\ProductionProgressLog;
+use App\Models\Purchase;
 use App\Models\Size;
 use App\Models\StockMutation;
-use App\Models\Unit;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,30 +19,19 @@ class DashboardController extends Controller
 {
     public function page(Request $request)
     {
-        $summary = $this->getDashboardSummary();
-
         $canViewAnalytics = $request->user()->hasPermission('dashboard.analytics.view');
-
-        if ($canViewAnalytics) {
-            $year = (int) ($request->get('year', Carbon::now()->year));
-            $compareYear = (int) ($request->get('compare_year', $year - 1));
-            $customerId = $request->get('customer_id', 'ALL');
-
-            $orderAnalytics = $this->getOrderAnalyticsData($customerId, $year, $compareYear);
-        } else {
-            $orderAnalytics = null;
-        }
+        $summary = $this->getDashboardSummary($canViewAnalytics);
 
         return Inertia::render('Dashboard', [
             'initialSummary' => $summary,
-            'initialOrderAnalytics' => $orderAnalytics,
             'canViewAnalytics' => $canViewAnalytics,
         ]);
     }
 
     public function summaryApi(Request $request)
     {
-        $summary = $this->getDashboardSummary();
+        $canViewAnalytics = $request->user()->hasPermission('dashboard.analytics.view');
+        $summary = $this->getDashboardSummary($canViewAnalytics);
 
         return response()->json([
             'success' => true,
@@ -540,155 +529,287 @@ class DashboardController extends Controller
         return array_filter($sizes, fn ($qty) => $qty > 0);
     }
 
-    private function getDashboardSummary(): array
+    private function getDashboardSummary(bool $canViewAnalytics = true): array
     {
-        // 1. Basic Counts
-        $totalItems = Item::count();
-        $activeItems = Item::where('is_active', true)->count();
-        $totalStockBase = (int) Item::sum('stock');
+        $now = Carbon::now();
+        $startOfMonth = $now->copy()->startOfMonth()->toDateString();
+        $endOfMonth = $now->copy()->endOfMonth()->toDateString();
 
-        $lowStockItems = Item::whereRaw('stock <= min_stock')
-            ->where('is_active', true)
-            ->with(['unit', 'category'])
-            ->orderBy('stock', 'asc')
+        $monthlyFinishedLogs = ProductionProgressLog::with(['assignmentStep', 'tailor'])
+            ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->get();
-        $lowStockCount = $lowStockItems->count();
-        $outOfStockCount = Item::where('stock', '<=', 0)->count();
-        $safeStockCount = max(0, $totalItems - $lowStockCount);
+        $monthlyFinishedQty = (int) $monthlyFinishedLogs->sum('qty');
 
-        $totalCategories = Category::count();
-        $totalUnits = Unit::count();
-        $totalUsers = User::count();
-        $totalRoles = Role::count();
+        $tailorMap = [];
+        $totalPayroll = 0;
+        foreach ($monthlyFinishedLogs as $log) {
+            $wage = (float) ($log->assignmentStep ? $log->assignmentStep->wage : 0);
+            $subtotal = $wage * (float) $log->qty;
+            $totalPayroll += $subtotal;
 
-        // 2. Monthly In / Out Totals (Current Month)
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $monthlyInQty = (int) StockMutation::where('type', 'in')
-            ->where('mutation_date', '>=', $startOfMonth)
-            ->sum('total_base_quantity');
-
-        $monthlyOutQty = (int) StockMutation::where('type', 'out')
-            ->where('mutation_date', '>=', $startOfMonth)
-            ->sum('total_base_quantity');
-
-        $monthlyTransactionsCount = StockMutation::where('mutation_date', '>=', $startOfMonth)->count();
-
-        // 3. Activity Trend (Last 7 Days)
-        $trendDays = 7;
-        $activityTrend = [];
-        for ($i = $trendDays - 1; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $dateStr = $date->format('Y-m-d');
-            $dayLabel = $date->translatedFormat('D, d M');
-
-            $inSum = (int) StockMutation::where('type', 'in')
-                ->whereDate('mutation_date', $dateStr)
-                ->sum('total_base_quantity');
-
-            $outSum = (int) StockMutation::where('type', 'out')
-                ->whereDate('mutation_date', $dateStr)
-                ->sum('total_base_quantity');
-
-            $count = StockMutation::whereDate('mutation_date', $dateStr)->count();
-
-            $activityTrend[] = [
-                'date' => $dateStr,
-                'label' => $dayLabel,
-                'short_label' => $date->format('d/m'),
-                'day_name' => $date->translatedFormat('l'),
-                'in_qty' => $inSum,
-                'out_qty' => $outSum,
-                'total_mutations' => $count,
-            ];
+            $uid = $log->user_id;
+            if (! isset($tailorMap[$uid])) {
+                $tailorMap[$uid] = [
+                    'user_id' => $uid,
+                    'name' => $log->tailor ? $log->tailor->name : 'Penjahit',
+                    'qty' => 0,
+                    'wage_total' => 0,
+                ];
+            }
+            $tailorMap[$uid]['qty'] += (int) $log->qty;
+            $tailorMap[$uid]['wage_total'] += $subtotal;
         }
+        $topTailors = array_values($tailorMap);
+        usort($topTailors, fn ($a, $b) => $b['qty'] <=> $a['qty']);
+        $topTailors = array_slice($topTailors, 0, 4);
 
-        // 4. Category Breakdown & Stock Distribution
-        $palette = ['#0d9488', '#0284c7', '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
-        $categoriesData = Category::withCount('items')
-            ->with(['items' => function ($q) {
-                $q->select('id', 'category_id', 'stock');
-            }])
+        $spkAll = ProductionAssignment::all();
+        $spkPending = $spkAll->where('status', 'pending')->count();
+        $spkInProgress = $spkAll->where('status', 'in_progress')->count();
+        $spkCompleted = $spkAll->where('status', 'completed')->count();
+        $spkTotal = $spkAll->count();
+
+        $activeAssignments = ProductionAssignment::with(['invoiceItem.product', 'invoiceItem.invoice.customer', 'assignee'])
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->orderByRaw('CASE WHEN target_date IS NULL THEN 1 ELSE 0 END, target_date ASC')
+            ->take(5)
             ->get()
-            ->map(function ($cat, $index) use ($palette, $totalItems) {
-                $stockSum = $cat->items->sum('stock');
-                $itemPercentage = $totalItems > 0 ? round(($cat->items_count / $totalItems) * 100, 1) : 0;
+            ->map(function ($a) {
+                $target = $a->target_date ? Carbon::parse($a->target_date) : null;
 
                 return [
-                    'id' => $cat->id,
-                    'name' => $cat->name,
-                    'items_count' => $cat->items_count,
-                    'total_stock' => $stockSum,
-                    'percentage' => $itemPercentage,
-                    'color' => $palette[$index % count($palette)],
+                    'id' => $a->id,
+                    'product_name' => $a->invoiceItem && $a->invoiceItem->product ? $a->invoiceItem->product->name : ($a->invoiceItem ? $a->invoiceItem->item_name : '-'),
+                    'customer_name' => $a->invoiceItem && $a->invoiceItem->invoice && $a->invoiceItem->invoice->customer ? $a->invoiceItem->invoice->customer->name : 'Umum',
+                    'tailor_name' => $a->assignee ? $a->assignee->name : 'Belum Ditugaskan',
+                    'qty' => (int) $a->qty,
+                    'status' => strtolower((string) $a->status),
+                    'target_date' => $target ? $target->format('d M Y') : '-',
+                    'is_overdue' => $target ? $target->isPast() : false,
                 ];
-            })
-            ->sortByDesc('items_count')
-            ->values()
-            ->all();
+            })->values()->all();
 
-        // 5. Critical Stock Items (Need Restock)
-        $criticalItems = $lowStockItems->take(5)->map(function ($item) {
-            $ratio = $item->min_stock > 0 ? min(100, round(($item->stock / $item->min_stock) * 100)) : 0;
+        $topProductsRaw = InvoiceItem::selectRaw('product_id, SUM(qty) as total_qty, SUM(subtotal) as total_revenue')
+            ->with('product')
+            ->whereNotNull('product_id')
+            ->groupBy('product_id')
+            ->orderByDesc('total_qty')
+            ->take(5)
+            ->get();
 
+        $maxQty = $topProductsRaw->max('total_qty') ?: 1;
+        $topProducts = $topProductsRaw->map(function ($p) use ($maxQty) {
             return [
-                'id' => $item->id,
-                'code' => $item->code,
-                'name' => $item->name,
-                'stock' => $item->stock,
-                'min_stock' => $item->min_stock,
-                'unit_symbol' => $item->unit ? ($item->unit->symbol ?: $item->unit->name) : 'pcs',
-                'category_name' => $item->category ? $item->category->name : '-',
-                'image_url' => $item->image_url,
-                'health_ratio' => $ratio,
-                'is_out_of_stock' => $item->stock <= 0,
+                'product_id' => $p->product_id,
+                'name' => $p->product ? $p->product->name : 'Produk #'.$p->product_id,
+                'code' => $p->product ? $p->product->code : null,
+                'category' => $p->product && $p->product->category ? $p->product->category : 'Umum',
+                'total_qty' => (int) $p->total_qty,
+                'total_revenue' => (float) $p->total_revenue,
+                'percentage' => round(((int) $p->total_qty / $maxQty) * 100),
             ];
         })->values()->all();
 
-        // 6. Recent Mutations (Latest 6)
+        $criticalItems = Item::where('is_active', true)
+            ->whereRaw('stock <= min_stock')
+            ->with(['unit', 'category'])
+            ->orderBy('stock', 'asc')
+            ->take(5)
+            ->get()
+            ->map(function ($item) {
+                $minStock = (float) $item->min_stock;
+                $stock = (float) $item->stock;
+                $ratio = $minStock > 0 ? min(100, round(($stock / $minStock) * 100)) : 0;
+
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'code' => $item->code,
+                    'stock' => $stock,
+                    'min_stock' => $minStock,
+                    'unit_symbol' => $item->unit ? ($item->unit->symbol ?: $item->unit->name) : 'pcs',
+                    'category_name' => $item->category ? $item->category->name : '-',
+                    'health_ratio' => $ratio,
+                    'is_out_of_stock' => $stock <= 0,
+                ];
+            })->values()->all();
+
+        $totalItems = Item::count();
+        $lowStockCount = Item::where('is_active', true)->whereRaw('stock <= min_stock')->count();
+        $outOfStockCount = Item::where('is_active', true)->where('stock', '<=', 0)->count();
+
         $recentMutations = StockMutation::with(['item.unit', 'user', 'unit'])
             ->orderBy('created_at', 'desc')
-            ->take(6)
+            ->take(5)
             ->get()
             ->map(function ($m) {
                 return [
                     'id' => $m->id,
                     'type' => $m->type,
-                    'quantity' => $m->quantity,
+                    'quantity' => (float) $m->quantity,
                     'unit_symbol' => $m->unit ? ($m->unit->symbol ?: $m->unit->name) : ($m->item && $m->item->unit ? ($m->item->unit->symbol ?: $m->item->unit->name) : 'pcs'),
-                    'total_base_quantity' => $m->total_base_quantity,
-                    'base_unit_symbol' => $m->item && $m->item->unit ? ($m->item->unit->symbol ?: $m->item->unit->name) : 'pcs',
-                    'item_id' => $m->item_id,
                     'item_name' => $m->item ? $m->item->name : 'Item Dihapus',
                     'item_code' => $m->item ? $m->item->code : '-',
-                    'item_image' => $m->item ? $m->item->image_url : null,
-                    'notes' => $m->notes,
-                    'reference_no' => $m->reference_no,
                     'user_name' => $m->user ? $m->user->name : 'Sistem',
-                    'date' => $m->mutation_date ? $m->mutation_date->format('d M Y, H:i') : $m->created_at->format('d M Y, H:i'),
-                    'time_ago' => $m->created_at->diffForHumans(),
+                    'date_formatted' => $m->mutation_date ? Carbon::parse($m->mutation_date)->format('d M, H:i') : $m->created_at->format('d M, H:i'),
                 ];
-            });
+            })->values()->all();
+
+        if ($canViewAnalytics) {
+            $monthInvoices = Invoice::whereBetween('order_date', [$startOfMonth, $endOfMonth])->get();
+            $monthlyOmset = (float) $monthInvoices->sum('total_amount');
+            $monthlyCashIn = (float) $monthInvoices->sum('paid_amount');
+            $monthlyReceivables = max(0, $monthlyOmset - $monthlyCashIn);
+            $monthlyInvoicesCount = $monthInvoices->count();
+            $unpaidInvoicesCount = $monthInvoices->filter(fn ($i) => ! in_array(strtolower((string) $i->payment_status), ['lunas']))->count();
+            $collectionRate = $monthlyOmset > 0 ? round(($monthlyCashIn / $monthlyOmset) * 100) : 0;
+
+            $countLunas = $monthInvoices->filter(fn ($i) => strtolower((string) $i->payment_status) === 'lunas')->count();
+            $countDp = $monthInvoices->filter(fn ($i) => in_array(strtolower((string) $i->payment_status), ['dp', 'partial']))->count();
+            $countUnpaid = $monthInvoices->filter(fn ($i) => in_array(strtolower((string) $i->payment_status), ['belum_bayar', 'belum_lunas']))->count();
+
+            $monthPurchases = Purchase::whereBetween('date', [$startOfMonth, $endOfMonth])->get();
+            $monthlyPurchasesTotal = (float) $monthPurchases->sum('total_amount');
+            $monthlyPurchasesCount = $monthPurchases->count();
+
+            $totalExpenses = $monthlyPurchasesTotal + $totalPayroll;
+            $netCashflow = $monthlyCashIn - $totalExpenses;
+            $estimatedGrossMargin = $monthlyOmset - $totalExpenses;
+            $marginRate = $monthlyOmset > 0 ? round(($estimatedGrossMargin / $monthlyOmset) * 100, 1) : 0;
+            $materialRatio = $monthlyOmset > 0 ? round(($monthlyPurchasesTotal / $monthlyOmset) * 100, 1) : 0;
+            $laborRatio = $monthlyOmset > 0 ? round(($totalPayroll / $monthlyOmset) * 100, 1) : 0;
+
+            $currentYear = $now->year;
+            $monthNames = [
+                1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
+                5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu',
+                9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des',
+            ];
+
+            $monthlyTrend = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $mStart = Carbon::create($currentYear, $m, 1)->startOfMonth()->toDateString();
+                $mEnd = Carbon::create($currentYear, $m, 1)->endOfMonth()->toDateString();
+
+                $invs = Invoice::whereBetween('order_date', [$mStart, $mEnd])->get();
+                $mOmset = (float) $invs->sum('total_amount');
+                $mCashIn = (float) $invs->sum('paid_amount');
+                $mPurchases = (float) Purchase::whereBetween('date', [$mStart, $mEnd])->sum('total_amount');
+
+                $mLogs = ProductionProgressLog::with('assignmentStep')
+                    ->whereBetween('date', [$mStart, $mEnd])
+                    ->get();
+                $mPayroll = 0;
+                foreach ($mLogs as $l) {
+                    $w = (float) ($l->assignmentStep ? $l->assignmentStep->wage : 0);
+                    $mPayroll += $w * (float) $l->qty;
+                }
+                $mPcs = (int) $mLogs->sum('qty');
+
+                $monthlyTrend[] = [
+                    'month' => $monthNames[$m],
+                    'month_num' => $m,
+                    'omset' => $mOmset,
+                    'cash_in' => $mCashIn,
+                    'expenses' => $mPurchases + $mPayroll,
+                    'purchases' => $mPurchases,
+                    'payroll' => $mPayroll,
+                    'output_pcs' => $mPcs,
+                ];
+            }
+
+            $pendingInvoices = Invoice::with('customer')
+                ->whereIn('payment_status', ['belum_bayar', 'belum_lunas', 'dp', 'partial'])
+                ->whereRaw('total_amount > paid_amount')
+                ->orderByRaw('(total_amount - paid_amount) DESC')
+                ->take(5)
+                ->get()
+                ->map(function ($inv) {
+                    $outstanding = (float) ($inv->total_amount - $inv->paid_amount);
+                    $deadline = $inv->delivery_deadline ? Carbon::parse($inv->delivery_deadline) : null;
+
+                    return [
+                        'id' => $inv->id,
+                        'invoice_number' => $inv->invoice_number,
+                        'customer_name' => $inv->customer ? $inv->customer->name : 'Umum',
+                        'total_amount' => (float) $inv->total_amount,
+                        'paid_amount' => (float) $inv->paid_amount,
+                        'outstanding' => $outstanding,
+                        'payment_status' => strtolower((string) $inv->payment_status),
+                        'order_date' => $inv->order_date ? Carbon::parse($inv->order_date)->format('d M Y') : '-',
+                        'deadline' => $deadline ? $deadline->format('d M Y') : '-',
+                        'is_overdue' => $deadline ? $deadline->isPast() : false,
+                    ];
+                })->values()->all();
+
+            $kpi = [
+                'monthly_omset' => $monthlyOmset,
+                'monthly_cash_in' => $monthlyCashIn,
+                'monthly_receivables' => $monthlyReceivables,
+                'collection_rate' => $collectionRate,
+                'monthly_invoices_count' => $monthlyInvoicesCount,
+                'unpaid_invoices_count' => $unpaidInvoicesCount,
+                'monthly_production_output' => $monthlyFinishedQty,
+            ];
+
+            $financialHealth = [
+                'monthly_omset' => $monthlyOmset,
+                'monthly_cash_in' => $monthlyCashIn,
+                'monthly_receivables' => $monthlyReceivables,
+                'collection_rate' => $collectionRate,
+                'invoices_count' => $monthlyInvoicesCount,
+                'count_lunas' => $countLunas,
+                'count_dp' => $countDp,
+                'count_unpaid' => $countUnpaid,
+                'monthly_purchases' => $monthlyPurchasesTotal,
+                'monthly_purchases_count' => $monthlyPurchasesCount,
+                'monthly_payroll' => $totalPayroll,
+                'total_expenses' => $totalExpenses,
+                'net_cashflow' => $netCashflow,
+                'estimated_gross_margin' => $estimatedGrossMargin,
+                'margin_percentage' => $marginRate,
+                'material_ratio' => $materialRatio,
+                'labor_ratio' => $laborRatio,
+            ];
+        } else {
+            $monthlyTrend = [];
+            $kpi = [
+                'monthly_omset' => null,
+                'monthly_cash_in' => null,
+                'monthly_receivables' => null,
+                'collection_rate' => null,
+                'monthly_invoices_count' => null,
+                'unpaid_invoices_count' => null,
+                'monthly_production_output' => $monthlyFinishedQty,
+            ];
+            $financialHealth = null;
+            $pendingInvoices = [];
+        }
 
         return [
-            'metrics' => [
-                'total_items' => $totalItems,
-                'active_items' => $activeItems,
-                'total_stock_base' => $totalStockBase,
-                'low_stock_count' => $lowStockCount,
-                'out_of_stock_count' => $outOfStockCount,
-                'safe_stock_count' => $safeStockCount,
-                'total_categories' => $totalCategories,
-                'total_units' => $totalUnits,
-                'total_users' => $totalUsers,
-                'total_roles' => $totalRoles,
-                'monthly_in_qty' => $monthlyInQty,
-                'monthly_out_qty' => $monthlyOutQty,
-                'monthly_transactions_count' => $monthlyTransactionsCount,
+            'period_label' => $now->translatedFormat('F Y'),
+            'current_year' => $now->year,
+            'kpi' => $kpi,
+            'financial_health' => $financialHealth,
+            'monthly_trend' => $monthlyTrend,
+            'production_pulse' => [
+                'spk_pending' => $spkPending,
+                'spk_in_progress' => $spkInProgress,
+                'spk_completed' => $spkCompleted,
+                'spk_total' => $spkTotal,
+                'monthly_finished_qty' => $monthlyFinishedQty,
+                'top_tailors' => $topTailors,
             ],
-            'activity_trend' => $activityTrend,
-            'category_distribution' => $categoriesData,
             'critical_items' => $criticalItems,
             'recent_mutations' => $recentMutations,
+            'top_products' => $topProducts,
+            'active_deadlines' => $activeAssignments,
+            'pending_invoices' => $pendingInvoices,
+            'inventory_stats' => [
+                'total_items' => $totalItems,
+                'low_stock_count' => $lowStockCount,
+                'out_of_stock_count' => $outOfStockCount,
+            ],
         ];
     }
 }

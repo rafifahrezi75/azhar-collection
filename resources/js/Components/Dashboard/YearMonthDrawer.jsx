@@ -208,7 +208,7 @@ const YearMonthDrawer = memo(function YearMonthDrawer({
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-xs font-bold text-slate-800 font-mono">
+                                                        <span className="text-xs font-bold text-slate-800">
                                                             {inv.invoice_number}
                                                         </span>
                                                         <PaymentBadge value={inv.payment_status} />
@@ -217,7 +217,7 @@ const YearMonthDrawer = memo(function YearMonthDrawer({
                                                     <div className="text-[11px] text-slate-400 mt-0.5">{formatDate(inv.order_date)}</div>
                                                 </div>
                                                 <div className="text-right shrink-0">
-                                                    <div className="text-sm font-bold text-slate-800 font-mono">
+                                                    <div className="text-sm font-bold text-slate-800">
                                                         {formatMoneyShort(inv.total)}
                                                     </div>
                                                     {inv.outstanding > 0 && (

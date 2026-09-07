@@ -22,6 +22,7 @@ const PageHeaderBar = memo(function PageHeaderBar({
     addTitle = "Tambah",
     canCreate = true,
     extraActions = null,
+    beforeSearch = null,
 }) {
     const displayTitle =
         title ||
@@ -39,7 +40,9 @@ const PageHeaderBar = memo(function PageHeaderBar({
                 )}
             </div>
 
-            <div className="flex items-center gap-1.5 self-start sm:self-center overflow-visible">
+            <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-center overflow-visible">
+                {beforeSearch}
+
                 {onSearchChange && (
                     <div className="relative">
                         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />

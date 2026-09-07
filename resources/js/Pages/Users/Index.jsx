@@ -498,7 +498,7 @@ export default function Index() {
                                                                 }
                                                                 title="Edit Pengguna"
                                                                 aria-label="Edit Pengguna"
-                                                                className="w-7 h-7 inline-flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md transition-all duration-200 border border-amber-200/80 cursor-pointer shadow-2xs"
+                                                                className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-all duration-200 border border-indigo-200/80 cursor-pointer shadow-2xs"
                                                             >
                                                                 <SquarePen className="w-3.5 h-3.5" />
                                                             </button>

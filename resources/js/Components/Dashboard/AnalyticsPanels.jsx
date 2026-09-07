@@ -22,7 +22,7 @@ export const TopProductsChart = memo(function TopProductsChart({ products = [], 
                                 <span className="text-xs font-semibold text-slate-700 truncate">
                                     {i + 1}. {p.name}
                                 </span>
-                                <span className="text-[11px] font-bold text-teal-700 font-mono shrink-0">
+                                <span className="text-[11px] font-bold text-teal-700 shrink-0">
                                     {formatMoneyShort(p.total_revenue)}
                                 </span>
                             </div>
@@ -106,7 +106,7 @@ export const PaymentStatusDonut = memo(function PaymentStatusDonut({ breakdown =
                                 <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: d.color }} />
                                 <span className="text-slate-600 flex-1 truncate">{d.label}</span>
                                 <span className="text-slate-400">{d.count}</span>
-                                <span className="font-semibold text-slate-700 font-mono w-24 text-right">
+                                <span className="font-semibold text-slate-700 w-24 text-right">
                                     {formatMoneyShort(d.total)}
                                 </span>
                             </div>

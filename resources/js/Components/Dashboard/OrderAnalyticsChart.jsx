@@ -95,7 +95,7 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                         </div>
                     </div>
                     <div className="mt-3">
-                        <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tracking-tight">
+                        <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                             {formatShortRp(kpi.current_revenue)}
                         </div>
                         <div className="mt-2 pt-2 border-t border-teal-100 flex items-center justify-between text-xs">
@@ -118,7 +118,7 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                             ) : (
                                 <span className="text-slate-400 text-[11px]">Komparasi Mati</span>
                             )}
-                            <span className="text-slate-500 font-mono text-[11px] truncate">
+                            <span className="text-slate-500 text-[11px] truncate">
                                 vs {formatShortRp(kpi.compare_revenue)}
                             </span>
                         </div>
@@ -143,7 +143,7 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                         </div>
                     </div>
                     <div className="mt-3">
-                        <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tracking-tight">
+                        <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                             {formatNumber(kpi.current_qty)}{" "}
                             <span className="text-xs font-bold text-slate-500 font-sans">Pcs Baju</span>
                         </div>
@@ -167,7 +167,7 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                             ) : (
                                 <span className="text-slate-400 text-[11px]">Komparasi Mati</span>
                             )}
-                            <span className="text-slate-500 font-mono text-[11px] truncate">
+                            <span className="text-slate-500 text-[11px] truncate">
                                 vs {formatNumber(kpi.compare_qty)} Pcs
                             </span>
                         </div>
@@ -192,11 +192,11 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                         </div>
                     </div>
                     <div className="mt-3">
-                        <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tracking-tight">
+                        <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                             {formatNumber(kpi.current_invoices)}{" "}
                             <span className="text-xs font-bold text-slate-500 font-sans">Invoice</span>
                         </div>
-                        <div className="mt-2 pt-2 border-t border-amber-100 flex items-center justify-between text-xs font-mono text-[11px]">
+                        <div className="mt-2 pt-2 border-t border-amber-100 flex items-center justify-between text-xs text-[11px]">
                             <span className="text-slate-500">Rata-rata/Inv:</span>
                             <span className="font-extrabold text-amber-800">
                                 {formatShortRp(kpi.average_order_value)}
@@ -223,10 +223,10 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                         </div>
                     </div>
                     <div className="mt-3">
-                        <div className="text-xl sm:text-2xl font-black font-mono text-emerald-700 tracking-tight">
+                        <div className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">
                             {formatShortRp(kpi.current_paid)}
                         </div>
-                        <div className="mt-2 pt-2 border-t border-emerald-100 flex items-center justify-between text-xs font-mono text-[11px]">
+                        <div className="mt-2 pt-2 border-t border-emerald-100 flex items-center justify-between text-xs text-[11px]">
                             <span className="text-slate-500">Sisa Piutang:</span>
                             <span className="font-extrabold text-rose-600">
                                 {formatShortRp(kpi.outstanding_amount)}
@@ -367,7 +367,7 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                                             </div>
 
                                             {/* Tooltip Primary Metric Figures */}
-                                            <div className="space-y-2 font-mono text-[11px]">
+                                            <div className="space-y-2 text-[11px]">
                                                 {/* Selected Year */}
                                                 <div className="flex items-center justify-between bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700">
                                                     <span className="flex items-center gap-1.5 text-teal-300 font-bold">
@@ -410,19 +410,19 @@ const OrderAnalyticsChart = memo(function OrderAnalyticsChart({
                                                 <div className="pt-2 border-t border-slate-800 space-y-1 text-[10px] text-slate-300">
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-400">Total Omzet:</span>
-                                                        <span className="font-bold text-white font-mono">
+                                                        <span className="font-bold text-white">
                                                             {formatShortRp(m.current_revenue)}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-400">Total Volume:</span>
-                                                        <span className="font-bold text-white font-mono">
+                                                        <span className="font-bold text-white">
                                                             {formatNumber(m.current_qty)} Pcs Baju
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-400">Status Pembayaran:</span>
-                                                        <span className="font-bold text-emerald-400 font-mono">
+                                                        <span className="font-bold text-emerald-400">
                                                             {m.paid_count} Lunas • {m.dp_count} DP • {m.unpaid_count} Belum
                                                         </span>
                                                     </div>

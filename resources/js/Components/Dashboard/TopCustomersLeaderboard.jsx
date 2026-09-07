@@ -75,7 +75,7 @@ const TopCustomersLeaderboard = memo(function TopCustomersLeaderboard({
                                         </div>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <div className="text-xs font-bold text-slate-800 font-mono">
+                                        <div className="text-xs font-bold text-slate-800">
                                             {formatMoneyShort(r.revenue)}
                                         </div>
                                         <div

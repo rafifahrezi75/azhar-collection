@@ -79,7 +79,7 @@ const CategoryDonutChart = memo(function CategoryDonutChart({ categories = [] })
                     <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                         {hoveredCategory ? hoveredCategory.name.slice(0, 14) + "..." : "Total Bahan"}
                     </span>
-                    <span className="text-xl font-bold font-mono text-slate-900">
+                    <span className="text-xl font-bold text-slate-900">
                         {hoveredCategory ? `${hoveredCategory.items_count} SKU` : `${totalItems} SKU`}
                     </span>
                     <span className="text-[10px] text-slate-500 font-medium">
@@ -113,7 +113,7 @@ const CategoryDonutChart = memo(function CategoryDonutChart({ categories = [] })
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-2.5 shrink-0 font-mono">
+                            <div className="flex items-center gap-2.5 shrink-0">
                                 <span className="font-bold text-slate-900">{cat.items_count} SKU</span>
                                 <span className="text-[11px] px-1.5 py-0.2 rounded bg-white text-slate-600 border border-slate-200 font-semibold">
                                     {cat.percentage}%

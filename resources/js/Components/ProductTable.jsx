@@ -71,7 +71,7 @@ const ProductTable = memo(function ProductTable({
     };
 
     return (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-soft-sm overflow-hidden">
+        <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                     <thead>
@@ -335,7 +335,7 @@ const ProductTable = memo(function ProductTable({
                                                     }
                                                     title="Detail"
                                                     aria-label="Detail"
-                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg transition-all duration-200 border border-sky-200/80 cursor-pointer shadow-soft-2xs"
+                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </button>
@@ -350,7 +350,7 @@ const ProductTable = memo(function ProductTable({
                                                         }
                                                         title="Edit"
                                                         aria-label="Edit"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-all duration-200 border border-indigo-200/80 cursor-pointer shadow-soft-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -366,7 +366,7 @@ const ProductTable = memo(function ProductTable({
                                                         }
                                                         title="Hapus"
                                                         aria-label="Hapus"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition-all duration-200 border border-rose-200/80 cursor-pointer shadow-soft-2xs"
+                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>

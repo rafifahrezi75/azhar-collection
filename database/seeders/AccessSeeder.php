@@ -95,11 +95,6 @@ class AccessSeeder extends Seeder
             ['label' => 'Staff', 'is_active' => true]
         );
 
-        $userRole = Role::updateOrCreate(
-            ['name' => 'user'],
-            ['label' => 'User', 'is_active' => true]
-        );
-
         $adminRole->permissions()->sync(Permission::pluck('id')->toArray());
 
         $staffRole->permissions()->sync(
@@ -127,12 +122,6 @@ class AccessSeeder extends Seeder
                 'invoice.view',
                 'invoice.create',
                 'invoice.update',
-            ])->pluck('id')->toArray()
-        );
-
-        $userRole->permissions()->sync(
-            Permission::whereIn('name', [
-                'dashboard.view',
             ])->pluck('id')->toArray()
         );
 

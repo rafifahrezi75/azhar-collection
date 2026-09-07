@@ -53,7 +53,7 @@ const PermissionAccordionTable = memo(function PermissionAccordionTable({
     };
 
     return (
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-soft-sm">
+        <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
             {/* Control Header Bar */}
             <div className="px-4 py-2.5 bg-slate-50/90 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2">

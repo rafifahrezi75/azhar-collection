@@ -34,7 +34,7 @@ const InvoiceDrillModal = memo(function InvoiceDrillModal({ invoice, onClose }) 
                 <div className="flex items-start justify-between gap-3 p-5 border-b border-slate-200 bg-slate-50/70">
                     <div className="min-w-0">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Detail Pesanan</div>
-                        <h2 className="text-base font-bold text-slate-900 font-mono truncate">{invoice.invoice_number}</h2>
+                        <h2 className="text-base font-bold text-slate-900 truncate">{invoice.invoice_number}</h2>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                             <PaymentBadge value={invoice.payment_status} />
                             <ProductionBadge value={invoice.production_status} />
@@ -87,7 +87,7 @@ const InvoiceDrillModal = memo(function InvoiceDrillModal({ invoice, onClose }) 
                                             </span>
                                             <span className="text-slate-500 tabular-nums">×{s.qty}</span>
                                             <span className="text-slate-400 tabular-nums">@ {formatRupiah(s.unit_price)}</span>
-                                            <span className="font-mono font-semibold text-slate-700 tabular-nums ml-auto">
+                                            <span className="font-semibold text-slate-700 tabular-nums ml-auto">
                                                 {formatRupiah(s.subtotal)}
                                             </span>
                                         </div>
@@ -96,7 +96,7 @@ const InvoiceDrillModal = memo(function InvoiceDrillModal({ invoice, onClose }) 
                                     <div className="py-1.5 flex items-center justify-between gap-2 text-xs">
                                         <span className="text-slate-500 tabular-nums">×{item.qty}</span>
                                         <span className="text-slate-400 tabular-nums">@ {formatRupiah(item.unit_price)}</span>
-                                        <span className="font-mono font-semibold text-slate-700 tabular-nums ml-auto">
+                                        <span className="font-semibold text-slate-700 tabular-nums ml-auto">
                                             {formatRupiah(item.subtotal)}
                                         </span>
                                     </div>
@@ -104,7 +104,7 @@ const InvoiceDrillModal = memo(function InvoiceDrillModal({ invoice, onClose }) 
                             </div>
                             <div className="flex items-center justify-between px-3.5 py-2 bg-teal-50/40 border-t border-teal-100/60">
                                 <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">Subtotal</span>
-                                <span className="text-sm font-bold text-teal-700 font-mono">{formatRupiah(item.subtotal)}</span>
+                                <span className="text-sm font-bold text-teal-700">{formatRupiah(item.subtotal)}</span>
                             </div>
                         </div>
                     ))}
@@ -113,15 +113,15 @@ const InvoiceDrillModal = memo(function InvoiceDrillModal({ invoice, onClose }) 
                 <div className="border-t border-slate-200 bg-slate-50/70 p-5 space-y-2.5">
                     <div className="flex justify-between items-center text-sm">
                         <span className="font-semibold text-slate-500">Total</span>
-                        <span className="font-bold text-slate-900 font-mono">{formatRupiah(totals.total)}</span>
+                        <span className="font-bold text-slate-900">{formatRupiah(totals.total)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                         <span className="font-semibold text-slate-500">Dibayar</span>
-                        <span className="font-bold text-emerald-600 font-mono">{formatRupiah(totals.paid)}</span>
+                        <span className="font-bold text-emerald-600">{formatRupiah(totals.paid)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                         <span className="font-semibold text-slate-500">Sisa</span>
-                        <span className={`font-bold font-mono ${totals.sisa > 0 ? "text-rose-600" : "text-slate-400"}`}>
+                        <span className={`font-bold ${totals.sisa > 0 ? "text-rose-600" : "text-slate-400"}`}>
                             {formatRupiah(totals.sisa)}
                         </span>
                     </div>

@@ -10,6 +10,7 @@ import {
     User as UserIcon,
     ChevronDown,
 } from "lucide-react";
+import { todayLocal } from "@/utils/format";
 
 export default function Preview({
     users = [],
@@ -19,14 +20,18 @@ export default function Preview({
 }) {
     const iframeRef = useRef(null);
 
+    const localToday = todayLocal().split("-");
+    const defaultMonth = Number(localToday[1]);
+    const defaultYear = Number(localToday[0]);
+
     const [selectedUserId, setSelectedUserId] = useState(
         initialUserId || (users.length > 0 ? String(users[0].id) : ""),
     );
     const [selectedMonth, setSelectedMonth] = useState(
-        initialMonth || new Date().getMonth() + 1,
+        initialMonth || defaultMonth,
     );
     const [selectedYear, setSelectedYear] = useState(
-        initialYear || new Date().getFullYear(),
+        initialYear || defaultYear,
     );
 
     const pdfUrl = `/dashboard/payroll/pdf?user_id=${selectedUserId}&month=${selectedMonth}&year=${selectedYear}`;

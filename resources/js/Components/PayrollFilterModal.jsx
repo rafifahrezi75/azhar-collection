@@ -1,10 +1,15 @@
 import React, { memo } from "react";
 import { Calendar, RotateCcw, X } from "lucide-react";
+import { todayLocal } from "@/utils/format";
+
+const localParts = todayLocal().split("-");
+const currentDefaultYear = Number(localParts[0]);
+const currentDefaultMonth = Number(localParts[1]);
 
 const PayrollFilterModal = memo(function PayrollFilterModal({
     isOpen,
-    month = new Date().getMonth() + 1,
-    year = new Date().getFullYear(),
+    month = currentDefaultMonth,
+    year = currentDefaultYear,
     onMonthChange,
     onYearChange,
     onReset,
@@ -27,8 +32,12 @@ const PayrollFilterModal = memo(function PayrollFilterModal({
         { val: 12, label: "Desember" },
     ];
 
-    const currentYear = new Date().getFullYear();
-    const yearOptions = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+    const yearOptions = [
+        currentDefaultYear - 2,
+        currentDefaultYear - 1,
+        currentDefaultYear,
+        currentDefaultYear + 1,
+    ];
 
     return (
         <div className="absolute right-0 top-full mt-1 z-[100] w-[calc(100vw-24px)] max-w-80 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 sm:p-4 origin-top-right animate-in fade-in zoom-in-95 duration-150">

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProductionAssignment;
+use App\Models\ProductionAssignmentStep;
+use App\Models\ProductionProgressLog;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -15,8 +17,14 @@ class PayrollController extends Controller
 {
     public function index(Request $request): InertiaResponse
     {
-        $selectedMonth = (int) $request->query('month', (int) date('n'));
-        $selectedYear = (int) $request->query('year', (int) date('Y'));
+        $rawMonth = $request->query('month');
+        $rawYear = $request->query('year');
+        $selectedMonth = ($rawMonth !== null && $rawMonth !== '' && (int) $rawMonth >= 1 && (int) $rawMonth <= 12)
+            ? (int) $rawMonth
+            : (int) date('n');
+        $selectedYear = ($rawYear !== null && $rawYear !== '' && (int) $rawYear >= 2000)
+            ? (int) $rawYear
+            : (int) date('Y');
         $search = trim((string) $request->query('search', ''));
 
         $startDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->startOfMonth()->format('Y-m-d');
@@ -48,73 +56,147 @@ class PayrollController extends Controller
         $activeEmployeesCount = 0;
 
         foreach ($users as $user) {
-            $assignments = ProductionAssignment::with(['invoiceItem.invoice', 'steps'])
-                ->where('user_id', $user->id)
-                ->whereHas('invoiceItem.invoice', function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('order_date', [$startDate, $endDate])
-                        ->orWhereBetween('completion_date', [$startDate, $endDate]);
+            $periodAssignments = ProductionAssignment::where('user_id', $user->id)
+                ->where(function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('target_date', [$startDate, $endDate])
+                        ->orWhereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59']);
                 })
                 ->get();
 
-            if ($assignments->isEmpty()) {
-                $assignments = ProductionAssignment::with(['invoiceItem.invoice', 'steps'])
-                    ->where('user_id', $user->id)
-                    ->get();
+            $distinctAssignmentIds = [];
+            $distinctInvoiceIds = [];
+            foreach ($periodAssignments as $pa) {
+                $distinctAssignmentIds[$pa->id] = true;
+                if ($pa->invoiceItem?->invoice_id) {
+                    $distinctInvoiceIds[$pa->invoiceItem->invoice_id] = true;
+                }
             }
+
+            $logs = ProductionProgressLog::with(['assignmentStep.assignment.invoiceItem.invoice'])
+                ->where('user_id', $user->id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->get();
+
+            $completedStepsWithoutLogs = ProductionAssignmentStep::with(['assignment.invoiceItem.invoice'])
+                ->whereHas('assignment', fn ($q) => $q->where('user_id', $user->id))
+                ->whereDoesntHave('progressLogs')
+                ->whereIn('status', ['completed', 'COMPLETED', 'SELESAI'])
+                ->where(function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('completed_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
+                        ->orWhere(function ($q2) use ($startDate, $endDate) {
+                            $q2->whereNull('completed_at')
+                                ->whereHas('assignment', function ($aq) use ($startDate, $endDate) {
+                                    $aq->whereBetween('target_date', [$startDate, $endDate])
+                                        ->orWhereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59']);
+                                });
+                        });
+                })
+                ->get();
 
             $userTotalWage = 0;
             $userTotalQty = 0;
             $userCuttingPieces = 0;
             $userSewingPieces = 0;
-            $distinctInvoiceIds = [];
+            $userStepsBreakdown = [];
             $totalSteps = 0;
 
-            foreach ($assignments as $assignment) {
-                if ($assignment->invoiceItem?->invoice_id) {
-                    $distinctInvoiceIds[$assignment->invoiceItem->invoice_id] = true;
+            foreach ($logs as $log) {
+                $step = $log->assignmentStep;
+                if (! $step) {
+                    continue;
                 }
 
-                foreach ($assignment->steps as $step) {
-                    $qty = (int) ($step->qty ?: $assignment->qty ?: 1);
-                    $wage = (float) ($step->wage ?: 0);
-                    $subtotal = $qty * $wage;
+                $qty = (int) $log->qty;
+                $wage = (float) ($step->wage ?: 0);
+                $subtotal = $qty * $wage;
 
-                    $userTotalWage += $subtotal;
-                    $userTotalQty += $qty;
-                    $totalSteps++;
+                $userTotalWage += $subtotal;
+                $userTotalQty += $qty;
+                $totalSteps++;
 
-                    $stepName = strtolower($step->step_name ?? '');
-                    if (str_contains($stepName, 'potong') || str_contains($stepName, 'cutting')) {
-                        $userCuttingPieces += $qty;
-                    } elseif (str_contains($stepName, 'jahit') || str_contains($stepName, 'sew')) {
-                        $userSewingPieces += $qty;
-                    }
+                $invId = $step->assignment?->invoiceItem?->invoice_id;
+                if ($invId) {
+                    $distinctInvoiceIds[$invId] = true;
+                }
+                if ($step->production_assignment_id) {
+                    $distinctAssignmentIds[$step->production_assignment_id] = true;
+                }
+
+                $stepName = $step->step_name ?: 'Pengerjaan';
+                $userStepsBreakdown[$stepName] = ($userStepsBreakdown[$stepName] ?? 0) + $qty;
+
+                $stepNameLower = strtolower($stepName);
+                if (str_contains($stepNameLower, 'potong') || str_contains($stepNameLower, 'cutting')) {
+                    $userCuttingPieces += $qty;
+                } elseif (str_contains($stepNameLower, 'jahit') || str_contains($stepNameLower, 'sew')) {
+                    $userSewingPieces += $qty;
                 }
             }
 
-            if ($userTotalWage > 0 || $assignments->isNotEmpty()) {
+            foreach ($completedStepsWithoutLogs as $step) {
+                $assignment = $step->assignment;
+                $qty = (int) ($step->qty ?: $assignment?->qty ?: 1);
+                $wage = (float) ($step->wage ?: 0);
+                $subtotal = $qty * $wage;
+
+                $userTotalWage += $subtotal;
+                $userTotalQty += $qty;
+                $totalSteps++;
+
+                $invId = $assignment?->invoiceItem?->invoice_id;
+                if ($invId) {
+                    $distinctInvoiceIds[$invId] = true;
+                }
+                if ($assignment?->id) {
+                    $distinctAssignmentIds[$assignment->id] = true;
+                }
+
+                $stepName = $step->step_name ?: 'Pengerjaan';
+                $userStepsBreakdown[$stepName] = ($userStepsBreakdown[$stepName] ?? 0) + $qty;
+
+                $stepNameLower = strtolower($stepName);
+                if (str_contains($stepNameLower, 'potong') || str_contains($stepNameLower, 'cutting')) {
+                    $userCuttingPieces += $qty;
+                } elseif (str_contains($stepNameLower, 'jahit') || str_contains($stepNameLower, 'sew')) {
+                    $userSewingPieces += $qty;
+                }
+            }
+
+            if ($userTotalWage > 0 || count($distinctAssignmentIds) > 0) {
                 $activeEmployeesCount++;
+
+                $totalPayrollAmount += $userTotalWage;
+                $totalQtyProduced += $userTotalQty;
+                $totalCutPieces += $userCuttingPieces;
+                $totalSewnPieces += $userSewingPieces;
+
+                $stepsList = [];
+                foreach ($userStepsBreakdown as $name => $q) {
+                    $stepsList[] = [
+                        'name' => $name,
+                        'qty' => $q,
+                    ];
+                }
+
+                $payrollList[] = [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'total_invoices' => count($distinctInvoiceIds),
+                    'total_assignments' => count($distinctAssignmentIds),
+                    'total_tasks' => count($distinctAssignmentIds),
+                    'cutting_pieces' => $userCuttingPieces,
+                    'sewing_pieces' => $userSewingPieces,
+                    'total_steps' => $totalSteps,
+                    'total_qty' => $userTotalQty,
+                    'step_breakdown' => $stepsList,
+                    'total_wage' => $userTotalWage,
+                    'status' => $userTotalWage > 0 ? 'completed' : 'pending',
+                ];
             }
-
-            $totalPayrollAmount += $userTotalWage;
-            $totalQtyProduced += $userTotalQty;
-            $totalCutPieces += $userCuttingPieces;
-            $totalSewnPieces += $userSewingPieces;
-
-            $payrollList[] = [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'total_invoices' => count($distinctInvoiceIds),
-                'total_assignments' => $assignments->count(),
-                'total_tasks' => $assignments->count(),
-                'cutting_pieces' => $userCuttingPieces,
-                'sewing_pieces' => $userSewingPieces,
-                'total_steps' => $totalSteps,
-                'total_qty' => $userTotalQty,
-                'total_wage' => $userTotalWage,
-            ];
         }
+
+        $totalAllTasks = array_sum(array_column($payrollList, 'total_tasks'));
 
         $monthNames = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
@@ -137,6 +219,7 @@ class PayrollController extends Controller
                 'total_payroll_amount' => $totalPayrollAmount,
                 'total_payroll' => $totalPayrollAmount,
                 'total_qty' => $totalQtyProduced,
+                'total_tasks' => $totalAllTasks,
             ],
         ]);
     }
@@ -158,8 +241,14 @@ class PayrollController extends Controller
             $selectedUserId = (string) $staffUsers->first()->id;
         }
 
-        $selectedMonth = (int) $request->query('month', (int) date('n'));
-        $selectedYear = (int) $request->query('year', (int) date('Y'));
+        $rawMonth = $request->query('month');
+        $rawYear = $request->query('year');
+        $selectedMonth = ($rawMonth !== null && $rawMonth !== '' && (int) $rawMonth >= 1 && (int) $rawMonth <= 12)
+            ? (int) $rawMonth
+            : (int) date('n');
+        $selectedYear = ($rawYear !== null && $rawYear !== '' && (int) $rawYear >= 2000)
+            ? (int) $rawYear
+            : (int) date('Y');
 
         return Inertia::render('Payroll/Preview', [
             'users' => $staffUsers,
@@ -172,8 +261,14 @@ class PayrollController extends Controller
     public function printPdf(Request $request, $user = null): Response
     {
         $userId = $user instanceof User ? $user->id : ($user ?? $request->query('user_id'));
-        $month = (int) $request->query('month', (int) date('n'));
-        $year = (int) $request->query('year', (int) date('Y'));
+        $rawMonth = $request->query('month');
+        $rawYear = $request->query('year');
+        $month = ($rawMonth !== null && $rawMonth !== '' && (int) $rawMonth >= 1 && (int) $rawMonth <= 12)
+            ? (int) $rawMonth
+            : (int) date('n');
+        $year = ($rawYear !== null && $rawYear !== '' && (int) $rawYear >= 2000)
+            ? (int) $rawYear
+            : (int) date('Y');
 
         $targetUser = $userId ? User::find($userId) : User::first();
         if (! $targetUser) {
@@ -183,62 +278,117 @@ class PayrollController extends Controller
         $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
         $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d');
 
-        $assignments = ProductionAssignment::with([
-            'invoiceItem.invoice.customer',
-            'steps',
-        ])
+        $logs = ProductionProgressLog::with(['assignmentStep.assignment.invoiceItem.invoice.customer'])
             ->where('user_id', $targetUser->id)
-            ->whereHas('invoiceItem.invoice', function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('order_date', [$startDate, $endDate])
-                    ->orWhereBetween('completion_date', [$startDate, $endDate])
-                    ->orWhereNull('order_date');
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get();
+
+        $completedStepsWithoutLogs = ProductionAssignmentStep::with(['assignment.invoiceItem.invoice.customer'])
+            ->whereHas('assignment', fn ($q) => $q->where('user_id', $targetUser->id))
+            ->whereDoesntHave('progressLogs')
+            ->whereIn('status', ['completed', 'COMPLETED', 'SELESAI'])
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('completed_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->whereNull('completed_at')
+                            ->whereHas('assignment', function ($aq) use ($startDate, $endDate) {
+                                $aq->whereBetween('target_date', [$startDate, $endDate])
+                                    ->orWhereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59']);
+                            });
+                    });
             })
             ->get();
 
-        if ($assignments->isEmpty()) {
-            $assignments = ProductionAssignment::with([
-                'invoiceItem.invoice.customer',
-                'steps',
-            ])
-                ->where('user_id', $targetUser->id)
-                ->get();
+        $itemsByItem = [];
+
+        foreach ($logs as $log) {
+            $step = $log->assignmentStep;
+            if (! $step || ! $step->assignment) {
+                continue;
+            }
+            $assignment = $step->assignment;
+            $itemKey = $assignment->invoice_item_id ?: $assignment->id;
+            $stepId = $step->id;
+            $qty = (int) $log->qty;
+            $wage = (float) ($step->wage ?: 0);
+            $subtotal = $qty * $wage;
+
+            if (! isset($itemsByItem[$itemKey])) {
+                $inv = $assignment->invoiceItem?->invoice;
+                $custName = $inv?->customer_name ?? ($inv?->customer?->name ?? '');
+                $itemName = $assignment->invoiceItem?->item_name ?? 'Item Pesanan';
+                $label = ! empty($custName) && $custName !== '-' ? "{$itemName} ({$custName})" : $itemName;
+
+                $itemsByItem[$itemKey] = [
+                    'invoice_number' => $inv?->invoice_number ?? '-',
+                    'customer_name' => $custName,
+                    'order_date' => $inv?->order_date ? date('d/m/Y', strtotime($inv->order_date)) : '-',
+                    'item_name' => $itemName,
+                    'product_label' => $label,
+                    'unit' => $assignment->invoiceItem?->unit ?? 'Pcs',
+                    'steps_qty' => [],
+                    'subtotal' => 0,
+                ];
+            }
+
+            $itemsByItem[$itemKey]['steps_qty'][$stepId] = ($itemsByItem[$itemKey]['steps_qty'][$stepId] ?? 0) + $qty;
+            $itemsByItem[$itemKey]['subtotal'] += $subtotal;
+        }
+
+        foreach ($completedStepsWithoutLogs as $step) {
+            if (! $step->assignment) {
+                continue;
+            }
+            $assignment = $step->assignment;
+            $itemKey = $assignment->invoice_item_id ?: $assignment->id;
+            $stepId = $step->id;
+            $qty = (int) ($step->qty ?: $assignment->qty ?: 1);
+            $wage = (float) ($step->wage ?: 0);
+            $subtotal = $qty * $wage;
+
+            if (! isset($itemsByItem[$itemKey])) {
+                $inv = $assignment->invoiceItem?->invoice;
+                $custName = $inv?->customer_name ?? ($inv?->customer?->name ?? '');
+                $itemName = $assignment->invoiceItem?->item_name ?? 'Item Pesanan';
+                $label = ! empty($custName) && $custName !== '-' ? "{$itemName} ({$custName})" : $itemName;
+
+                $itemsByItem[$itemKey] = [
+                    'invoice_number' => $inv?->invoice_number ?? '-',
+                    'customer_name' => $custName,
+                    'order_date' => $inv?->order_date ? date('d/m/Y', strtotime($inv->order_date)) : '-',
+                    'item_name' => $itemName,
+                    'product_label' => $label,
+                    'unit' => $assignment->invoiceItem?->unit ?? 'Pcs',
+                    'steps_qty' => [],
+                    'subtotal' => 0,
+                ];
+            }
+
+            $itemsByItem[$itemKey]['steps_qty'][$stepId] = ($itemsByItem[$itemKey]['steps_qty'][$stepId] ?? 0) + $qty;
+            $itemsByItem[$itemKey]['subtotal'] += $subtotal;
         }
 
         $payrollItems = [];
-        $grandTotalWage = 0;
-
-        foreach ($assignments as $assignment) {
-            $invoice = $assignment->invoiceItem?->invoice;
-            $invoiceNumber = $invoice?->invoice_number ?? '-';
-            $customerName = $invoice?->customer_name ?? ($invoice?->customer?->name ?? '');
-            $orderDate = $invoice?->order_date ? date('d/m/Y', strtotime($invoice->order_date)) : '-';
-            $itemName = $assignment->invoiceItem?->item_name ?? 'Item Pesanan';
-            $unit = $assignment->invoiceItem?->unit ?? 'Pcs';
-            $qty = (int) ($assignment->qty ?: 1);
-
-            $stepRateSum = 0;
-            foreach ($assignment->steps as $step) {
-                $stepRateSum += (float) ($step->wage ?: 0);
-            }
-
-            $unitWage = $stepRateSum;
-            $subtotal = $qty * $unitWage;
-            $grandTotalWage += $subtotal;
-
-            $productLabel = ! empty($customerName) && $customerName !== '-' ? "{$itemName} ({$customerName})" : $itemName;
+        foreach ($itemsByItem as $item) {
+            $maxQty = ! empty($item['steps_qty']) ? max($item['steps_qty']) : 0;
+            $itemQty = $maxQty > 0 ? $maxQty : 1;
+            $subtotal = (float) $item['subtotal'];
+            $unitWage = $itemQty > 0 ? ($subtotal / $itemQty) : 0;
 
             $payrollItems[] = [
-                'invoice_number' => $invoiceNumber,
-                'customer_name' => $customerName,
-                'order_date' => $orderDate,
-                'item_name' => $itemName,
-                'product_label' => $productLabel,
-                'qty' => $qty,
-                'unit' => $unit,
+                'invoice_number' => $item['invoice_number'],
+                'customer_name' => $item['customer_name'],
+                'order_date' => $item['order_date'],
+                'item_name' => $item['item_name'],
+                'product_label' => $item['product_label'],
+                'qty' => $itemQty,
+                'unit' => $item['unit'],
                 'unit_wage' => $unitWage,
                 'subtotal' => $subtotal,
             ];
         }
+
+        $grandTotalWage = (float) array_sum(array_column($payrollItems, 'subtotal'));
 
         $monthNames = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',

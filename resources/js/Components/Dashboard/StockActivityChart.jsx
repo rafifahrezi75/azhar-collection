@@ -33,12 +33,12 @@ const StockActivityChart = memo(function StockActivityChart({ data = [] }) {
                     <div className="flex items-center gap-2">
                         <span className="w-3 h-3 rounded-xs bg-teal-500 inline-block shadow-2xs" />
                         <span className="text-slate-600 font-medium">Stok Masuk:</span>
-                        <span className="font-mono font-bold text-teal-700">+{totalIn.toLocaleString("id-ID")}</span>
+                        <span className="font-bold text-teal-700">+{totalIn.toLocaleString("id-ID")}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="w-3 h-3 rounded-xs bg-amber-500 inline-block shadow-2xs" />
                         <span className="text-slate-600 font-medium">Stok Keluar:</span>
-                        <span className="font-mono font-bold text-amber-700">-{totalOut.toLocaleString("id-ID")}</span>
+                        <span className="font-bold text-amber-700">-{totalOut.toLocaleString("id-ID")}</span>
                     </div>
                 </div>
 
@@ -77,7 +77,7 @@ const StockActivityChart = memo(function StockActivityChart({ data = [] }) {
                                         <p className="font-bold text-white border-b border-slate-700 pb-1 mb-1.5">
                                             {item.label}
                                         </p>
-                                        <div className="space-y-1 font-mono text-[11px]">
+                                        <div className="space-y-1 text-[11px]">
                                             <div className="flex items-center justify-between text-teal-400">
                                                 <span className="flex items-center gap-1">
                                                     <ArrowDownLeft className="w-3 h-3" /> Masuk:

@@ -854,7 +854,7 @@ export default function Show({
             />
 
             <div className="space-y-4 max-w-7xl mx-auto">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                <div className="bg-white rounded-md border border-slate-200 shadow-2xs">
                     {/* HEADER AREA */}
                     <div className="p-4 sm:p-5 border-b border-slate-100">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1812,7 +1812,7 @@ export default function Show({
                                                                                                             <div key={gIdx} className="bg-white">
                                                                                                                 <div
                                                                                                                     onClick={() => toggleBOMSize(sizeKey)}
-                                                                                                                    className="py-2 px-3 bg-slate-100/75 border-b border-slate-200/80 flex items-center justify-between cursor-pointer hover:bg-slate-200/60 transition-colors select-none"
+                                                                                                                    className="py-2 pr-3 pl-8 bg-slate-100/75 border-b border-slate-200/80 flex items-center justify-between cursor-pointer hover:bg-slate-200/60 transition-colors select-none"
                                                                                                                 >
                                                                                                                     <div className="flex items-center gap-2 min-w-0">
                                                                                                                         <div className="p-0.5 text-slate-500 shrink-0">
@@ -1853,9 +1853,9 @@ export default function Show({
                                                                                                                     <table className="w-full text-left border-collapse table-fixed text-[10px] bg-white">
                                                                                                                         <thead>
                                                                                                                             <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
-                                                                                                                                <th className="py-1.5 pl-4 pr-2 w-[6%] text-center">No</th>
-                                                                                                                                <th className="py-1.5 px-2 w-[28%]">Bahan Baku</th>
-                                                                                                                                <th className="py-1.5 px-2 w-[16%]">Kode SKU</th>
+                                                                                                                                <th className="py-1.5 pl-12 pr-2 w-[8%] text-left">No</th>
+                                                                                                                                <th className="py-1.5 px-2 w-[27%]">Bahan Baku</th>
+                                                                                                                                <th className="py-1.5 px-2 w-[15%]">Kode SKU</th>
                                                                                                                                 <th className="py-1.5 px-2 text-center w-[12%]">Target Qty</th>
                                                                                                                                 <th className="py-1.5 px-2 text-right w-[12%]">Kebutuhan / Unit</th>
                                                                                                                                 <th className="py-1.5 px-2 text-right w-[13%]">Total Kebutuhan</th>
@@ -1867,7 +1867,7 @@ export default function Show({
                                                                                                                                 const isDeficit = mat.itemStock < mat.usageQty;
                                                                                                                                 return (
                                                                                                                                     <tr key={mat.id || mIdx} className="hover:bg-slate-50/70 transition-colors">
-                                                                                                                                        <td className="py-1.5 pl-4 pr-2 text-center font-mono text-slate-400 text-[10px] align-middle">
+                                                                                                                                        <td className="py-1.5 pl-12 pr-2 text-left font-mono text-slate-400 text-[10px] align-middle">
                                                                                                                                             {mIdx + 1}
                                                                                                                                         </td>
                                                                                                                                         <td className="py-1.5 px-2 font-bold text-slate-800 truncate align-middle" title={mat.name}>

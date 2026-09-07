@@ -83,7 +83,7 @@ export const CriticalStockWidget = memo(function CriticalStockWidget({ items = [
                                         <span className="text-[10px] font-normal text-slate-400 ml-1.5">{it.category_name}</span>
                                     </span>
                                     <span
-                                        className={`text-[11px] font-bold font-mono shrink-0 ${
+                                        className={`text-[11px] font-bold shrink-0 ${
                                             it.is_out_of_stock ? "text-rose-600" : "text-slate-700"
                                         }`}
                                     >
