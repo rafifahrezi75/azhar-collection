@@ -30,6 +30,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/users-management', [UserManagementController::class, 'index'])
         ->middleware('permission:user.view');
 
+    Route::post('/users-management', [UserManagementController::class, 'store'])
+        ->middleware('permission:user.update');
+
+    Route::put('/users-management/{user}', [UserManagementController::class, 'update'])
+        ->middleware('permission:user.update');
+
+    Route::delete('/users-management/{user}', [UserManagementController::class, 'destroy'])
+        ->middleware('permission:user.update');
+
     Route::put('/users-management/{user}/roles', [UserManagementController::class, 'updateRole'])
         ->middleware('permission:user.update');
 });

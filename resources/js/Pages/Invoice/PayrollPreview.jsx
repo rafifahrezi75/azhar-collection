@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { Head, router } from "@inertiajs/react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import { Printer, Download, ArrowLeft, Wallet, User } from "lucide-react";
@@ -7,7 +7,7 @@ export default function PayrollPreview({ invoice, assignment, assignmentId: init
     const iframeRef = useRef(null);
     const assignments = (invoice?.items || []).flatMap((item) => item.production_assignments || []);
 
-    const defaultAssignmentId = initialAssignmentId
+    const targetAssignmentId = initialAssignmentId
         ? String(initialAssignmentId)
         : assignment?.id
         ? String(assignment.id)
@@ -15,21 +15,17 @@ export default function PayrollPreview({ invoice, assignment, assignmentId: init
         ? String(assignments[0].id)
         : "";
 
-    const [selectedAssignmentId, setSelectedAssignmentId] = useState(defaultAssignmentId);
-
-    const pdfUrl = selectedAssignmentId
-        ? `/dashboard/invoice/${invoice.id}/payroll-pdf?assignment_id=${selectedAssignmentId}`
+    const pdfUrl = targetAssignmentId
+        ? `/dashboard/invoice/${invoice.id}/payroll-pdf?assignment_id=${targetAssignmentId}`
         : `/dashboard/invoice/${invoice.id}/payroll-pdf`;
 
     const handlePrint = () => {
         if (iframeRef.current) iframeRef.current.contentWindow.print();
     };
 
-    const handleAssignmentChange = (e) => {
-        setSelectedAssignmentId(e.target.value);
-    };
-
-    const currentAssigneeName = assignments.find((a) => String(a.id) === String(selectedAssignmentId))?.assignee?.name || "";
+    const currentAssigneeName = assignment?.assignee?.name
+        || assignments.find((a) => String(a.id) === String(targetAssignmentId))?.assignee?.name
+        || "";
 
     return (
         <DashboardLayout>
@@ -40,9 +36,14 @@ export default function PayrollPreview({ invoice, assignment, assignmentId: init
                     <div className="flex items-center gap-3 min-w-0">
                         <button
                             type="button"
-                            onClick={() => router.visit(`/dashboard/invoice/${invoice.id}`)}
+                            onClick={() => {
+                                const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+                                const returnTo = params?.get("return_to");
+                                const returnParam = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : "";
+                                router.visit(`/dashboard/invoice/${invoice.id}${returnParam}`);
+                            }}
                             className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors cursor-pointer shrink-0"
-                            title="Kembali ke Detail Invoice"
+                            title="Kembali"
                         >
                             <ArrowLeft className="w-4 h-4" />
                         </button>
@@ -60,21 +61,10 @@ export default function PayrollPreview({ invoice, assignment, assignmentId: init
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                        {assignments.length > 0 && (
-                            <div className="flex items-center h-9 bg-white border border-slate-200 rounded-lg px-2.5 focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 transition-colors">
-                                <User className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1.5" />
-                                <select
-                                    value={selectedAssignmentId}
-                                    onChange={handleAssignmentChange}
-                                    className="bg-transparent text-xs font-medium text-slate-700 border-0 border-none outline-none ring-0 focus:ring-0 focus:outline-none shadow-none p-0 pr-6 cursor-pointer max-w-[200px] truncate"
-                                >
-                                    <option value="">Semua Karyawan</option>
-                                    {assignments.map((a) => (
-                                        <option key={a.id} value={String(a.id)}>
-                                            {a.assignee?.name || "Karyawan"} ({a.steps?.length || 0} Langkah)
-                                        </option>
-                                    ))}
-                                </select>
+                        {currentAssigneeName && (
+                            <div className="inline-flex items-center gap-1.5 h-9 bg-slate-50 border border-slate-200 rounded-lg px-3 text-xs font-semibold text-slate-700">
+                                <User className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                                <span>{currentAssigneeName}</span>
                             </div>
                         )}
 

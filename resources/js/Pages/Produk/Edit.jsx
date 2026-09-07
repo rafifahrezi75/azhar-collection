@@ -1180,21 +1180,24 @@ export default function Edit({ product }) {
         <DashboardLayout>
             <Head title={`Edit ${product.name} - Azhar Collection`} />
 
-            <div className="space-y-4">
-                <div className="flex items-center gap-3">
+            <div className="space-y-4 max-w-7xl mx-auto">
+                <div className="flex items-center gap-2.5 min-w-0">
                     <button
                         type="button"
                         title="Kembali"
                         onClick={() => router.visit("/dashboard/produk")}
-                        className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer"
+                        className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer shrink-0"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>
-                    <div>
-                        <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                            Edit Produk
-                        </h1>
-                        <p className="text-xs text-slate-500">
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
+                        <Shirt className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
+                            Edit Data Produk
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
                             {product.code} — {product.name}
                         </p>
                     </div>

@@ -318,7 +318,7 @@ class AccessSeeder extends Seeder
 
         Menu::create([
             'parent_id' => $settingsParent->id,
-            'title' => 'User Management',
+            'title' => 'Pengguna',
             'icon' => 'People',
             'path' => '/dashboard/users',
             'permission_name' => 'user.view',

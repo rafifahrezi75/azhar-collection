@@ -26,6 +26,16 @@ class ProductProductionStep extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function getStepOrderAttribute()
+    {
+        return $this->sort_order;
+    }
+
+    public function getEstimatedTimeDaysAttribute()
+    {
+        return $this->attributes['estimated_time_days'] ?? 2;
+    }
+
     public function productionStep()
     {
         return $this->belongsTo(ProductionStep::class);

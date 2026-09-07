@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { Head, router } from "@inertiajs/react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
+import Pagination from "@/Components/Pagination";
 import {
     ArrowLeft,
     Receipt,
@@ -54,6 +55,9 @@ export default function Show({ purchase }) {
         );
     }
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
     const items = useMemo(() => purchase.items || [], [purchase.items]);
     const totalQty = useMemo(
         () => items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -63,6 +67,11 @@ export default function Show({ purchase }) {
         () => items.reduce((sum, item) => sum + resolveUnitMeta(item).equivalentQty, 0),
         [items]
     );
+
+    const paginatedItems = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return items.slice(start, start + itemsPerPage);
+    }, [items, currentPage, itemsPerPage]);
 
     return (
         <DashboardLayout>
@@ -76,7 +85,7 @@ export default function Show({ purchase }) {
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <button
                                     type="button"
-                                    title="Kembali ke Daftar Pembelian"
+                                    title="Kembali"
                                     onClick={() => router.visit(route("purchases.index"))}
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
                                 >
@@ -253,77 +262,91 @@ export default function Show({ purchase }) {
                                     </div>
 
                                     {items.length > 0 ? (
-                                        <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs overflow-x-auto">
-                                            <table className="w-full text-left text-xs">
-                                                <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                                                    <tr>
-                                                        <th className="px-3 py-2.5 w-10 text-center">#</th>
-                                                        <th className="px-3 py-2.5">Bahan Baku</th>
-                                                        <th className="px-3 py-2.5 text-right">Kuantitas</th>
-                                                        <th className="px-3 py-2.5">Satuan Beli</th>
-                                                        <th className="px-3 py-2.5 text-right">Setara Satuan Dasar</th>
-                                                        <th className="px-3 py-2.5 text-right">Harga Satuan</th>
-                                                        <th className="px-3 py-2.5 text-right">Subtotal</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100 bg-white font-medium">
-                                                    {items.map((row, idx) => {
-                                                        const unit = resolveUnitMeta(row);
-                                                        return (
-                                                            <tr key={row.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                                                                <td className="px-3 py-2 text-center text-slate-400 font-medium">
-                                                                    {idx + 1}
-                                                                </td>
-                                                                <td className="px-3 py-2">
-                                                                    <div className="font-bold text-slate-900 leading-tight">
-                                                                        {row.item?.name || "-"}
-                                                                    </div>
-                                                                    <span className="inline-block mt-0.5 font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-600">
-                                                                        {row.item?.code || "-"}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 py-2 text-right font-bold text-slate-800 font-mono">
-                                                                    {row.quantity}
-                                                                </td>
-                                                                <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
-                                                                    {unit.name}
-                                                                    {unit.symbol && (
-                                                                        <span className="ml-1 text-slate-400">
-                                                                            ({unit.symbol})
+                                        <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs bg-white">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left text-xs">
+                                                    <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                                                        <tr>
+                                                            <th className="px-3 py-2.5 w-10 text-center">#</th>
+                                                            <th className="px-3 py-2.5">Bahan Baku</th>
+                                                            <th className="px-3 py-2.5 text-right">Kuantitas</th>
+                                                            <th className="px-3 py-2.5">Satuan Beli</th>
+                                                            <th className="px-3 py-2.5 text-right">Setara Satuan Dasar</th>
+                                                            <th className="px-3 py-2.5 text-right">Harga Satuan</th>
+                                                            <th className="px-3 py-2.5 text-right">Subtotal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100 bg-white font-medium">
+                                                        {paginatedItems.map((row, idx) => {
+                                                            const unit = resolveUnitMeta(row);
+                                                            const rowNumber = (currentPage - 1) * itemsPerPage + idx + 1;
+                                                            return (
+                                                                <tr key={row.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                                                                    <td className="px-3 py-2 text-center text-slate-400 font-medium">
+                                                                        {rowNumber}
+                                                                    </td>
+                                                                    <td className="px-3 py-2">
+                                                                        <div className="font-bold text-slate-900 leading-tight">
+                                                                            {row.item?.name || "-"}
+                                                                        </div>
+                                                                        <span className="inline-block mt-0.5 font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-600">
+                                                                            {row.item?.code || "-"}
                                                                         </span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-3 py-2 text-right font-mono text-slate-700 whitespace-nowrap">
-                                                                    <span className="font-semibold text-teal-700">
-                                                                        {unit.equivalentQty} {unit.baseSymbol}
-                                                                    </span>
-                                                                    {unit.multiplier > 1 && (
-                                                                        <span className="block text-[10px] text-slate-400">
-                                                                            1 {unit.symbol || unit.name} = {unit.multiplier} {unit.baseSymbol}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-right font-bold text-slate-800 font-mono">
+                                                                        {row.quantity}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
+                                                                        {unit.name}
+                                                                        {unit.symbol && (
+                                                                            <span className="ml-1 text-slate-400">
+                                                                                ({unit.symbol})
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-right font-mono text-slate-700 whitespace-nowrap">
+                                                                        <span className="font-semibold text-teal-700">
+                                                                            {unit.equivalentQty} {unit.baseSymbol}
                                                                         </span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-3 py-2 text-right font-mono text-slate-600 whitespace-nowrap">
-                                                                    {formatRupiah(row.unit_price)}
-                                                                </td>
-                                                                <td className="px-3 py-2 text-right font-bold font-mono text-slate-900 whitespace-nowrap">
-                                                                    {formatRupiah(row.subtotal)}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                                <tfoot className="border-t-2 border-slate-200 bg-slate-50/80 font-medium">
-                                                    <tr>
-                                                        <td colSpan="6" className="px-3 py-2.5 text-right font-bold text-slate-700 uppercase tracking-wider text-[10px]">
-                                                            Total Nilai Pembelian:
-                                                        </td>
-                                                        <td className="px-3 py-2.5 text-right font-extrabold text-teal-700 font-mono text-xs sm:text-sm">
-                                                            {formatRupiah(purchase.total_amount)}
-                                                        </td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
+                                                                        {unit.multiplier > 1 && (
+                                                                            <span className="block text-[10px] text-slate-400">
+                                                                                1 {unit.symbol || unit.name} = {unit.multiplier} {unit.baseSymbol}
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-right font-mono text-slate-600 whitespace-nowrap">
+                                                                        {formatRupiah(row.unit_price)}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-right font-bold font-mono text-slate-900 whitespace-nowrap">
+                                                                        {formatRupiah(row.subtotal)}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                    <tfoot className="border-t-2 border-slate-200 bg-slate-50/80 font-medium">
+                                                        <tr>
+                                                            <td colSpan="6" className="px-3 py-2.5 text-right font-bold text-slate-700 uppercase tracking-wider text-[10px]">
+                                                                Total Nilai Pembelian:
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-right font-extrabold text-teal-700 font-mono text-xs sm:text-sm">
+                                                                {formatRupiah(purchase.total_amount)}
+                                                            </td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                            <Pagination
+                                                totalItems={items.length}
+                                                itemsPerPage={itemsPerPage}
+                                                currentPage={currentPage}
+                                                onPageChange={setCurrentPage}
+                                                onItemsPerPageChange={(val) => {
+                                                    setItemsPerPage(val);
+                                                    setCurrentPage(1);
+                                                }}
+                                                pageSizeOptions={[5, 10, 25, 50]}
+                                            />
                                         </div>
                                     ) : (
                                         <div className="p-8 text-center text-slate-500 text-xs bg-slate-50/50 rounded-lg border border-slate-200">

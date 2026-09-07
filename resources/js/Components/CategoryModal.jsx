@@ -103,8 +103,8 @@ const CategoryModal = memo(function CategoryModal({
                                 submitting
                                     ? "Memproses..."
                                     : isEditing
-                                      ? "Simpan Perubahan"
-                                      : "Simpan Kategori"
+                                      ? "Simpan"
+                                      : "Simpan"
                             }
                             className="w-8 h-8 flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white rounded-md border border-teal-700/20 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >

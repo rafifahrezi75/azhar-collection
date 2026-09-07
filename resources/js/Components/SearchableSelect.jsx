@@ -28,6 +28,7 @@ export default function SearchableSelect({
     const menuRef = useRef(null);
 
     const selectedOption = useMemo(() => {
+        if (!value) return null;
         return options.find((opt) => String(opt.value) === String(value));
     }, [options, value]);
 
@@ -190,13 +191,8 @@ export default function SearchableSelect({
                                 {selectedOption.label}
                             </span>
                             {selectedOption.badge && (
-                                <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200 rounded shrink-0">
+                                <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-teal-50 text-teal-700 border border-teal-200/80 rounded shrink-0">
                                     {selectedOption.badge}
-                                </span>
-                            )}
-                            {selectedOption.sublabel && (
-                                <span className="text-[10px] text-slate-400 truncate hidden sm:inline">
-                                    &bull; {selectedOption.sublabel}
                                 </span>
                             )}
                         </div>

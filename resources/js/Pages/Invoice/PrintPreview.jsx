@@ -39,12 +39,13 @@ export default function PrintPreview({ invoice }) {
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <button
                                     type="button"
-                                    title="Kembali ke Detail Invoice"
-                                    onClick={() =>
-                                        router.visit(
-                                            `/dashboard/invoice/${invoice.id}`
-                                        )
-                                    }
+                                    title="Kembali"
+                                    onClick={() => {
+                                        const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+                                        const returnTo = params?.get("return_to");
+                                        const returnParam = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : "";
+                                        router.visit(`/dashboard/invoice/${invoice.id}${returnParam}`);
+                                    }}
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
                                 >
                                     <ArrowLeft className="w-4 h-4" />

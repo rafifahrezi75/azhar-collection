@@ -20,9 +20,14 @@ export default function ProductionPreview({ invoice }) {
                     <div className="flex items-center gap-3 min-w-0">
                         <button
                             type="button"
-                            onClick={() => router.visit(`/dashboard/invoice/${invoice.id}`)}
+                            onClick={() => {
+                                const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+                                const returnTo = params?.get("return_to");
+                                const returnParam = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : "";
+                                router.visit(`/dashboard/invoice/${invoice.id}${returnParam}`);
+                            }}
                             className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors cursor-pointer shrink-0"
-                            title="Kembali ke Detail Invoice"
+                            title="Kembali"
                         >
                             <ArrowLeft className="w-4 h-4" />
                         </button>

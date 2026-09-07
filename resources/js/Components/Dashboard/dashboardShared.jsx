@@ -24,6 +24,7 @@ const norm = (s) => String(s || "").toLowerCase().trim();
 export const PAYMENT_BADGES = {
     lunas: { label: "Lunas", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
     dp: { label: "DP / Sebagian", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+    partial: { label: "DP / Sebagian", cls: "bg-amber-50 text-amber-700 border-amber-200" },
     belum_bayar: { label: "Belum Bayar", cls: "bg-rose-50 text-rose-700 border-rose-200" },
     belum_lunas: { label: "Belum Lunas", cls: "bg-rose-50 text-rose-700 border-rose-200" },
 };

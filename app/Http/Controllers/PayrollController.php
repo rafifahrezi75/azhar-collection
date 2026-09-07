@@ -43,6 +43,8 @@ class PayrollController extends Controller
         $payrollList = [];
         $totalPayrollAmount = 0;
         $totalQtyProduced = 0;
+        $totalCutPieces = 0;
+        $totalSewnPieces = 0;
         $activeEmployeesCount = 0;
 
         foreach ($users as $user) {
@@ -62,6 +64,8 @@ class PayrollController extends Controller
 
             $userTotalWage = 0;
             $userTotalQty = 0;
+            $userCuttingPieces = 0;
+            $userSewingPieces = 0;
             $distinctInvoiceIds = [];
             $totalSteps = 0;
 
@@ -78,6 +82,13 @@ class PayrollController extends Controller
                     $userTotalWage += $subtotal;
                     $userTotalQty += $qty;
                     $totalSteps++;
+
+                    $stepName = strtolower($step->step_name ?? '');
+                    if (str_contains($stepName, 'potong') || str_contains($stepName, 'cutting')) {
+                        $userCuttingPieces += $qty;
+                    } elseif (str_contains($stepName, 'jahit') || str_contains($stepName, 'sew')) {
+                        $userSewingPieces += $qty;
+                    }
                 }
             }
 
@@ -87,6 +98,8 @@ class PayrollController extends Controller
 
             $totalPayrollAmount += $userTotalWage;
             $totalQtyProduced += $userTotalQty;
+            $totalCutPieces += $userCuttingPieces;
+            $totalSewnPieces += $userSewingPieces;
 
             $payrollList[] = [
                 'id' => $user->id,
@@ -94,6 +107,9 @@ class PayrollController extends Controller
                 'email' => $user->email,
                 'total_invoices' => count($distinctInvoiceIds),
                 'total_assignments' => $assignments->count(),
+                'total_tasks' => $assignments->count(),
+                'cutting_pieces' => $userCuttingPieces,
+                'sewing_pieces' => $userSewingPieces,
                 'total_steps' => $totalSteps,
                 'total_qty' => $userTotalQty,
                 'total_wage' => $userTotalWage,
@@ -116,13 +132,16 @@ class PayrollController extends Controller
             'periodName' => ($monthNames[$selectedMonth] ?? 'Bulan '.$selectedMonth).' '.$selectedYear,
             'stats' => [
                 'total_employees' => $activeEmployeesCount,
+                'total_cut_pieces' => $totalCutPieces,
+                'total_sewn_pieces' => $totalSewnPieces,
+                'total_payroll_amount' => $totalPayrollAmount,
                 'total_payroll' => $totalPayrollAmount,
                 'total_qty' => $totalQtyProduced,
             ],
         ]);
     }
 
-    public function previewPage(Request $request): InertiaResponse
+    public function previewPage(Request $request, $user = null): InertiaResponse
     {
         $staffUsers = User::whereHas('roles', fn ($q) => $q->where('name', 'staff'))
             ->orWhereHas('productionAssignments')
@@ -134,7 +153,7 @@ class PayrollController extends Controller
             $staffUsers = User::orderBy('name')->select('id', 'name', 'email')->get();
         }
 
-        $selectedUserId = $request->query('user_id');
+        $selectedUserId = $user instanceof User ? $user->id : ($user ?? $request->query('user_id'));
         if (! $selectedUserId && $staffUsers->isNotEmpty()) {
             $selectedUserId = (string) $staffUsers->first()->id;
         }
@@ -150,14 +169,14 @@ class PayrollController extends Controller
         ]);
     }
 
-    public function printPdf(Request $request): Response
+    public function printPdf(Request $request, $user = null): Response
     {
-        $userId = $request->query('user_id');
+        $userId = $user instanceof User ? $user->id : ($user ?? $request->query('user_id'));
         $month = (int) $request->query('month', (int) date('n'));
         $year = (int) $request->query('year', (int) date('Y'));
 
-        $user = $userId ? User::find($userId) : User::first();
-        if (! $user) {
+        $targetUser = $userId ? User::find($userId) : User::first();
+        if (! $targetUser) {
             abort(404, 'Karyawan tidak ditemukan');
         }
 
@@ -168,7 +187,7 @@ class PayrollController extends Controller
             'invoiceItem.invoice.customer',
             'steps',
         ])
-            ->where('user_id', $user->id)
+            ->where('user_id', $targetUser->id)
             ->whereHas('invoiceItem.invoice', function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('order_date', [$startDate, $endDate])
                     ->orWhereBetween('completion_date', [$startDate, $endDate])
@@ -181,7 +200,7 @@ class PayrollController extends Controller
                 'invoiceItem.invoice.customer',
                 'steps',
             ])
-                ->where('user_id', $user->id)
+                ->where('user_id', $targetUser->id)
                 ->get();
         }
 
@@ -229,7 +248,7 @@ class PayrollController extends Controller
         $periodName = ($monthNames[$month] ?? 'Bulan '.$month).' '.$year;
 
         $pdf = Pdf::loadView('payroll-pdf', [
-            'user' => $user,
+            'user' => $targetUser,
             'month' => $month,
             'year' => $year,
             'periodName' => $periodName,
@@ -237,6 +256,6 @@ class PayrollController extends Controller
             'grandTotalWage' => $grandTotalWage,
         ])->setPaper('a5', 'landscape');
 
-        return $pdf->stream("Slip-Gaji-{$user->name}-{$periodName}.pdf");
+        return $pdf->stream("Slip-Gaji-{$targetUser->name}-{$periodName}.pdf");
     }
 }

@@ -105,31 +105,13 @@ export default function Preview({
 
                             {/* Toolbar Filter & Aksi */}
                             <div className="flex flex-wrap items-center justify-between xl:justify-end gap-2.5 shrink-0">
-                                {/* Filter Karyawan */}
-                                {users.length > 0 && (
-                                    <div className="flex items-center h-8 bg-white border border-slate-300 rounded-lg px-2 text-xs shadow-2xs focus-within:border-teal-600 focus-within:ring-1 focus-within:ring-teal-600 transition-all">
-                                        <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1.5 pointer-events-none" />
-                                        <select
-                                            value={selectedUserId}
-                                            onChange={(e) =>
-                                                setSelectedUserId(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="bg-transparent text-[11px] font-semibold text-slate-700 border-none outline-none ring-0 focus:ring-0 cursor-pointer py-0 px-3.5 text-center [text-align-last:center] bg-[position:right_-3px_center]"
-                                        >
-                                            {users.map((u) => (
-                                                <option
-                                                    key={u.id}
-                                                    value={u.id}
-                                                    className="text-left"
-                                                >
-                                                    {u.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
+                                {/* Info Karyawan (Read-Only) */}
+                                <div className="flex items-center h-8 bg-slate-50 border border-slate-200 rounded-lg px-3 text-xs shadow-2xs">
+                                    <UserIcon className="w-3.5 h-3.5 text-teal-600 shrink-0 mr-1.5" />
+                                    <span className="text-[11px] font-bold text-slate-800">
+                                        {currentUserName}
+                                    </span>
+                                </div>
 
                                 {/* Filter Periode Bulan & Tahun */}
                                 <div className="flex items-center h-8 bg-white border border-slate-300 rounded-lg px-2 text-xs shadow-2xs focus-within:border-teal-600 focus-within:ring-1 focus-within:ring-teal-600 transition-all">

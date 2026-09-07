@@ -48,25 +48,29 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function showPage(Invoice $invoice): Response
+    public function showPage(Request $request, Invoice $invoice): Response
     {
         $invoice->load([
             'customer',
             'items.product.images',
-            'items.product.sizes',
+            'items.product.sizes.size',
             'items.product.productionSteps.productionStep',
             'items.productionSteps.assignee',
             'items.productionAssignments.assignee',
             'items.productionAssignments.steps',
             'items.product.materials.item.unit',
+            'items.product.materials.size',
             'creator',
         ]);
 
         $users = User::select('id', 'name', 'email')->orderBy('name')->get();
+        $sizes = Size::orderBy('category')->orderBy('sort_order')->get();
 
         return Inertia::render('Invoice/Show', [
             'invoice' => $invoice,
             'users' => $users,
+            'sizes' => $sizes,
+            'returnTo' => $request->query('return_to'),
         ]);
     }
 
@@ -87,7 +91,11 @@ class InvoiceController extends Controller
         }
 
         if ($request->filled('payment_status') && $request->payment_status !== 'all') {
-            $query->where('payment_status', $request->payment_status);
+            if (strtoupper($request->payment_status) === 'DP') {
+                $query->whereIn('payment_status', ['DP', 'dp', 'partial', 'PARTIAL']);
+            } else {
+                $query->where('payment_status', $request->payment_status);
+            }
         }
 
         if ($request->filled('type') && $request->type !== 'all') {

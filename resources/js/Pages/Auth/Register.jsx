@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import InputError from '@/Components/InputError';
+import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { User, Mail, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -10,6 +12,8 @@ export default function Register() {
         password_confirmation: '',
     });
 
+    const [showPassword, setShowPassword] = useState(false);
+
     const submit = (e) => {
         e.preventDefault();
         post(route('register'), {
@@ -18,117 +22,141 @@ export default function Register() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden font-sans text-slate-100">
-            {/* Decorative Gradients */}
-            <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-violet-600/30 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none" />
+        <GuestLayout subtitle="Pendaftaran Pengguna Portal Azhar Collection">
+            <Head title="Daftar Akun Baru" />
 
-            <div className="w-full max-w-md relative z-10">
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-xl shadow-indigo-500/25 mb-4 text-white font-bold text-2xl tracking-wider">
-                        AC
-                    </div>
-                    <h1 className="text-2xl font-extrabold text-white tracking-tight">
-                        Buat Akun Baru
-                    </h1>
-                    <p className="text-sm text-slate-400 mt-1">
-                        Daftar pengguna baru Azhar Collection (Otomatis Role: User)
-                    </p>
-                </div>
-
-                <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
-                    <form onSubmit={submit} className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                                Nama Lengkap
-                            </label>
-                            <input
-                                id="name"
-                                type="text"
-                                name="name"
-                                value={data.name}
-                                onChange={(e) => setData('name', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                                placeholder="Ahmad Azhar"
-                                required
-                                autoFocus
-                            />
-                            <InputError message={errors.name} className="mt-1.5 text-xs text-rose-400" />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                                Email Address
-                            </label>
-                            <input
-                                id="email"
-                                type="email"
-                                name="email"
-                                value={data.email}
-                                onChange={(e) => setData('email', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                                placeholder="ahmad@example.com"
-                                required
-                            />
-                            <InputError message={errors.email} className="mt-1.5 text-xs text-rose-400" />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                                Password
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                name="password"
-                                value={data.password}
-                                onChange={(e) => setData('password', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                                placeholder="••••••••"
-                                required
-                            />
-                            <InputError message={errors.password} className="mt-1.5 text-xs text-rose-400" />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                                Konfirmasi Password
-                            </label>
-                            <input
-                                id="password_confirmation"
-                                type="password"
-                                name="password_confirmation"
-                                value={data.password_confirmation}
-                                onChange={(e) => setData('password_confirmation', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                                placeholder="••••••••"
-                                required
-                            />
-                            <InputError message={errors.password_confirmation} className="mt-1.5 text-xs text-rose-400" />
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={processing}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 mt-2"
-                        >
-                            {processing ? "Mendaftarkan..." : "Daftar Akun Baru"}
-                        </button>
-                    </form>
-
-                    <div className="text-center pt-2 border-t border-slate-800/80">
-                        <p className="text-xs text-slate-400">
-                            Sudah memiliki akun?{" "}
-                            <Link
-                                href={route('login')}
-                                className="font-semibold text-indigo-400 hover:text-indigo-300 underline transition-colors"
-                            >
-                                Masuk ke Login
-                            </Link>
-                        </p>
-                    </div>
-                </div>
+            <div className="space-y-1 text-center sm:text-left">
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                    Buat Akun Baru
+                </h2>
+                <p className="text-xs text-slate-500">
+                    Lengkapi formulir di bawah ini untuk mendaftarkan akun baru
+                </p>
             </div>
-        </div>
+
+            <form onSubmit={submit} className="space-y-3.5">
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Nama Lengkap
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <User className="w-4 h-4" />
+                        </div>
+                        <input
+                            id="name"
+                            type="text"
+                            name="name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs sm:text-sm font-medium focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none"
+                            placeholder="Ahmad Azhar"
+                            required
+                            autoFocus
+                        />
+                    </div>
+                    <InputError message={errors.name} className="mt-1 text-xs text-rose-600" />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Alamat Email
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <Mail className="w-4 h-4" />
+                        </div>
+                        <input
+                            id="email"
+                            type="email"
+                            name="email"
+                            value={data.email}
+                            onChange={(e) => setData('email', e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs sm:text-sm font-medium focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none"
+                            placeholder="ahmad@example.com"
+                            required
+                        />
+                    </div>
+                    <InputError message={errors.email} className="mt-1 text-xs text-rose-600" />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Kata Sandi
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <Lock className="w-4 h-4" />
+                        </div>
+                        <input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={data.password}
+                            onChange={(e) => setData('password', e.target.value)}
+                            className="w-full pl-10 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs sm:text-sm font-medium focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none"
+                            placeholder="••••••••"
+                            required
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                            title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                        >
+                            {showPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                            ) : (
+                                <Eye className="w-4 h-4" />
+                            )}
+                        </button>
+                    </div>
+                    <InputError message={errors.password} className="mt-1 text-xs text-rose-600" />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Konfirmasi Kata Sandi
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <Lock className="w-4 h-4" />
+                        </div>
+                        <input
+                            id="password_confirmation"
+                            type={showPassword ? "text" : "password"}
+                            name="password_confirmation"
+                            value={data.password_confirmation}
+                            onChange={(e) => setData('password_confirmation', e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs sm:text-sm font-medium focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-none"
+                            placeholder="••••••••"
+                            required
+                        />
+                    </div>
+                    <InputError message={errors.password_confirmation} className="mt-1 text-xs text-rose-600" />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={processing}
+                    className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-teal-600/25 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-1"
+                >
+                    <UserPlus className="w-4 h-4" />
+                    <span>{processing ? "Mendaftarkan..." : "Daftar Akun Baru"}</span>
+                </button>
+            </form>
+
+            <div className="text-center pt-3 border-t border-slate-100">
+                <p className="text-xs text-slate-500">
+                    Sudah memiliki akun?{" "}
+                    <Link
+                        href={route('login')}
+                        className="font-bold text-teal-700 hover:text-teal-800 hover:underline transition-colors"
+                    >
+                        Masuk ke Login
+                    </Link>
+                </p>
+            </div>
+        </GuestLayout>
     );
 }

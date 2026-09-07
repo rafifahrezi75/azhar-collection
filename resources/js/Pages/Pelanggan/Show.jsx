@@ -9,20 +9,21 @@ import {
     Building2,
     Landmark,
     Briefcase,
-    User,
+    User as UserIcon,
     Phone,
     Mail,
     MapPin,
     FileText,
     Receipt,
     Calendar,
-    Edit2,
+    Edit,
     ExternalLink,
     Clock,
     CheckCircle2,
     Tag,
     ShoppingBag,
     Eye,
+    X,
 } from "lucide-react";
 
 export default function Show({ customer, stats = {} }) {
@@ -54,7 +55,7 @@ export default function Show({ customer, stats = {} }) {
         if (t.includes("INSTANSI") || t.includes("PEMERINTAH")) return <Landmark className="w-4 h-4 text-purple-600" />;
         if (t.includes("PERUSAHAAN") || t.includes("SWASTA")) return <Briefcase className="w-4 h-4 text-indigo-600" />;
         if (t.includes("KOMUNITAS") || t.includes("EVENT")) return <Users className="w-4 h-4 text-amber-600" />;
-        return <User className="w-4 h-4 text-teal-600" />;
+        return <UserIcon className="w-4 h-4 text-teal-600" />;
     };
 
     const getStatusBadge = (status) => {
@@ -62,7 +63,7 @@ export default function Show({ customer, stats = {} }) {
         if (s === "completed" || s === "selesai" || s === "paid") {
             return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3" />
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     Selesai
                 </span>
             );
@@ -70,7 +71,7 @@ export default function Show({ customer, stats = {} }) {
         if (s === "in_progress" || s === "proses") {
             return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                    <Clock className="w-3 h-3" />
+                    <Clock className="w-3 h-3 text-blue-600" />
                     Diproses
                 </span>
             );
@@ -78,13 +79,14 @@ export default function Show({ customer, stats = {} }) {
         if (s === "canceled" || s === "batal") {
             return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                    <X className="w-3 h-3 text-rose-600" />
                     Dibatalkan
                 </span>
             );
         }
         return (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                <Clock className="w-3 h-3" />
+                <Clock className="w-3 h-3 text-amber-600" />
                 Pending
             </span>
         );
@@ -99,243 +101,267 @@ export default function Show({ customer, stats = {} }) {
         <DashboardLayout>
             <Head title={`${customer.name} - Detail Pelanggan - Azhar Collection`} />
 
-            <div className="space-y-4 max-w-7xl mx-auto pb-12">
+            <div className="space-y-4 max-w-7xl mx-auto">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    {/* TOP HEADER AREA */}
+                    {/* HEADER AREA */}
                     <div className="p-4 sm:p-5 border-b border-slate-100">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            {/* Tombol Kembali & Judul */}
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <button
                                     type="button"
+                                    title="Kembali"
                                     onClick={() => router.visit("/dashboard/pelanggan")}
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
-                                    title="Kembali ke Daftar Pelanggan"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
 
-                                <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 border border-teal-100/60 flex items-center justify-center shadow-2xs shrink-0 font-bold">
-                                    {getTypeIcon(customer.type)}
+                                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 border border-teal-100/60 flex items-center justify-center shadow-2xs shrink-0 font-bold">
+                                    <Users className="w-4 h-4" />
                                 </div>
 
                                 <div className="min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate">
-                                            {customer.name}
-                                        </h1>
-                                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-teal-50 text-teal-700 border border-teal-200 rounded-md">
-                                            {customer.code}
-                                        </span>
-                                        {customer.is_active ? (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                                Aktif
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                                                Nonaktif
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                                        {customer.institution_name ? `${customer.institution_name} • ` : ""}
-                                        {customer.type}
+                                    <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate">
+                                        Detail Pelanggan
+                                    </h3>
+                                    <p className="text-[11px] text-slate-500 truncate">
+                                        Informasi profil pemesan, lembaga, kontak penanggung jawab, dan riwayat invoice.
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
-                                {canUpdate && (
+                            {/* Navigasi Tab & Tombol Aksi */}
+                            <div className="flex flex-wrap items-center justify-between lg:justify-end gap-3 shrink-0">
+                                {/* Tab Navigation */}
+                                <div className="flex items-center gap-2 h-8 border-b border-slate-200/80">
                                     <button
                                         type="button"
-                                        onClick={() => router.visit(`/dashboard/pelanggan/${customer.id}/edit`)}
-                                        className="h-8 px-3 inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-lg shadow-2xs transition-all cursor-pointer"
+                                        onClick={() => setActiveTab("info")}
+                                        className={`inline-flex items-center gap-1.5 h-full px-2.5 text-xs font-semibold rounded-t-md transition-all cursor-pointer border-b-2 -mb-px ${
+                                            activeTab === "info"
+                                                ? "border-teal-600 text-teal-700 bg-teal-50/80 font-bold"
+                                                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                                        }`}
                                     >
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                        <span>Edit Data Pelanggan</span>
+                                        <FileText
+                                            className={`w-3.5 h-3.5 ${
+                                                activeTab === "info"
+                                                    ? "text-teal-600"
+                                                    : "text-slate-400"
+                                            }`}
+                                        />
+                                        <span>Informasi</span>
                                     </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab("invoices")}
+                                        className={`inline-flex items-center gap-1.5 h-full px-2.5 text-xs font-semibold rounded-t-md transition-all cursor-pointer border-b-2 -mb-px ${
+                                            activeTab === "invoices"
+                                                ? "border-teal-600 text-teal-700 bg-teal-50/80 font-bold"
+                                                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                                        }`}
+                                    >
+                                        <Receipt
+                                            className={`w-3.5 h-3.5 ${
+                                                activeTab === "invoices"
+                                                    ? "text-teal-600"
+                                                    : "text-slate-400"
+                                            }`}
+                                        />
+                                        <span>Riwayat Invoice</span>
+                                        <span
+                                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                                                activeTab === "invoices"
+                                                    ? "bg-teal-100/80 text-teal-800 border border-teal-200/80"
+                                                    : "bg-slate-100 text-slate-500 border border-slate-200"
+                                            }`}
+                                        >
+                                            {customer.invoices?.length || 0}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                {/* Tombol Aksi */}
+                                {canUpdate && (
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            type="button"
+                                            title="Edit Data Pelanggan"
+                                            onClick={() => router.visit(`/dashboard/pelanggan/${customer.id}/edit`)}
+                                            className="inline-flex items-center gap-1.5 h-8 px-2.5 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                                        >
+                                            <Edit className="w-3.5 h-3.5 text-teal-600" />
+                                            <span>Edit</span>
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {/* STATS OVERVIEW CARDS */}
-                    <div className="p-4 sm:p-5 bg-slate-50/50 border-b border-slate-100 grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                Total Belanja (Omzet)
-                            </span>
-                            <div className="text-base sm:text-lg font-bold text-teal-700 font-mono">
-                                {formatRupiah(stats.total_spent || 0)}
-                            </div>
-                            <span className="text-[10px] text-slate-400 block">
-                                Akumulasi seluruh nota
-                            </span>
-                        </div>
-
-                        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                Riwayat Pesanan
-                            </span>
-                            <div className="text-base sm:text-lg font-bold text-slate-800 font-mono">
-                                {stats.total_invoices || 0} <span className="text-xs font-sans text-slate-500 font-normal">Invoice</span>
-                            </div>
-                            <span className="text-[10px] text-emerald-600 font-semibold block">
-                                {stats.completed_invoices || 0} pesanan selesai
-                            </span>
-                        </div>
-
-                        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                Total Item Produksi
-                            </span>
-                            <div className="text-base sm:text-lg font-bold text-slate-800 font-mono">
-                                {stats.total_items || 0} <span className="text-xs font-sans text-slate-500 font-normal">Pcs</span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 block">
-                                Volume pakaian dipesan
-                            </span>
-                        </div>
-
-                        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                Kategori Pelanggan
-                            </span>
-                            <div className="text-sm font-bold text-slate-800 truncate">
-                                {customer.type}
-                            </div>
-                            <span className="text-[10px] text-slate-400 truncate block">
-                                {customer.contact_person ? `PIC: ${customer.contact_person}` : "Perorangan"}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* TABS NAVIGATION */}
-                    <div className="px-4 sm:px-5 pt-3 border-b border-slate-200 bg-white flex items-center gap-4">
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab("info")}
-                            className={`pb-3 text-xs font-bold transition-all relative cursor-pointer flex items-center gap-1.5 ${
-                                activeTab === "info"
-                                    ? "text-teal-700 border-b-2 border-teal-600"
-                                    : "text-slate-500 hover:text-slate-800"
-                            }`}
-                        >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Informasi Profil & Kontak</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab("invoices")}
-                            className={`pb-3 text-xs font-bold transition-all relative cursor-pointer flex items-center gap-1.5 ${
-                                activeTab === "invoices"
-                                    ? "text-teal-700 border-b-2 border-teal-600"
-                                    : "text-slate-500 hover:text-slate-800"
-                            }`}
-                        >
-                            <Receipt className="w-3.5 h-3.5" />
-                            <span>Riwayat Invoice Pesanan ({customer.invoices?.length || 0})</span>
-                        </button>
-                    </div>
-
-                    {/* TAB CONTENT */}
+                    {/* MAIN TAB CONTENT */}
                     <div className="p-4 sm:p-5">
-                        {activeTab === "info" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                                {/* Profil & Lembaga */}
-                                <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200 shadow-2xs space-y-3">
-                                    <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2.5">
-                                        <Building2 className="w-4 h-4 text-teal-600" />
-                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                            Identitas Pemesan & Instansi
-                                        </h3>
+                        {activeTab === "info" ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                                {/* KOLOM KIRI: Profil Ringkas & Metrik */}
+                                <div className="lg:col-span-4 space-y-4">
+                                    {/* Identitas Utama */}
+                                    <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 shadow-2xs space-y-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h1 className="text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
+                                                        {customer.name}
+                                                    </h1>
+                                                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 font-bold shadow-2xs">
+                                                        {customer.code}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+                                                    <p>
+                                                        Tipe:{" "}
+                                                        <strong className="text-slate-800 font-semibold">
+                                                            {customer.type}
+                                                        </strong>
+                                                    </p>
+                                                    {customer.institution_name && (
+                                                        <p>
+                                                            Instansi:{" "}
+                                                            <strong className="text-slate-800 font-semibold">
+                                                                {customer.institution_name}
+                                                            </strong>
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {customer.is_active ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                    Aktif
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                                                    <X className="w-3 h-3 text-slate-400" />
+                                                    Nonaktif
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Quick WhatsApp / Contact Button */}
+                                        {waUrl && (
+                                            <a
+                                                href={waUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-full inline-flex items-center justify-center gap-1.5 h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-200 transition-colors shadow-2xs"
+                                            >
+                                                <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span>Hubungi via WhatsApp</span>
+                                                <ExternalLink className="w-3 h-3 text-emerald-500" />
+                                            </a>
+                                        )}
                                     </div>
 
-                                    <div className="space-y-2.5 text-xs">
-                                        <div className="flex justify-between py-1 border-b border-slate-100">
-                                            <span className="text-slate-500 font-medium">Kode Pelanggan</span>
-                                            <span className="font-mono font-bold text-slate-800">{customer.code}</span>
+                                    {/* Metrik & Ringkasan Transaksi */}
+                                    <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 space-y-2.5 text-xs shadow-2xs">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200/80 pb-2">
+                                            <Receipt className="w-4 h-4 text-teal-600" />
+                                            <span>Akumulasi Transaksi</span>
                                         </div>
 
-                                        <div className="flex justify-between py-1 border-b border-slate-100">
-                                            <span className="text-slate-500 font-medium">Nama Pelanggan</span>
-                                            <span className="font-bold text-slate-800">{customer.name}</span>
-                                        </div>
+                                        <div className="space-y-2 text-xs pt-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-slate-500">Total Belanja:</span>
+                                                <span className="font-mono font-bold text-teal-700 text-sm">
+                                                    {formatRupiah(stats.total_spent || 0)}
+                                                </span>
+                                            </div>
 
-                                        <div className="flex justify-between py-1 border-b border-slate-100">
-                                            <span className="text-slate-500 font-medium">Tipe Kemitraan</span>
-                                            <span className="font-semibold text-slate-800">{customer.type}</span>
-                                        </div>
+                                            <div className="flex items-center justify-between border-t border-slate-200/60 pt-2">
+                                                <span className="text-slate-500">Total Invoice:</span>
+                                                <span className="font-semibold text-slate-800">
+                                                    {stats.total_invoices || 0} Pesanan
+                                                </span>
+                                            </div>
 
-                                        <div className="flex justify-between py-1 border-b border-slate-100">
-                                            <span className="text-slate-500 font-medium">Nama Lembaga / Sekolah</span>
-                                            <span className="font-semibold text-slate-800">
-                                                {customer.institution_name || "-"}
-                                            </span>
-                                        </div>
+                                            <div className="flex items-center justify-between border-t border-slate-200/60 pt-2">
+                                                <span className="text-slate-500">Pesanan Selesai:</span>
+                                                <span className="font-semibold text-emerald-700">
+                                                    {stats.completed_invoices || 0} Pesanan
+                                                </span>
+                                            </div>
 
-                                        <div className="flex justify-between py-1 border-b border-slate-100">
-                                            <span className="text-slate-500 font-medium">Kontak Person (PIC)</span>
-                                            <span className="font-semibold text-slate-800">
-                                                {customer.contact_person || "-"}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex justify-between py-1">
-                                            <span className="text-slate-500 font-medium">Status Akun</span>
-                                            <span className="font-bold">
-                                                {customer.is_active ? (
-                                                    <span className="text-emerald-700">Aktif</span>
-                                                ) : (
-                                                    <span className="text-slate-500">Nonaktif</span>
-                                                )}
-                                            </span>
+                                            <div className="flex items-center justify-between border-t border-slate-200/60 pt-2">
+                                                <span className="text-slate-500">Volume Pakaian:</span>
+                                                <span className="font-semibold text-slate-800">
+                                                    {stats.total_items || 0} Pcs
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Kontak & Alamat */}
-                                <div className="space-y-4">
-                                    <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-200 shadow-2xs space-y-3">
-                                        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2.5">
-                                            <Phone className="w-4 h-4 text-teal-600" />
-                                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                                Kontak & Alamat Pengiriman
-                                            </h3>
+                                {/* KOLOM KANAN: Detail Informasi Lengkap */}
+                                <div className="lg:col-span-8 space-y-4">
+                                    {/* Section 1: Identitas Lembaga & PIC */}
+                                    <div className="p-4 bg-slate-50/50 rounded-lg border border-slate-200 space-y-3.5">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200/80 pb-2">
+                                            <Building2 className="w-4 h-4 text-teal-600" />
+                                            <span>Identitas & Lembaga Pemesan</span>
                                         </div>
 
-                                        <div className="space-y-2.5 text-xs">
-                                            <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                                                <span className="text-slate-500 font-medium">No. Telepon / WA</span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] mb-0.5">Kode Pelanggan</span>
+                                                <span className="font-mono font-bold text-slate-800 text-sm">{customer.code}</span>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] mb-0.5">Nama Pemesan</span>
+                                                <span className="font-bold text-slate-900 text-sm">{customer.name}</span>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] mb-0.5">Tipe Kemitraan</span>
+                                                <span className="font-semibold text-slate-800">{customer.type}</span>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] mb-0.5">Nama Instansi / Lembaga</span>
+                                                <span className="font-semibold text-slate-800">{customer.institution_name || "-"}</span>
+                                            </div>
+
+                                            <div className="sm:col-span-2">
+                                                <span className="text-slate-400 block text-[11px] mb-0.5">Kontak Person / PIC (Penanggung Jawab)</span>
+                                                <span className="font-semibold text-slate-800">{customer.contact_person || "-"}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 2: Kontak & Alamat Pengiriman */}
+                                    <div className="p-4 bg-slate-50/50 rounded-lg border border-slate-200 space-y-3.5">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200/80 pb-2">
+                                            <Phone className="w-4 h-4 text-teal-600" />
+                                            <span>Informasi Kontak & Alamat Pengiriman</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] mb-0.5">No. Telepon / WhatsApp</span>
                                                 {customer.phone ? (
-                                                    <div className="flex items-center gap-2 font-mono font-bold text-slate-800">
-                                                        <span>{customer.phone}</span>
-                                                        {waUrl && (
-                                                            <a
-                                                                href={waUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 hover:bg-emerald-100"
-                                                            >
-                                                                <span>WhatsApp</span>
-                                                                <ExternalLink className="w-2.5 h-2.5" />
-                                                            </a>
-                                                        )}
-                                                    </div>
+                                                    <span className="font-mono font-bold text-slate-800">{customer.phone}</span>
                                                 ) : (
                                                     <span className="text-slate-400">-</span>
                                                 )}
                                             </div>
 
-                                            <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                                                <span className="text-slate-500 font-medium">Email</span>
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] mb-0.5">Alamat Email</span>
                                                 {customer.email ? (
-                                                    <a
-                                                        href={`mailto:${customer.email}`}
-                                                        className="font-medium text-teal-700 hover:underline"
-                                                    >
+                                                    <a href={`mailto:${customer.email}`} className="font-medium text-teal-700 hover:underline">
                                                         {customer.email}
                                                     </a>
                                                 ) : (
@@ -343,19 +369,18 @@ export default function Show({ customer, stats = {} }) {
                                                 )}
                                             </div>
 
-                                            <div className="py-1">
-                                                <span className="text-slate-500 font-medium block mb-1">
-                                                    Alamat Lengkap / Wilayah
-                                                </span>
-                                                <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-slate-700 leading-relaxed font-medium">
-                                                    {customer.address || "Belum ada catatan alamat."}
+                                            <div className="sm:col-span-2">
+                                                <span className="text-slate-400 block text-[11px] mb-1">Alamat Lengkap / Wilayah Pengiriman</span>
+                                                <div className="p-3 bg-white rounded-lg border border-slate-200 text-slate-700 leading-relaxed font-medium">
+                                                    {customer.address || "Belum ada catatan alamat pengiriman."}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* Section 3: Catatan Khusus */}
                                     {customer.notes && (
-                                        <div className="bg-amber-50/60 rounded-xl p-4 border border-amber-200 shadow-2xs space-y-1.5">
+                                        <div className="p-4 bg-amber-50/60 rounded-lg border border-amber-200 space-y-2">
                                             <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
                                                 Catatan Khusus Pelanggan
                                             </span>
@@ -366,9 +391,7 @@ export default function Show({ customer, stats = {} }) {
                                     )}
                                 </div>
                             </div>
-                        )}
-
-                        {activeTab === "invoices" && (
+                        ) : (
                             <div className="space-y-3">
                                 {customer.invoices && customer.invoices.length > 0 ? (
                                     <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs">
@@ -394,7 +417,7 @@ export default function Show({ customer, stats = {} }) {
                                                             <td className="py-2.5 px-3.5 font-mono font-bold text-teal-700">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => router.visit(`/dashboard/invoice/${inv.id}`)}
+                                                                    onClick={() => router.visit(`/dashboard/invoice/${inv.id}?return_to=${encodeURIComponent(`/dashboard/pelanggan/${customer.id}`)}`)}
                                                                     className="hover:underline cursor-pointer"
                                                                 >
                                                                     {inv.invoice_number}
@@ -424,7 +447,7 @@ export default function Show({ customer, stats = {} }) {
                                                             <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => router.visit(`/dashboard/invoice/${inv.id}`)}
+                                                                    onClick={() => router.visit(`/dashboard/invoice/${inv.id}?return_to=${encodeURIComponent(`/dashboard/pelanggan/${customer.id}`)}`)}
                                                                     title="Lihat Detail Invoice"
                                                                     className="w-7 h-7 inline-flex items-center justify-center bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg transition-all border border-teal-200/80 cursor-pointer shadow-2xs"
                                                                 >

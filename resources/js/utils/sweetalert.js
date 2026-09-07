@@ -46,7 +46,7 @@ export const confirmDialog = async ({
         text,
         icon,
         showCancelButton: true,
-        confirmButtonColor: '#4f46e5', // Indigo-600
+        confirmButtonColor: '#800080', // Brand Primary Teal/Purple
         cancelButtonColor: '#64748b', // Slate-500
         confirmButtonText,
         cancelButtonText,

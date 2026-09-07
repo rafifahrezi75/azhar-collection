@@ -192,7 +192,7 @@ export default function Show({ invoice, work, history, calendar, totals, filters
                                     type="button"
                                     onClick={() => router.visit(route("production-progress.index"))}
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
-                                    title="Kembali ke Progress Penjahit"
+                                    title="Kembali"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>

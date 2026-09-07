@@ -78,6 +78,7 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
     ]);
 
     const [users, setUsers] = useState(initialUsers || []);
+    const [masterSizes, setMasterSizes] = useState([]);
     const [showSpkSection, setShowSpkSection] = useState(false);
     const [spkDrafts, setSpkDrafts] = useState([]);
     const [spkForm, setSpkForm] = useState({ item_index: "", user_id: "", qty: "", target_date: "", steps: [] });
@@ -106,11 +107,12 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
     const fetchMasters = useCallback(async () => {
         setLoadingMasters(true);
         try {
-            const [custRes, prodRes, numRes, usersRes] = await Promise.all([
+            const [custRes, prodRes, numRes, usersRes, sizesRes] = await Promise.all([
                 axios.get("/api/customers"),
                 axios.get("/api/products"),
                 axios.get("/api/invoices/next-number"),
                 axios.get("/api/users-management").catch(() => ({ data: { users: [] } })),
+                axios.get("/api/sizes").catch(() => ({ data: { data: [] } })),
             ]);
             setCustomers(custRes.data?.data || []);
             setProducts(prodRes.data?.data || []);
@@ -118,6 +120,7 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                 setInvoiceNumber(numRes.data.next_number);
             }
             setUsers(usersRes.data?.users || usersRes.data?.data || []);
+            setMasterSizes(sizesRes.data?.data || []);
         } catch {
             Toast.error("Gagal memuat master data pelanggan atau produk");
         } finally {
@@ -536,20 +539,13 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
     }, [customers]);
 
     const productOptions = useMemo(() => {
-        return [
-            {
-                value: "",
-                label: "",
-                sublabel: "Input nama & harga bebas tanpa resep bahan",
-            },
-            ...products.map((p) => ({
-                value: String(p.id),
-                label: p.name,
-                sublabel: `${p.category?.name || "Pakaian"} • ${formatCurrency(p.base_price)}`,
-                badge: p.code,
-                searchKey: `${p.name} ${p.code || ""} ${p.category?.name || ""}`,
-            })),
-        ];
+        return products.map((p) => ({
+            value: String(p.id),
+            label: p.name,
+            sublabel: `${p.category?.name || "Pakaian"} • ${formatCurrency(p.base_price)}`,
+            badge: p.code,
+            searchKey: `${p.name} ${p.code || ""} ${p.category?.name || ""}`,
+        }));
     }, [products]);
 
     const userOptions = useMemo(() => {
@@ -578,7 +574,7 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                                     type="button"
                                     onClick={() => router.visit("/dashboard/invoice")}
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
-                                    title="Kembali ke Daftar Invoice"
+                                    title="Kembali"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
@@ -804,8 +800,8 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                                                         </button>
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
-                                                        <div className="sm:col-span-5">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
+                                                        <div className="sm:col-span-6">
                                                             <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                                                                 Katalog Model Produk
                                                             </label>
@@ -813,12 +809,13 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                                                                 value={item.product_id}
                                                                 onChange={(val) => handleItemChange(idx, "product_id", val)}
                                                                 options={productOptions}
-                                                                placeholder="-- Tanpa Katalog (Item Bebas) --"
-                                                                searchPlaceholder="Cari model baju, kode, atau kategori..."
+                                                                placeholder="Cari / Pilih Model Produk"
+                                                                searchPlaceholder="Ketik nama model pakaian, kode, atau kategori..."
+                                                                clearable={true}
                                                             />
                                                         </div>
 
-                                                        <div className="sm:col-span-7">
+                                                        <div className="sm:col-span-6">
                                                             <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                                                                 Nama Item di Nota <span className="text-rose-500">*</span>
                                                             </label>
@@ -833,150 +830,146 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 text-xs">
-                                                        <div className="sm:col-span-2">
-                                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                                                                Satuan
-                                                            </label>
-                                                            <select
-                                                                value={item.unit}
-                                                                onChange={(e) => handleItemChange(idx, "unit", e.target.value)}
-                                                                className="w-full h-8 px-2 text-xs border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600 font-medium"
-                                                            >
-                                                                <option value="Stel">Stel</option>
-                                                                <option value="Pcs">Pcs</option>
-                                                                <option value="Lusin">Lusin</option>
-                                                                <option value="Kodi">Kodi</option>
-                                                                <option value="Set">Set</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <div className="sm:col-span-4">
-                                                            <div className="flex items-center justify-between mb-1">
-                                                                <label className="block text-[11px] font-semibold text-slate-700">
-                                                                    Kuantitas
-                                                                </label>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setActiveItemIndexForSize(idx)}
-                                                                    className="text-[10px] font-bold text-teal-700 hover:text-teal-800 cursor-pointer inline-flex items-center gap-1"
-                                                                >
-                                                                    <Ruler className="w-2.5 h-2.5" />
-                                                                    <span>{breakdownEntries.length > 0 ? "Edit Ukuran" : "+ Rincian Size"}</span>
-                                                                </button>
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <input
-                                                                    type="number"
-                                                                    min="1"
-                                                                    value={item.qty}
-                                                                    onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
-                                                                    readOnly={breakdownEntries.length > 0}
-                                                                    className={`w-20 h-8 px-2 text-xs font-mono font-bold text-center border rounded-lg shadow-2xs ${
-                                                                        breakdownEntries.length > 0
-                                                                            ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
-                                                                            : "border-slate-300 bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 text-slate-900"
-                                                                    }`}
-                                                                    required
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setActiveItemIndexForSize(idx)}
-                                                                    className={`flex-1 h-8 inline-flex items-center justify-center gap-1 px-2 text-[11px] font-semibold rounded-lg border shadow-2xs transition-all cursor-pointer truncate ${
-                                                                        breakdownEntries.length > 0
-                                                                            ? "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100"
-                                                                            : "bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100"
-                                                                    }`}
-                                                                >
-                                                                    <Ruler className="w-3 h-3 text-teal-600 shrink-0" />
-                                                                    <span className="truncate">
-                                                                        {breakdownEntries.length > 0 ? `${breakdownEntries.length} Ukuran` : "Atur Size"}
-                                                                    </span>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="sm:col-span-3">
-                                                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                                                                Harga Satuan
-                                                            </label>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                value={item.unit_price}
-                                                                onChange={(e) => handleItemChange(idx, "unit_price", e.target.value)}
-                                                                className="w-full h-8 px-2.5 text-xs text-right font-mono border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                                                                required
-                                                            />
-                                                        </div>
-
-                                                        <div className="sm:col-span-3 text-right">
-                                                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                                                                Subtotal
-                                                            </label>
-                                                            <div className="h-8 flex items-center justify-end font-bold text-slate-900 font-mono text-xs">
-                                                                {formatCurrency(item.subtotal)}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {breakdownEntries.length > 0 && (
-                                                        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/70 text-xs">
-                                                            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                                                <Ruler className="w-3 h-3 text-teal-600" />
-                                                                <span>Rincian Size ({breakdownEntries.reduce((s, [, v]) => s + (typeof v === 'object' ? parseInt(v.qty) || 0 : parseInt(v) || 0), 0)} Pcs):</span>
-                                                            </div>
-                                                            <div className="flex flex-wrap items-center gap-1">
-                                                                {breakdownEntries.map(([sz, v]) => {
-                                                                    const qty = typeof v === 'object' ? v.qty || 0 : v;
-                                                                    return (
-                                                                        <span
-                                                                            key={sz}
-                                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200/80 shadow-2xs"
-                                                                        >
-                                                                            <span>{sz}:</span>
-                                                                            <strong className="font-mono">{qty}</strong>
-                                                                        </span>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {matchedProduct && (
-                                                        <details className="mt-2 pt-2 border-t border-slate-200/70 group">
-                                                            <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold text-slate-700 hover:text-teal-700 transition-colors">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Layers className="w-3.5 h-3.5 text-teal-600" />
-                                                                    <span>Detail BOM & Produksi Model</span>
+                                                    {/* Baris konfigurasi rincian (Satuan, Kuantitas, Size, Harga) tampil setelah barang/item dipilih atau diisi */}
+                                                    {Boolean(item.product_id || (item.item_name && item.item_name.trim().length > 0)) ? (
+                                                        <div className="p-3 bg-slate-50/70 rounded-lg border border-slate-200/90 space-y-3">
+                                                            <div className="grid grid-cols-2 sm:grid-cols-12 gap-3 text-xs items-end">
+                                                                <div className="col-span-1 sm:col-span-2">
+                                                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                                        Satuan
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={item.unit || "Stel"}
+                                                                        readOnly
+                                                                        tabIndex={-1}
+                                                                        className="w-full h-8 px-2.5 text-xs font-semibold border border-slate-200 bg-slate-100/80 text-slate-600 rounded-lg shadow-2xs cursor-not-allowed select-none"
+                                                                    />
                                                                 </div>
-                                                                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform" />
-                                                            </summary>
-                                                            <div className="mt-3 space-y-3">
-                                                                {renderFilteredBOM(item, matchedProduct)}
 
-                                                                {matchedProduct.production_steps && matchedProduct.production_steps.length > 0 && (
-                                                                    <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-                                                                            <Zap className="w-3 h-3 text-teal-600" /> Langkah Produksi & Upah Borongan:
-                                                                        </span>
-                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                                            {matchedProduct.production_steps.map((step, sIdx) => (
-                                                                                <div key={sIdx} className="flex justify-between items-center bg-white p-2 rounded-md border border-slate-200 text-[11px] shadow-2xs">
-                                                                                    <span className="font-semibold text-slate-800 truncate">
-                                                                                        {sIdx + 1}. {step.production_step?.name || step.custom_name}
-                                                                                    </span>
-                                                                                    <span className="font-mono text-teal-700 font-bold shrink-0">
-                                                                                        {formatCurrency(step.wage)}
-                                                                                    </span>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
+                                                                <div className="col-span-1 sm:col-span-4">
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <label className="block text-[11px] font-semibold text-slate-700">
+                                                                            Kuantitas
+                                                                        </label>
                                                                     </div>
-                                                                )}
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <input
+                                                                            type="number"
+                                                                            min="1"
+                                                                            value={item.qty}
+                                                                            onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
+                                                                            readOnly={breakdownEntries.length > 0}
+                                                                            className={`w-20 h-8 px-2 text-xs font-mono font-bold text-center border rounded-lg shadow-2xs ${
+                                                                                breakdownEntries.length > 0
+                                                                                    ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                                                                                    : "border-slate-300 bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 text-slate-900"
+                                                                            }`}
+                                                                            required
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setActiveItemIndexForSize(idx)}
+                                                                            className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-2.5 text-[11px] font-semibold rounded-lg border shadow-2xs transition-all cursor-pointer truncate ${
+                                                                                breakdownEntries.length > 0
+                                                                                    ? "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100"
+                                                                                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                                                                            }`}
+                                                                        >
+                                                                            <Ruler className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                                                                            <span className="truncate">
+                                                                                {breakdownEntries.length > 0 ? `${breakdownEntries.length} Ukuran (${item.qty} Pcs)` : "+ Rincian Size"}
+                                                                            </span>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="col-span-1 sm:col-span-3">
+                                                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                                                        Harga Satuan
+                                                                    </label>
+                                                                    <div className="relative">
+                                                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Rp</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            value={item.unit_price}
+                                                                            onChange={(e) => handleItemChange(idx, "unit_price", e.target.value)}
+                                                                            className="w-full h-8 pl-8 pr-2.5 text-xs text-right font-mono font-semibold border border-slate-300 rounded-lg bg-white shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                                                            required
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="col-span-1 sm:col-span-3 text-right">
+                                                                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                                                                        Subtotal
+                                                                    </label>
+                                                                    <div className="h-8 flex items-center justify-end px-3 bg-slate-100/80 border border-slate-200/80 rounded-lg font-bold text-slate-900 font-mono text-xs">
+                                                                        {formatCurrency(item.subtotal)}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </details>
-                                                    )}
+
+                                                            {breakdownEntries.length > 0 && (
+                                                                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/70 text-xs">
+                                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                                        <Ruler className="w-3 h-3 text-teal-600" />
+                                                                        <span>Rincian Size ({breakdownEntries.reduce((s, [, v]) => s + (typeof v === 'object' ? parseInt(v.qty) || 0 : parseInt(v) || 0), 0)} Pcs):</span>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap items-center gap-1">
+                                                                        {breakdownEntries.map(([sz, v]) => {
+                                                                            const qty = typeof v === 'object' ? v.qty || 0 : v;
+                                                                            return (
+                                                                                <span
+                                                                                    key={sz}
+                                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200/80 shadow-2xs"
+                                                                                >
+                                                                                    <span>{sz}:</span>
+                                                                                    {qty}
+                                                                                </span>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {matchedProduct && (
+                                                                <details className="pt-2 border-t border-slate-200/70 group">
+                                                                    <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold text-slate-700 hover:text-teal-700 transition-colors">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <Layers className="w-3.5 h-3.5 text-teal-600" />
+                                                                            <span>Detail BOM & Produksi Model ({matchedProduct.name})</span>
+                                                                        </div>
+                                                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform" />
+                                                                    </summary>
+                                                                    <div className="mt-3 space-y-3">
+                                                                        {renderFilteredBOM(item, matchedProduct)}
+
+                                                                        {matchedProduct.production_steps && matchedProduct.production_steps.length > 0 && (
+                                                                            <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
+                                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                                                                                    <Zap className="w-3 h-3 text-teal-600" /> Langkah Produksi & Upah Borongan:
+                                                                                </span>
+                                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                                    {matchedProduct.production_steps.map((step, sIdx) => (
+                                                                                        <div key={sIdx} className="flex justify-between items-center bg-white p-2 rounded-md border border-slate-200 text-[11px] shadow-2xs">
+                                                                                            <span className="font-semibold text-slate-800 truncate">
+                                                                                                {sIdx + 1}. {step.production_step?.name || step.custom_name}
+                                                                                            </span>
+                                                                                            <span className="font-mono text-teal-700 font-bold shrink-0">
+                                                                                                {formatCurrency(step.wage)}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </details>
+                                                            )}
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             );
                                         })}
@@ -1500,25 +1493,12 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
             {activeItemIndexForSize !== null && (() => {
                 const activeLine = items[activeItemIndexForSize];
                 const activeProd = products.find((p) => String(p.id) === String(activeLine?.product_id));
-                if (!activeProd) {
-                    return (
-                        <SizeBreakdownModal
-                            isOpen={true}
-                            itemName={activeLine?.item_name || "Item Pesanan"}
-                            productSizes={[]}
-                            defaultUnitPrice={Number(activeLine?.unit_price) || 0}
-                            initialBreakdown={{}}
-                            currentBreakdown={{}}
-                            onClose={() => setActiveItemIndexForSize(null)}
-                            onSave={() => {}}
-                        />
-                    );
-                }
                 return (
                     <SizeBreakdownModal
                         isOpen={true}
                         itemName={activeLine?.item_name || "Item Pesanan"}
                         productSizes={activeProd?.sizes || []}
+                        masterSizes={masterSizes}
                         defaultUnitPrice={Number(activeLine?.unit_price) || 0}
                         initialBreakdown={activeLine?.size_breakdown || {}}
                         currentBreakdown={activeLine?.size_breakdown || {}}

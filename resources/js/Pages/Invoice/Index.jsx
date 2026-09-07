@@ -384,17 +384,24 @@ export default function Index() {
 
                                                 {/* Status Bayar */}
                                                 <td className="py-2.5 px-3.5 text-center">
-                                                    <span
-                                                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                            inv.payment_status === "LUNAS"
-                                                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                                : inv.payment_status === "DP"
-                                                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                                                : "bg-rose-50 text-rose-700 border border-rose-200"
-                                                        }`}
-                                                    >
-                                                        {inv.payment_status}
-                                                    </span>
+                                                    {(() => {
+                                                        const pStatus = String(inv.payment_status || "").toUpperCase();
+                                                        const isLunas = pStatus === "LUNAS";
+                                                        const isDp = pStatus === "DP" || pStatus === "PARTIAL";
+                                                        return (
+                                                            <span
+                                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                    isLunas
+                                                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                                        : isDp
+                                                                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                                                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                                                                }`}
+                                                            >
+                                                                {isDp ? "DP" : inv.payment_status || "BELUM_LUNAS"}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </td>
 
                                                 {/* Tipe */}

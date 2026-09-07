@@ -257,7 +257,17 @@ export default function Create({ categories = [], units = [] }) {
             Toast.success(
                 res.data.message || "Data barang berhasil ditambahkan.",
             );
-            router.visit("/dashboard/barang");
+            const createdItem = res.data?.data || res.data;
+            const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+            const returnTo = searchParams ? searchParams.get("return_to") : null;
+
+            if (returnTo) {
+                const sep = returnTo.includes("?") ? "&" : "?";
+                const target = createdItem?.id ? `${returnTo}${sep}new_item_id=${createdItem.id}` : returnTo;
+                router.visit(target);
+            } else {
+                router.visit("/dashboard/barang");
+            }
         } catch (err) {
             const message =
                 err.response?.data?.message ||
@@ -269,6 +279,9 @@ export default function Create({ categories = [], units = [] }) {
             setSubmitting(false);
         }
     };
+
+    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const returnTo = searchParams ? searchParams.get("return_to") : null;
 
     const baseUnitObj = units.find(
         (u) => String(u.id) === String(form.unit_id),
@@ -295,7 +308,7 @@ export default function Create({ categories = [], units = [] }) {
                                     type="button"
                                     title="Kembali"
                                     onClick={() =>
-                                        router.visit("/dashboard/barang")
+                                        router.visit(returnTo || "/dashboard/barang")
                                     }
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-sm cursor-pointer"
                                 >

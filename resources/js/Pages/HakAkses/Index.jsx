@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import {
     Head,
+    Link,
     router,
     usePage,
 } from "@inertiajs/react";
@@ -23,6 +24,7 @@ import {
     Users,
     Shield,
     RotateCcw,
+    UserPlus,
 } from "lucide-react";
 
 export default function Index() {
@@ -537,25 +539,25 @@ export default function Index() {
 
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setMode(
-                                                "user",
-                                            )
-                                        }
+                                        onClick={() => setMode("user")}
                                         className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                                            mode ===
-                                            "user"
+                                            mode === "user"
                                                 ? "bg-slate-900 text-white shadow-xs"
                                                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                                         }`}
                                     >
                                         <Users className="w-3.5 h-3.5" />
-
-                                        <span>
-                                            Per User
-                                        </span>
+                                        <span>Per User</span>
                                     </button>
                                 </div>
+
+                                <Link
+                                    href="/dashboard/users"
+                                    className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md border border-slate-300 shadow-2xs transition-all cursor-pointer"
+                                >
+                                    <UserPlus className="w-3.5 h-3.5 text-teal-600" />
+                                    <span>Kelola Pengguna</span>
+                                </Link>
                             </div>
                         }
                     />

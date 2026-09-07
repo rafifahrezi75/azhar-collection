@@ -28,16 +28,16 @@ export default function Error({ status = 404, message }) {
         <div className="min-h-[70vh] flex items-center justify-center p-4">
             <div className="max-w-md w-full bg-white border border-slate-200/80 rounded-lg p-8 text-center shadow-xl shadow-slate-200/50 space-y-6 relative overflow-hidden">
                 {/* Decorative Ambient Circle */}
-                <div className="absolute -top-12 -right-12 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -top-12 -right-12 w-36 h-36 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-teal-600/10 rounded-full blur-2xl pointer-events-none" />
 
                 {/* Big Status Badge */}
                 <div className="relative inline-flex items-center justify-center">
-                    <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
+                    <div className="w-24 h-24 rounded-lg bg-teal-50/60 border border-teal-100 flex items-center justify-center text-teal-700 shadow-inner">
                         {status === 403 ? (
                             <ShieldAlert className="w-12 h-12 text-rose-500 animate-pulse" />
                         ) : status === 404 ? (
-                            <FileQuestion className="w-12 h-12 text-indigo-600 animate-bounce" />
+                            <FileQuestion className="w-12 h-12 text-teal-600 animate-bounce" />
                         ) : (
                             <AlertCircle className="w-12 h-12 text-amber-500" />
                         )}
@@ -62,7 +62,7 @@ export default function Error({ status = 404, message }) {
                     <button
                         type="button"
                         onClick={() => window.history.back()}
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all border border-slate-200 cursor-pointer"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all border border-slate-200 cursor-pointer"
                     >
                         <ArrowLeft className="w-4 h-4" />
                         <span>Kembali</span>
@@ -70,7 +70,7 @@ export default function Error({ status = 404, message }) {
 
                     <Link
                         href={isAuthenticated ? "/dashboard" : "/login"}
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-xs transition-all shadow-md shadow-indigo-500/20"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-xs transition-all shadow-md shadow-teal-600/20"
                     >
                         <Home className="w-4 h-4" />
                         <span>{isAuthenticated ? "Ke Dashboard" : "Ke Halaman Login"}</span>

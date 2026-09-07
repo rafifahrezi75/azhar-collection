@@ -1717,7 +1717,7 @@ const ProductModal = memo(function ProductModal({
                                     className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 rounded-md shadow-xs transition-colors cursor-pointer"
                                 >
                                     <Check className="w-4 h-4" />
-                                    <span>{submitting ? "Menyimpan Data..." : (isEditing ? "Simpan Perubahan" : "Simpan Produk Baru")}</span>
+                                    <span>{submitting ? "Menyimpan Data..." : (isEditing ? "Simpan" : "Simpan")}</span>
                                 </button>
                             )}
                         </div>

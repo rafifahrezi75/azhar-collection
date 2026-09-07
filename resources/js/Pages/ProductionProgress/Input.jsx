@@ -388,7 +388,7 @@ function CalendarView({
                                     type="button"
                                     onClick={() => router.visit(backUrl)}
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
-                                    title="Kembali ke Detail Progress"
+                                    title="Kembali"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
@@ -656,7 +656,7 @@ function InputForm({
                                     type="button"
                                     onClick={() => router.visit(backUrl)}
                                     className="p-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors shadow-2xs cursor-pointer shrink-0"
-                                    title="Kembali ke Detail Progress"
+                                    title="Kembali"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                 </button>
@@ -796,7 +796,7 @@ function InputForm({
                                 <button
                                     type="submit"
                                     disabled={submitting || cards.length === 0}
-                                    title={submitting ? "Menyimpan..." : "Simpan Progress"}
+                                    title={submitting ? "Menyimpan..." : "Simpan"}
                                     className="h-8 w-8 inline-flex items-center justify-center bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white rounded-lg shadow-sm transition-all cursor-pointer shrink-0"
                                 >
                                     <Save className="w-4 h-4" />

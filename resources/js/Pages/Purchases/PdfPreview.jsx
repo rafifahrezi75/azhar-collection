@@ -39,7 +39,7 @@ export default function PdfPreview({ purchase }) {
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <button
                                     type="button"
-                                    title="Kembali ke Detail Pembelian"
+                                    title="Kembali"
                                     onClick={() =>
                                         router.visit(
                                             `/dashboard/purchases/${purchase.id}`

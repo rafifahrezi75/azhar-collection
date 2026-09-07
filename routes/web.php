@@ -91,6 +91,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/payroll/pdf', [PayrollController::class, 'printPdf'])
         ->name('payroll.pdf');
 
+    Route::get('/dashboard/payroll/employee/{user}/preview', [PayrollController::class, 'previewPage'])
+        ->name('payroll.employee.preview');
+
+    Route::get('/dashboard/payroll/employee/{user}/print', [PayrollController::class, 'printPdf'])
+        ->name('payroll.employee.print');
+
     // Pembelian
     Route::get('/dashboard/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/dashboard/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
@@ -385,6 +391,15 @@ Route::middleware('auth')->prefix('api')->group(function () {
     // Users Management
     Route::get('/users-management', [UserManagementController::class, 'index'])
         ->middleware('permission:user.view');
+
+    Route::post('/users-management', [UserManagementController::class, 'store'])
+        ->middleware('permission:user.update');
+
+    Route::put('/users-management/{user}', [UserManagementController::class, 'update'])
+        ->middleware('permission:user.update');
+
+    Route::delete('/users-management/{user}', [UserManagementController::class, 'destroy'])
+        ->middleware('permission:user.update');
 
     Route::put('/users-management/{user}/roles', [UserManagementController::class, 'updateRole'])
         ->middleware('permission:user.update');

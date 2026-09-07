@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             PurchaseSeeder::class,
             ProductionAssignmentSeeder::class,
             ProductionProgressSeeder::class,
+            LargePrintDataSeeder::class,
         ]);
 
         Schema::enableForeignKeyConstraints();

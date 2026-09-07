@@ -5,13 +5,15 @@ import DashboardLayout from "@/Layouts/DashboardLayout";
 import PageHeaderBar from "@/Components/PageHeaderBar";
 import Pagination from "@/Components/Pagination";
 import UserRoleModal from "@/Components/UserRoleModal";
+import UserModal from "@/Components/UserModal";
 import SimpleFilterModal from "@/Components/SimpleFilterModal";
 import { hasPermission } from "@/utils/permissions";
-import { Toast } from "@/utils/sweetalert";
-import { Shield } from "lucide-react";
+import { Toast, confirmDialog } from "@/utils/sweetalert";
+import { Shield, SquarePen, Trash2 } from "lucide-react";
 
 export default function Index() {
     const { auth } = usePage().props;
+    const currentUserId = auth?.user?.id;
     const permissions = auth?.permissions || [];
 
     const [users, setUsers] = useState([]);
@@ -25,14 +27,34 @@ export default function Index() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    const [editingUser, setEditingUser] = useState(null);
+    const [editingRoleUser, setEditingRoleUser] = useState(null);
     const [selectedRoleIds, setSelectedRoleIds] = useState([]);
-    const [saving, setSaving] = useState(false);
+    const [savingRole, setSavingRole] = useState(false);
 
-    const canUpdate = useMemo(
-        () => hasPermission(permissions, "user.update"),
-        [permissions],
-    );
+    const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
+    const [userForm, setUserForm] = useState({
+        name: "",
+        email: "",
+        password: "",
+        role_ids: [],
+    });
+    const [userSubmitting, setUserSubmitting] = useState(false);
+
+    const canUpdate = useMemo(() => {
+        const userRoles = auth?.user?.roles || [];
+        const isAdmin = userRoles.some((r) =>
+            typeof r === "string"
+                ? r.toLowerCase() === "admin"
+                : r.name?.toLowerCase() === "admin",
+        );
+        return (
+            isAdmin ||
+            hasPermission(permissions, "user.update") ||
+            hasPermission(permissions, "user.create") ||
+            hasPermission(permissions, "user.view")
+        );
+    }, [permissions, auth]);
 
     const loadData = useCallback(() => {
         setLoading(true);
@@ -121,15 +143,14 @@ export default function Index() {
     const openRoleModal = useCallback(
         (user) => {
             closeFilter();
-
-            setEditingUser(user);
+            setEditingRoleUser(user);
             setSelectedRoleIds(user.roles?.map((role) => role.id) || []);
         },
         [closeFilter],
     );
 
-    const closeModal = useCallback(() => {
-        setEditingUser(null);
+    const closeRoleModal = useCallback(() => {
+        setEditingRoleUser(null);
         setSelectedRoleIds([]);
     }, []);
 
@@ -144,34 +165,135 @@ export default function Index() {
     }, []);
 
     const handleSaveUserRoles = useCallback(async () => {
-        if (!editingUser || !canUpdate) {
+        if (!editingRoleUser || !canUpdate) {
             return;
         }
 
-        setSaving(true);
+        setSavingRole(true);
 
         try {
             const res = await axios.put(
-                `/api/users-management/${editingUser.id}/roles`,
+                `/api/users-management/${editingRoleUser.id}/roles`,
                 {
                     role_ids: selectedRoleIds,
                 },
             );
 
             Toast.success(res.data.message || "Role user berhasil diperbarui.");
-
-            closeModal();
-
-            router.reload();
+            closeRoleModal();
             loadData();
         } catch (err) {
             Toast.error(
                 err.response?.data?.message || "Gagal memperbarui role user.",
             );
         } finally {
-            setSaving(false);
+            setSavingRole(false);
         }
-    }, [editingUser, canUpdate, selectedRoleIds, closeModal, loadData]);
+    }, [editingRoleUser, canUpdate, selectedRoleIds, closeRoleModal, loadData]);
+
+    const openUserModal = useCallback((user = null) => {
+        setEditingUser(user);
+        if (user) {
+            setUserForm({
+                name: user.name || "",
+                email: user.email || "",
+                password: "",
+                role_ids: user.roles?.map((r) => r.id) || [],
+            });
+        } else {
+            setUserForm({
+                name: "",
+                email: "",
+                password: "",
+                role_ids: [],
+            });
+        }
+        setIsUserModalOpen(true);
+    }, []);
+
+    const closeUserModal = useCallback(() => {
+        setIsUserModalOpen(false);
+        setEditingUser(null);
+    }, []);
+
+    const handleUserFormChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setUserForm((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    }, []);
+
+    const handleUserToggleRole = useCallback((roleId) => {
+        setUserForm((prev) => {
+            const exists = prev.role_ids.includes(roleId);
+            return {
+                ...prev,
+                role_ids: exists
+                    ? prev.role_ids.filter((id) => id !== roleId)
+                    : [...prev.role_ids, roleId],
+            };
+        });
+    }, []);
+
+    const handleUserSubmit = useCallback(async (e) => {
+        e.preventDefault();
+        setUserSubmitting(true);
+
+        try {
+            if (editingUser) {
+                const res = await axios.put(
+                    `/api/users-management/${editingUser.id}`,
+                    userForm,
+                );
+                Toast.success(res.data.message || "Data pengguna berhasil diperbarui.");
+            } else {
+                const res = await axios.post(
+                    "/api/users-management",
+                    userForm,
+                );
+                Toast.success(res.data.message || "Pengguna baru berhasil ditambahkan.");
+            }
+            closeUserModal();
+            loadData();
+        } catch (err) {
+            const errorMsg =
+                err.response?.data?.message ||
+                (err.response?.data?.errors
+                    ? Object.values(err.response.data.errors).flat().join(", ")
+                    : "Gagal menyimpan data pengguna.");
+            Toast.error(errorMsg);
+        } finally {
+            setUserSubmitting(false);
+        }
+    }, [editingUser, userForm, closeUserModal, loadData]);
+
+    const handleDeleteUser = useCallback(async (user) => {
+        if (!canUpdate) return;
+        if (user.id === currentUserId) {
+            Toast.error("Anda tidak dapat menghapus akun Anda sendiri.");
+            return;
+        }
+
+        const isConfirmed = await confirmDialog({
+            title: "Hapus Pengguna?",
+            text: `Apakah Anda yakin ingin menghapus pengguna "${user.name}" (${user.email})?`,
+            confirmButtonText: "Ya, Hapus Pengguna",
+            icon: "warning",
+        });
+
+        if (!isConfirmed) return;
+
+        try {
+            const res = await axios.delete(`/api/users-management/${user.id}`);
+            Toast.success(res.data.message || "Pengguna berhasil dihapus.");
+            loadData();
+        } catch (err) {
+            Toast.error(
+                err.response?.data?.message || "Gagal menghapus pengguna.",
+            );
+        }
+    }, [canUpdate, currentUserId, loadData]);
 
     return (
         <DashboardLayout>
@@ -249,7 +371,9 @@ export default function Index() {
                     }
                     onRefresh={handleRefresh}
                     refreshing={loading}
-                    canCreate={false}
+                    onAdd={() => openUserModal(null)}
+                    addTitle="Tambah"
+                    canCreate={canUpdate}
                 />
 
                 <div className="bg-white border border-slate-200/90 rounded-md overflow-hidden shadow-xs">
@@ -269,7 +393,7 @@ export default function Index() {
                                         Role Dimiliki
                                     </th>
 
-                                    <th className="px-3.5 py-2.5 w-24 text-center">
+                                    <th className="px-3.5 py-2.5 w-32 text-center">
                                         Aksi
                                     </th>
                                 </tr>
@@ -350,19 +474,58 @@ export default function Index() {
 
                                                 <td className="px-3.5 py-2.5 text-center whitespace-nowrap">
                                                     {canUpdate && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                openRoleModal(
-                                                                    user,
-                                                                )
-                                                            }
-                                                            title="Atur Role"
-                                                            aria-label="Atur Role"
-                                                            className="w-7 h-7 inline-flex items-center justify-center bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-md transition-all duration-200 border border-teal-200/80 cursor-pointer shadow-2xs"
-                                                        >
-                                                            <Shield className="w-3.5 h-3.5" />
-                                                        </button>
+                                                        <div className="flex items-center justify-center gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    openRoleModal(
+                                                                        user,
+                                                                    )
+                                                                }
+                                                                title="Atur Role"
+                                                                aria-label="Atur Role"
+                                                                className="w-7 h-7 inline-flex items-center justify-center bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-md transition-all duration-200 border border-teal-200/80 cursor-pointer shadow-2xs"
+                                                            >
+                                                                <Shield className="w-3.5 h-3.5" />
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    openUserModal(
+                                                                        user,
+                                                                    )
+                                                                }
+                                                                title="Edit Pengguna"
+                                                                aria-label="Edit Pengguna"
+                                                                className="w-7 h-7 inline-flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md transition-all duration-200 border border-amber-200/80 cursor-pointer shadow-2xs"
+                                                            >
+                                                                <SquarePen className="w-3.5 h-3.5" />
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    handleDeleteUser(
+                                                                        user,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    user.id ===
+                                                                    currentUserId
+                                                                }
+                                                                title={
+                                                                    user.id ===
+                                                                    currentUserId
+                                                                        ? "Tidak dapat menghapus akun sendiri"
+                                                                        : "Hapus Pengguna"
+                                                                }
+                                                                aria-label="Hapus Pengguna"
+                                                                className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-md transition-all duration-200 border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
@@ -387,13 +550,25 @@ export default function Index() {
                     )}
                 </div>
 
+                <UserModal
+                    isOpen={isUserModalOpen}
+                    isEditing={Boolean(editingUser)}
+                    form={userForm}
+                    roles={roles}
+                    submitting={userSubmitting}
+                    onClose={closeUserModal}
+                    onChange={handleUserFormChange}
+                    onToggleRole={handleUserToggleRole}
+                    onSubmit={handleUserSubmit}
+                />
+
                 <UserRoleModal
-                    isOpen={Boolean(editingUser)}
-                    user={editingUser}
+                    isOpen={Boolean(editingRoleUser)}
+                    user={editingRoleUser}
                     roles={roles}
                     selectedRoleIds={selectedRoleIds}
-                    saving={saving}
-                    onClose={closeModal}
+                    saving={savingRole}
+                    onClose={closeRoleModal}
                     onToggleRole={toggleRole}
                     onSave={handleSaveUserRoles}
                 />

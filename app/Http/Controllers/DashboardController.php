@@ -97,7 +97,7 @@ class DashboardController extends Controller
                 $paid = (float) $invs->sum('paid_amount');
                 $qty = (int) $invs->reduce(fn ($c, $i) => $c + $i->items->sum('qty'), 0);
                 $countLunas = $invs->filter(fn ($i) => strtolower((string) $i->payment_status) === 'lunas')->count();
-                $countDp = $invs->filter(fn ($i) => strtolower((string) $i->payment_status) === 'dp')->count();
+                $countDp = $invs->filter(fn ($i) => in_array(strtolower((string) $i->payment_status), ['dp', 'partial']))->count();
                 $countBelum = $invs->filter(
                     fn ($i) => in_array(strtolower((string) $i->payment_status), ['belum_bayar', 'belum_lunas'])
                 )->count();
@@ -247,7 +247,7 @@ class DashboardController extends Controller
             }, 0);
 
             $paidInvoices = $curMonthInvoices->filter(fn ($i) => strtolower((string) $i->payment_status) === 'lunas')->count();
-            $dpInvoices = $curMonthInvoices->filter(fn ($i) => strtolower((string) $i->payment_status) === 'dp')->count();
+            $dpInvoices = $curMonthInvoices->filter(fn ($i) => in_array(strtolower((string) $i->payment_status), ['dp', 'partial']))->count();
             $unpaidInvoices = $curMonthInvoices->filter(
                 fn ($i) => in_array(strtolower((string) $i->payment_status), ['belum_bayar', 'belum_lunas'])
             )->count();
