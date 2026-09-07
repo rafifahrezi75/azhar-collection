@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Head, router } from "@inertiajs/react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import SearchableSelect from "@/Components/SearchableSelect";
+import Pagination from "@/Components/Pagination";
 import axios from "axios";
 import Swal from "sweetalert2";
 import {
@@ -40,6 +41,7 @@ export default function Show({
     const [expandedBOM, setExpandedBOM] = useState({});
     const [expandedBOMSizes, setExpandedBOMSizes] = useState({});
     const [expandedSPK, setExpandedSPK] = useState({});
+    const [expandedEmployees, setExpandedEmployees] = useState({});
 
     const handleBack = useCallback(() => {
         const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
@@ -80,6 +82,13 @@ export default function Show({
         setExpandedSPK((prev) => ({
             ...prev,
             [assignmentId]: !prev[assignmentId],
+        }));
+    }, []);
+
+    const toggleEmployeeAccordion = useCallback((employeeId) => {
+        setExpandedEmployees((prev) => ({
+            ...prev,
+            [employeeId]: !prev[employeeId],
         }));
     }, []);
 
@@ -287,10 +296,166 @@ export default function Show({
 
     const customer = useMemo(() => invoice.customer || {}, [invoice]);
     const items = useMemo(() => invoice.items || [], [invoice]);
+    const [itemsCurrentPage, setItemsCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const [spkEmpPages, setSpkEmpPages] = useState({});
+    const [spkEmpPageSizes, setSpkEmpPageSizes] = useState({});
+
+    const paginatedItems = useMemo(() => {
+        const start = (itemsCurrentPage - 1) * itemsPerPage;
+        return items.slice(start, start + itemsPerPage);
+    }, [items, itemsCurrentPage, itemsPerPage]);
+
     const totalAssignments = useMemo(
         () => items.flatMap((i) => i.production_assignments || []).length,
         [items],
     );
+
+    const formatIndonesianStatus = useCallback((rawStatus) => {
+        const s = String(rawStatus || "").toLowerCase().trim();
+        if (s === "completed" || s === "selesai") {
+            return {
+                label: "Selesai",
+                badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                pillClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+            };
+        }
+        if (s === "in_progress" || s === "in progress" || s === "proses") {
+            return {
+                label: "Dalam Proses",
+                badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200",
+                pillClass: "bg-indigo-50 text-indigo-700 border-indigo-200",
+            };
+        }
+        if (s === "cancelled" || s === "batal" || s === "dibatalkan") {
+            return {
+                label: "Dibatalkan",
+                badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
+                pillClass: "bg-rose-50 text-rose-700 border-rose-200",
+            };
+        }
+        return {
+            label: "Menunggu",
+            badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+            pillClass: "bg-amber-50 text-amber-700 border-amber-200",
+        };
+    }, []);
+
+    const assignmentsByEmployee = useMemo(() => {
+        const map = new Map();
+
+        items.forEach((item) => {
+            (item.production_assignments || []).forEach((assignment) => {
+                const matchedUser = users.find(
+                    (u) => String(u.id) === String(assignment.user_id),
+                );
+                const empId =
+                    assignment.assignee?.id ||
+                    assignment.user_id ||
+                    `temp-${assignment.id}`;
+                const empName =
+                    assignment.assignee?.name ||
+                    matchedUser?.name ||
+                    "Karyawan";
+                const empEmail =
+                    assignment.assignee?.email || matchedUser?.email || "";
+
+                if (!map.has(empId)) {
+                    map.set(empId, {
+                        employeeId: empId,
+                        employeeName: empName,
+                        employeeEmail: empEmail,
+                        assignments: [],
+                    });
+                }
+
+                map.get(empId).assignments.push({
+                    ...assignment,
+                    item_name: item.item_name,
+                    item_unit: item.unit || "Pcs",
+                });
+            });
+        });
+
+        return Array.from(map.values()).map((emp) => {
+            let totalWage = 0;
+            let totalTargetQty = 0;
+            let totalSteps = 0;
+            let completedSteps = 0;
+            let inProgressCount = 0;
+            let completedCount = 0;
+
+            emp.assignments.forEach((assignment) => {
+                totalTargetQty += Number(assignment.qty) || 0;
+                const normAsStatus = String(assignment.status || "")
+                    .toLowerCase()
+                    .trim();
+                if (normAsStatus === "completed" || normAsStatus === "selesai") {
+                    completedCount += 1;
+                } else if (
+                    normAsStatus === "in_progress" ||
+                    normAsStatus === "proses" ||
+                    normAsStatus === "in progress"
+                ) {
+                    inProgressCount += 1;
+                }
+
+                (assignment.steps || []).forEach((step) => {
+                    totalSteps += 1;
+                    const normStepStatus = String(step.status || "")
+                        .toLowerCase()
+                        .trim();
+                    if (
+                        normStepStatus === "completed" ||
+                        normStepStatus === "selesai"
+                    ) {
+                        completedSteps += 1;
+                    } else if (
+                        normStepStatus === "in_progress" ||
+                        normStepStatus === "proses" ||
+                        normStepStatus === "in progress"
+                    ) {
+                        inProgressCount += 1;
+                    }
+
+                    const sQty =
+                        Number(step.qty) || Number(assignment.qty) || 0;
+                    const sWage = Number(step.wage) || 0;
+                    totalWage += sQty * sWage;
+                });
+            });
+
+            let employeeStatus = "Menunggu";
+            let statusStyle = "bg-amber-50 text-amber-700 border-amber-200";
+
+            if (
+                emp.assignments.length > 0 &&
+                completedCount === emp.assignments.length &&
+                (totalSteps === 0 || completedSteps === totalSteps)
+            ) {
+                employeeStatus = "Selesai";
+                statusStyle =
+                    "bg-emerald-50 text-emerald-700 border-emerald-200";
+            } else if (
+                inProgressCount > 0 ||
+                completedSteps > 0 ||
+                completedCount > 0
+            ) {
+                employeeStatus = "Dalam Proses";
+                statusStyle = "bg-indigo-50 text-indigo-700 border-indigo-200";
+            }
+
+            return {
+                ...emp,
+                totalWage,
+                totalTargetQty,
+                totalSteps,
+                completedSteps,
+                employeeStatus,
+                statusStyle,
+            };
+        });
+    }, [items, users]);
 
     const getItemProductionSteps = useCallback((item) => {
         const customSteps = item.production_steps || item.productionSteps || [];
@@ -522,6 +687,14 @@ export default function Show({
             }),
         [items, getSizeCategory],
     );
+
+    const [bomCurrentPage, setBomCurrentPage] = useState(1);
+    const [bomPerPage, setBomPerPage] = useState(5);
+
+    const paginatedBomPerItem = useMemo(() => {
+        const start = (bomCurrentPage - 1) * bomPerPage;
+        return bomPerItem.slice(start, start + bomPerPage);
+    }, [bomPerItem, bomCurrentPage, bomPerPage]);
 
     const aggregatedBOM = useMemo(() => {
         const map = {};
@@ -1083,332 +1256,266 @@ export default function Show({
                                     </div>
 
                                     {/* Card Rincian Item Pesanan */}
-                                    <div className="p-4 rounded-lg bg-slate-50/50 border border-slate-200 space-y-3 shadow-2xs">
-                                        <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                                    <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                                        <div className="p-3.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between gap-3 flex-wrap">
                                             <div className="flex items-center gap-2">
                                                 <Receipt className="w-4 h-4 text-teal-600" />
                                                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                                    Rincian Item & Spesifikasi
-                                                    Ukuran
+                                                    Rincian Item & Spesifikasi Ukuran
                                                 </h4>
                                             </div>
-                                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200 shadow-2xs">
-                                                {items.reduce(
-                                                    (sum, it) =>
-                                                        sum +
-                                                        (Number(it.qty) || 0),
-                                                    0,
-                                                )}{" "}
-                                                Total Pcs
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200 shadow-2xs">
+                                                    {items.length} Item
+                                                </span>
+                                                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200 shadow-2xs">
+                                                    {items.reduce(
+                                                        (sum, it) =>
+                                                            sum + (Number(it.qty) || 0),
+                                                        0
+                                                    )}{" "}
+                                                    Total Pcs
+                                                </span>
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-3">
-                                            {items.map((item, idx) => {
-                                                const sizesList =
-                                                    parseItemSizes(item);
-                                                const isExpanded =
-                                                    !!expandedItems[item.id];
-                                                const itemWageInfo =
-                                                    getItemTotalWage(item);
-                                                return (
-                                                    <div
-                                                        key={item.id || idx}
-                                                        className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden"
-                                                    >
-                                                        <div
-                                                            onClick={() =>
-                                                                toggleItemAccordion(
-                                                                    item.id,
-                                                                )
-                                                            }
-                                                            className="p-3 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
-                                                        >
-                                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                                <div className="p-1 rounded bg-white border border-slate-200 shadow-2xs text-slate-500 shrink-0">
-                                                                    <ChevronDown
-                                                                        className={`w-4 h-4 transition-transform duration-200 ${
-                                                                            isExpanded
-                                                                                ? "rotate-180 text-teal-600"
-                                                                                : "text-slate-400"
-                                                                        }`}
-                                                                    />
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <h5 className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
-                                                                        {
-                                                                            item.item_name
-                                                                        }
-                                                                    </h5>
-                                                                    {item.description && (
-                                                                        <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                                                                            {
-                                                                                item.description
-                                                                            }
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                                                                {itemWageInfo.wagePerPcs > 0 && (
-                                                                    <div className="hidden sm:flex flex-col items-end pr-2.5 border-r border-slate-200/80">
-                                                                        <span className="text-[10px] text-slate-500 font-medium">
-                                                                            Upah Jahit / Borongan:
+                                        <div className="overflow-hidden">
+                                            <table className="w-full text-left border-collapse table-fixed text-[11px]">
+                                                <thead>
+                                                    <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                        <th className="py-2 px-2.5 w-[38%]">Item Pesanan</th>
+                                                        <th className="py-2 px-1.5 text-center w-[15%]">Kuantitas</th>
+                                                        <th className="py-2 px-1.5 text-right w-[15%]">Harga Satuan</th>
+                                                        <th className="py-2 px-1.5 text-right w-[16%]">Upah Jahit</th>
+                                                        <th className="py-2 px-2 text-right w-[16%]">Subtotal</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                    {paginatedItems.map((item, idx) => {
+                                                        const sizesList = parseItemSizes(item);
+                                                        const isExpanded = !!expandedItems[item.id];
+                                                        const itemWageInfo = getItemTotalWage(item);
+                                                        return (
+                                                            <React.Fragment key={item.id || idx}>
+                                                                <tr className="hover:bg-slate-50/70 transition-colors">
+                                                                    <td
+                                                                        onClick={() => toggleItemAccordion(item.id)}
+                                                                        className="py-2 px-2.5 align-middle cursor-pointer select-none"
+                                                                    >
+                                                                        <div className="flex items-start gap-1.5 min-w-0">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    toggleItemAccordion(item.id);
+                                                                                }}
+                                                                                className="p-0.5 mt-0.5 rounded text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer shrink-0"
+                                                                                title={
+                                                                                    isExpanded
+                                                                                        ? "Sembunyikan rincian"
+                                                                                        : "Lihat rincian"
+                                                                                }
+                                                                            >
+                                                                                <ChevronDown
+                                                                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                                                                        isExpanded
+                                                                                            ? "rotate-180 text-teal-600"
+                                                                                            : ""
+                                                                                    }`}
+                                                                                />
+                                                                            </button>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <div
+                                                                                    className="font-semibold text-slate-900 truncate leading-tight"
+                                                                                    title={item.item_name}
+                                                                                >
+                                                                                    {item.item_name}
+                                                                                </div>
+                                                                                <div className="text-[9px] text-slate-400 mt-0.5 truncate">
+                                                                                    {sizesList.length > 0
+                                                                                        ? `${sizesList.length} spesifikasi ukuran`
+                                                                                        : "Ukuran standar"}
+                                                                                    {item.description
+                                                                                        ? ` • ${item.description}`
+                                                                                        : ""}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-2 px-1.5 text-center whitespace-nowrap align-middle">
+                                                                        <span className="font-bold text-slate-800 font-mono">
+                                                                            {item.qty}
+                                                                        </span>{" "}
+                                                                        <span className="text-[10px] text-slate-500">
+                                                                            {item.unit || "Pcs"}
                                                                         </span>
-                                                                        <span className="text-xs font-bold text-teal-700 font-mono">
-                                                                            {formatCurrency(itemWageInfo.totalWage)}{" "}
-                                                                            <span className="text-[10px] text-slate-400 font-normal font-sans">
-                                                                                ({formatCurrency(itemWageInfo.wagePerPcs)}/pcs)
-                                                                            </span>
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                                <div className="text-left sm:text-right">
-                                                                    <span className="font-bold text-xs sm:text-sm text-slate-900 font-mono block">
-                                                                        {formatCurrency(
-                                                                            item.subtotal,
+                                                                    </td>
+                                                                    <td className="py-2 px-1.5 text-right whitespace-nowrap font-mono text-[10px] text-slate-600 align-middle">
+                                                                        {formatCurrency(item.unit_price)}
+                                                                    </td>
+                                                                    <td className="py-2 px-1.5 text-right whitespace-nowrap font-mono text-[10px] align-middle">
+                                                                        {itemWageInfo.wagePerPcs > 0 ? (
+                                                                            <div>
+                                                                                <span className="font-bold text-teal-700">
+                                                                                    {formatCurrency(itemWageInfo.totalWage)}
+                                                                                </span>
+                                                                                <span className="text-[9px] text-slate-400 block">
+                                                                                    ({formatCurrency(itemWageInfo.wagePerPcs)}/pcs)
+                                                                                </span>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-slate-400">-</span>
                                                                         )}
-                                                                    </span>
-                                                                    <span className="text-[10px] text-slate-500 block font-mono">
-                                                                        {
-                                                                            item.qty
-                                                                        }{" "}
-                                                                        {item.unit ||
-                                                                            "Pcs"}{" "}
-                                                                        &times;{" "}
-                                                                        {formatCurrency(
-                                                                            item.unit_price,
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {isExpanded && (
-                                                            <div>
-                                                                {sizesList.length >
-                                                                0 ? (
-                                                                    <div className="overflow-x-auto">
-                                                                        <table className="w-full text-left text-xs">
-                                                                            <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                                                                                <tr>
-                                                                                    <th className="px-3 py-2">
-                                                                                        Ukuran
-                                                                                    </th>
-                                                                                    <th className="px-3 py-2 text-center">
-                                                                                        Kuantitas
-                                                                                    </th>
-                                                                                    <th className="px-3 py-2 text-right">
-                                                                                        Harga
-                                                                                        Satuan
-                                                                                    </th>
-                                                                                    <th className="px-3 py-2 text-right">
-                                                                                        Subtotal
-                                                                                    </th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody className="divide-y divide-slate-100 bg-white font-medium">
-                                                                                {sizesList.map(
-                                                                                    (
-                                                                                        sz,
-                                                                                        sIdx,
-                                                                                    ) => (
-                                                                                        <tr
-                                                                                            key={
-                                                                                                sIdx
-                                                                                            }
-                                                                                            className="hover:bg-slate-50/80 transition-colors"
-                                                                                        >
-                                                                                            <td className="px-3 py-1.5 font-bold text-slate-800">
-                                                                                                <div className="flex items-center gap-1.5">
-                                                                                                    {sz.category && (
-                                                                                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-50 border border-teal-200/80 text-teal-800 font-bold tracking-wide uppercase font-sans">
-                                                                                                            {
-                                                                                                                sz.category
-                                                                                                            }
-                                                                                                        </span>
-                                                                                                    )}
-                                                                                                    <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800">
-                                                                                                        {
-                                                                                                            sz.size
-                                                                                                        }
-                                                                                                    </span>
-                                                                                                </div>
-                                                                                            </td>
-                                                                                            <td className="px-3 py-1.5 text-center font-mono text-slate-800">
-                                                                                                {
-                                                                                                    sz.qty
-                                                                                                }{" "}
-                                                                                                {item.unit ||
-                                                                                                    "Pcs"}
-                                                                                            </td>
-                                                                                            <td className="px-3 py-1.5 text-right font-mono text-slate-600">
-                                                                                                {formatCurrency(
-                                                                                                    sz.price,
-                                                                                                )}
-                                                                                            </td>
-                                                                                            <td className="px-3 py-1.5 text-right font-bold text-slate-900 font-mono">
-                                                                                                {formatCurrency(
-                                                                                                    sz.subtotal,
-                                                                                                )}
-                                                                                            </td>
+                                                                    </td>
+                                                                    <td className="py-2 px-2 text-right whitespace-nowrap font-mono font-bold text-slate-900 align-middle">
+                                                                        {formatCurrency(item.subtotal)}
+                                                                    </td>
+                                                                </tr>
+                                                                 {isExpanded && (
+                                                                    <tr className="bg-slate-50/40">
+                                                                        <td
+                                                                            colSpan={5}
+                                                                            className="p-0 border-t border-slate-200/80"
+                                                                        >
+                                                                            {sizesList.length > 0 ? (
+                                                                                <table className="w-full text-left border-collapse table-fixed text-[10px] bg-white">
+                                                                                    <thead>
+                                                                                        <tr className="border-b border-slate-200 bg-slate-100/75 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
+                                                                                            <th className="py-1.5 pl-8 pr-2.5 w-[38%]">Ukuran</th>
+                                                                                            <th className="py-1.5 px-1.5 text-center w-[15%]">Kuantitas</th>
+                                                                                            <th className="py-1.5 px-1.5 text-right w-[15%]">Harga Satuan</th>
+                                                                                            <th className="py-1.5 px-1.5 text-center w-[16%]"></th>
+                                                                                            <th className="py-1.5 px-2 text-right w-[16%]">Subtotal</th>
                                                                                         </tr>
-                                                                                    ),
-                                                                                )}
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="p-3 text-center text-xs text-slate-400 bg-white">
-                                                                        Tidak
-                                                                        ada
-                                                                        rincian
-                                                                        spesifikasi
-                                                                        ukuran
-                                                                        khusus
-                                                                        untuk
-                                                                        item
-                                                                        ini.
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Rincian Langkah Kerja & Upah Jahit */}
-                                                                {itemWageInfo.steps.length > 0 && (
-                                                                    <div className="border-t border-slate-200/80">
-                                                                        <div className="px-3.5 py-2.5 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
-                                                                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                                                                <Scissors className="w-3.5 h-3.5 text-teal-600" />
-                                                                                Langkah Produksi & Upah Jahit (Borongan)
-                                                                            </span>
-                                                                            <span className="text-[10px] font-mono text-slate-600 font-medium">
-                                                                                Total Tarif: <strong className="text-teal-700 font-bold">{formatCurrency(itemWageInfo.wagePerPcs)}</strong>/{item.unit || "Pcs"} &bull; Total Upah Item: <strong className="text-teal-800 font-extrabold">{formatCurrency(itemWageInfo.totalWage)}</strong>
-                                                                            </span>
-                                                                        </div>
-
-                                                                        <div className="overflow-x-auto">
-                                                                            <table className="w-full text-left text-xs">
-                                                                                <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                                                                                    <tr>
-                                                                                        <th className="px-3 py-2 w-12 text-center">
-                                                                                            No
-                                                                                        </th>
-                                                                                        <th className="px-3 py-2">
-                                                                                            Tahapan Kerja / Langkah Produksi
-                                                                                        </th>
-                                                                                        <th className="px-3 py-2 text-center">
-                                                                                            Target Qty
-                                                                                        </th>
-                                                                                        <th className="px-3 py-2 text-right">
-                                                                                            Tarif Satuan
-                                                                                        </th>
-                                                                                        <th className="px-3 py-2 text-right">
-                                                                                            Total Upah
-                                                                                        </th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody className="divide-y divide-slate-100 bg-white font-medium">
-                                                                                    {itemWageInfo.steps.map(
-                                                                                        (
-                                                                                            step,
-                                                                                            sIdx,
-                                                                                        ) => {
-                                                                                            const stepTotal =
-                                                                                                step.wage *
-                                                                                                (Number(
-                                                                                                    item.qty,
-                                                                                                ) ||
-                                                                                                    0);
-                                                                                            return (
-                                                                                                <tr
-                                                                                                    key={
-                                                                                                        sIdx
-                                                                                                    }
-                                                                                                    className="hover:bg-slate-50/80 transition-colors"
-                                                                                                >
-                                                                                                    <td className="px-3 py-1.5 text-center font-mono text-slate-500 text-[11px]">
-                                                                                                        {sIdx +
-                                                                                                            1}
-                                                                                                    </td>
-                                                                                                    <td className="px-3 py-1.5 font-semibold text-slate-800">
-                                                                                                        {
-                                                                                                            step.name
-                                                                                                        }
-                                                                                                    </td>
-                                                                                                    <td className="px-3 py-1.5 text-center font-mono text-slate-800">
-                                                                                                        {
-                                                                                                            item.qty
-                                                                                                        }{" "}
-                                                                                                        {item.unit ||
-                                                                                                            "Pcs"}
-                                                                                                    </td>
-                                                                                                    <td className="px-3 py-1.5 text-right font-mono text-slate-600">
-                                                                                                        {formatCurrency(
-                                                                                                            step.wage,
-                                                                                                        )}{" "}
-                                                                                                        <span className="text-[10px] text-slate-400 font-sans">
-                                                                                                            /
-                                                                                                            {item.unit ||
-                                                                                                                "pcs"}
-                                                                                                        </span>
-                                                                                                    </td>
-                                                                                                    <td className="px-3 py-1.5 text-right font-bold text-teal-800 font-mono">
-                                                                                                        {formatCurrency(
-                                                                                                            stepTotal,
+                                                                                    </thead>
+                                                                                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                                                        {sizesList.map((sz, sIdx) => (
+                                                                                            <tr key={sIdx} className="hover:bg-slate-50/70">
+                                                                                                <td className="py-1.5 pl-8 pr-2.5 font-bold text-slate-800 align-middle">
+                                                                                                    <div className="flex items-center gap-1.5">
+                                                                                                        {sz.category && (
+                                                                                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-50 border border-teal-200/80 text-teal-800 font-bold tracking-wide uppercase font-sans">
+                                                                                                                {sz.category}
+                                                                                                            </span>
                                                                                                         )}
-                                                                                                    </td>
-                                                                                                </tr>
-                                                                                            );
-                                                                                        },
-                                                                                    )}
-                                                                                </tbody>
-                                                                                <tfoot className="bg-slate-50/90 border-t border-slate-200 font-semibold text-xs text-slate-800">
-                                                                                    <tr>
-                                                                                        <td
-                                                                                            colSpan={
-                                                                                                2
-                                                                                            }
-                                                                                            className="px-3 py-2 font-bold text-slate-700"
-                                                                                        >
-                                                                                            Total
-                                                                                            Upah
-                                                                                            Borongan
-                                                                                            Item
-                                                                                            Ini
-                                                                                        </td>
-                                                                                        <td className="px-3 py-2 text-center font-mono font-bold text-slate-700">
-                                                                                            {
-                                                                                                item.qty
-                                                                                            }{" "}
-                                                                                            {item.unit ||
-                                                                                                "Pcs"}
-                                                                                        </td>
-                                                                                        <td className="px-3 py-2 text-right font-mono font-bold text-teal-700">
-                                                                                            {formatCurrency(
-                                                                                                itemWageInfo.wagePerPcs,
-                                                                                            )}{" "}
-                                                                                            <span className="text-[10px] text-slate-500 font-sans">
-                                                                                                /
-                                                                                                {item.unit ||
-                                                                                                    "pcs"}
-                                                                                            </span>
-                                                                                        </td>
-                                                                                        <td className="px-3 py-2 text-right font-mono font-extrabold text-teal-800 text-xs sm:text-sm">
-                                                                                            {formatCurrency(
-                                                                                                itemWageInfo.totalWage,
-                                                                                            )}
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                </tfoot>
-                                                                            </table>
-                                                                        </div>
-                                                                    </div>
+                                                                                                        <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800">
+                                                                                                            {sz.size}
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                                <td className="py-1.5 px-1.5 text-center font-mono text-slate-800 align-middle">
+                                                                                                    {sz.qty} {item.unit || "Pcs"}
+                                                                                                </td>
+                                                                                                <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 align-middle">
+                                                                                                    {formatCurrency(sz.price)}
+                                                                                                </td>
+                                                                                                <td className="py-1.5 px-1.5 text-center text-slate-300 align-middle">
+                                                                                                    -
+                                                                                                </td>
+                                                                                                <td className="py-1.5 px-2 text-right font-bold text-slate-900 font-mono align-middle">
+                                                                                                    {formatCurrency(sz.subtotal)}
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        ))}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            ) : (
+                                                                                <div className="py-2.5 px-4 text-center text-xs text-slate-400 bg-white">
+                                                                                    Tidak ada rincian spesifikasi ukuran khusus untuk item ini.
+                                                                                </div>
+                                                                            )}
+
+                                                                            {itemWageInfo.steps.length > 0 && (
+                                                                                <div className="border-t border-slate-200 bg-white">
+                                                                                    <div className="px-4 py-1.5 bg-slate-100/75 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2 text-[10px]">
+                                                                                        <span className="font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                                                            <Scissors className="w-3.5 h-3.5 text-teal-600" />
+                                                                                            Langkah Produksi & Upah Jahit (Borongan)
+                                                                                        </span>
+                                                                                        <span className="font-mono text-slate-600 font-medium text-[9px]">
+                                                                                            Total Tarif: <strong className="text-teal-700 font-bold">{formatCurrency(itemWageInfo.wagePerPcs)}</strong>/{item.unit || "Pcs"} &bull; Total Upah: <strong className="text-teal-800 font-extrabold">{formatCurrency(itemWageInfo.totalWage)}</strong>
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    <table className="w-full text-left border-collapse table-fixed text-[10px]">
+                                                                                        <thead>
+                                                                                            <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
+                                                                                                <th className="py-1.5 pl-4 pr-2 w-[8%] text-center">No</th>
+                                                                                                <th className="py-1.5 px-2 w-[42%]">Tahapan Kerja</th>
+                                                                                                <th className="py-1.5 px-1.5 text-center w-[16%]">Target Qty</th>
+                                                                                                <th className="py-1.5 px-1.5 text-right w-[17%]">Tarif Satuan</th>
+                                                                                                <th className="py-1.5 pr-4 pl-2 text-right w-[17%]">Total Upah</th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                                                            {itemWageInfo.steps.map((step, sIdx) => {
+                                                                                                const stepTotal =
+                                                                                                    step.wage * (Number(item.qty) || 0);
+                                                                                                return (
+                                                                                                    <tr key={sIdx} className="hover:bg-slate-50/60">
+                                                                                                        <td className="py-1.5 pl-4 pr-2 text-center font-mono text-slate-500 text-[10px] align-middle">
+                                                                                                            {sIdx + 1}
+                                                                                                        </td>
+                                                                                                        <td className="py-1.5 px-2 font-semibold text-slate-800 truncate align-middle" title={step.name}>
+                                                                                                            {step.name}
+                                                                                                        </td>
+                                                                                                        <td className="py-1.5 px-1.5 text-center font-mono text-slate-800 align-middle">
+                                                                                                            {item.qty} {item.unit || "Pcs"}
+                                                                                                        </td>
+                                                                                                        <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 align-middle">
+                                                                                                            {formatCurrency(step.wage)}
+                                                                                                        </td>
+                                                                                                        <td className="py-1.5 pr-4 pl-2 text-right font-bold text-teal-800 font-mono align-middle">
+                                                                                                            {formatCurrency(stepTotal)}
+                                                                                                        </td>
+                                                                                                    </tr>
+                                                                                                );
+                                                                                            })}
+                                                                                        </tbody>
+                                                                                        <tfoot className="bg-slate-50/90 border-t border-slate-200 font-semibold text-[10px] text-slate-800">
+                                                                                            <tr>
+                                                                                                <td colSpan={2} className="py-1.5 pl-4 pr-2 font-bold text-slate-700 align-middle">
+                                                                                                    Total Upah Borongan Item Ini
+                                                                                                </td>
+                                                                                                <td className="py-1.5 px-1.5 text-center font-mono font-bold text-slate-700 align-middle">
+                                                                                                    {item.qty} {item.unit || "Pcs"}
+                                                                                                </td>
+                                                                                                <td className="py-1.5 px-1.5 text-right font-mono font-bold text-teal-700 align-middle">
+                                                                                                    {formatCurrency(itemWageInfo.wagePerPcs)}
+                                                                                                </td>
+                                                                                                <td className="py-1.5 pr-4 pl-2 text-right font-mono font-extrabold text-teal-800 align-middle">
+                                                                                                    {formatCurrency(itemWageInfo.totalWage)}
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        </tfoot>
+                                                                                    </table>
+                                                                                </div>
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
                                                                 )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
+
+                                        {items.length > 0 && (
+                                            <div className="border-t border-slate-200/80 bg-white [&_button]:w-7 [&_button]:h-7 [&_button]:text-[11px] [&>div]:px-3 [&>div]:py-2 text-[11px]">
+                                                <Pagination
+                                                    totalItems={items.length}
+                                                    itemsPerPage={itemsPerPage}
+                                                    currentPage={itemsCurrentPage}
+                                                    onPageChange={setItemsCurrentPage}
+                                                    onItemsPerPageChange={(val) => {
+                                                        setItemsPerPage(val);
+                                                        setItemsCurrentPage(1);
+                                                    }}
+                                                    pageSizeOptions={[5, 10, 20, 50]}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1558,234 +1665,269 @@ export default function Show({
                                                     </tbody>
                                                 </table>
                                             </div>
-
                                             {/* Rincian Kebutuhan Bahan per Item & per Ukuran */}
-                                            <div className="space-y-3 pt-2">
-                                                <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
-                                                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                                        <Boxes className="w-3.5 h-3.5 text-teal-600" />
-                                                        Rincian Bahan per Ukuran
-                                                        Produk
-                                                    </span>
-                                                    <span className="text-[10px] font-mono text-slate-500">
-                                                        Klik item untuk
-                                                        buka/tutup rincian
-                                                    </span>
-                                                </div>
+                                            <div className="pt-2">
+                                                <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                                                    <div className="p-3.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between gap-3 flex-wrap">
+                                                        <div className="flex items-center gap-2">
+                                                            <Boxes className="w-4 h-4 text-teal-600" />
+                                                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                                                Rincian Bahan per Ukuran Produk
+                                                            </h4>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200 shadow-2xs">
+                                                                {bomPerItem.length} Item
+                                                            </span>
+                                                        </div>
+                                                    </div>
 
-                                                <div className="space-y-3">
-                                                    {bomPerItem.map(
-                                                        (bomItem, bIdx) => {
-                                                            const isExpanded =
-                                                                !!expandedBOM[
-                                                                    bomItem
-                                                                        .itemId
-                                                                ];
-                                                            return (
-                                                                <div
-                                                                    key={
-                                                                        bomItem.itemId ||
-                                                                        bIdx
-                                                                    }
-                                                                    className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden"
-                                                                >
-                                                                    <div
-                                                                        onClick={() =>
-                                                                            toggleBOMAccordion(
-                                                                                bomItem.itemId,
-                                                                            )
-                                                                        }
-                                                                        className="p-3 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
-                                                                    >
-                                                                        <div className="flex items-center gap-2.5 min-w-0">
-                                                                            <div className="p-1 rounded bg-white border border-slate-200 shadow-2xs text-slate-500 shrink-0">
-                                                                                <ChevronDown
-                                                                                    className={`w-4 h-4 transition-transform duration-200 ${
-                                                                                        isExpanded
-                                                                                            ? "rotate-180 text-teal-600"
-                                                                                            : "text-slate-400"
-                                                                                    }`}
-                                                                                />
-                                                                            </div>
-                                                                            <div className="min-w-0">
-                                                                                <h5 className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
-                                                                                    {
-                                                                                        bomItem.itemName
-                                                                                    }
-                                                                                </h5>
-                                                                                <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                                                                                    Katalog:{" "}
-                                                                                    {
-                                                                                        bomItem.productName
-                                                                                    }{" "}
-                                                                                    &bull;{" "}
-                                                                                    {
-                                                                                        bomItem
-                                                                                            .materials
-                                                                                            .length
-                                                                                    }{" "}
-                                                                                    Bahan
-                                                                                    Terhubung
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200 shadow-2xs self-start sm:self-auto">
-                                                                            {
-                                                                                bomItem.qty
-                                                                            }{" "}
-                                                                            {
-                                                                                bomItem.unit
-                                                                            }
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {isExpanded && (
-                                                                        <div className="p-3 bg-slate-50/40 space-y-2.5">
-                                                                            {bomItem.sizeGroups.length === 0 ? (
-                                                                                <p className="text-xs text-slate-400 text-center py-4 bg-white rounded-lg border border-slate-200">
-                                                                                    Item ini belum memiliki pemetaan resep bahan baku per ukuran.
-                                                                                </p>
-                                                                            ) : (
-                                                                                bomItem.sizeGroups.map((group, gIdx) => {
-                                                                                    const sizeKey = `${bomItem.itemId}_${group.size}`;
-                                                                                    const isSizeExpanded = !!expandedBOMSizes[sizeKey];
-                                                                                    return (
-                                                                                        <div
-                                                                                            key={gIdx}
-                                                                                            className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-2xs"
-                                                                                        >
-                                                                                            <div
-                                                                                                onClick={() => toggleBOMSize(sizeKey)}
-                                                                                                className="p-2.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                                                    <div className="overflow-hidden">
+                                                        <table className="w-full text-left border-collapse table-fixed text-[11px]">
+                                                            <thead>
+                                                                <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                                    <th className="py-2 px-2.5 w-[42%]">Item Produk</th>
+                                                                    <th className="py-2 px-1.5 text-center w-[18%]">Target Qty</th>
+                                                                    <th className="py-2 px-1.5 text-center w-[20%]">Varian Ukuran</th>
+                                                                    <th className="py-2 px-2 text-center w-[20%]">Bahan Terhubung</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                                {paginatedBomPerItem.map(
+                                                                    (bomItem, bIdx) => {
+                                                                        const isExpanded =
+                                                                            !!expandedBOM[
+                                                                                bomItem
+                                                                                    .itemId
+                                                                            ];
+                                                                        return (
+                                                                            <React.Fragment
+                                                                                key={
+                                                                                    bomItem.itemId ||
+                                                                                    bIdx
+                                                                                }
+                                                                            >
+                                                                                <tr className="hover:bg-slate-50/70 transition-colors">
+                                                                                    <td
+                                                                                        onClick={() =>
+                                                                                            toggleBOMAccordion(
+                                                                                                bomItem.itemId
+                                                                                            )
+                                                                                        }
+                                                                                        className="py-2 px-2.5 align-middle cursor-pointer select-none"
+                                                                                    >
+                                                                                        <div className="flex items-start gap-1.5 min-w-0">
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    toggleBOMAccordion(
+                                                                                                        bomItem.itemId
+                                                                                                    );
+                                                                                                }}
+                                                                                                className="p-0.5 mt-0.5 rounded text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer shrink-0"
+                                                                                                title={
+                                                                                                    isExpanded
+                                                                                                        ? "Sembunyikan rincian"
+                                                                                                        : "Lihat rincian"
+                                                                                                }
                                                                                             >
-                                                                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                                                                    <div className="p-1 rounded bg-white border border-slate-200 shadow-2xs text-slate-500 shrink-0">
-                                                                                                        <ChevronDown
-                                                                                                            className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                                                                                                                isSizeExpanded
-                                                                                                                    ? "rotate-180 text-teal-600"
-                                                                                                                    : "text-slate-400"
-                                                                                                            }`}
-                                                                                                        />
-                                                                                                    </div>
-                                                                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                                                                        {group.category && (
-                                                                                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200 uppercase font-sans">
-                                                                                                                {group.category}
-                                                                                                            </span>
-                                                                                                        )}
-                                                                                                        <span className="text-xs font-bold text-slate-900">
-                                                                                                            {group.size === "Universal"
-                                                                                                                ? "Semua Ukuran (Bahan Umum)"
-                                                                                                                : `Ukuran ${group.size}`}
-                                                                                                        </span>
-                                                                                                        <span className="text-[11px] text-slate-500 font-mono">
-                                                                                                            &bull; Target:{" "}
-                                                                                                            <strong className="text-slate-700">
-                                                                                                                {group.sizeQty} {bomItem.unit}
-                                                                                                            </strong>
-                                                                                                        </span>
-                                                                                                    </div>
+                                                                                                <ChevronDown
+                                                                                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                                                                                        isExpanded
+                                                                                                            ? "rotate-180 text-teal-600"
+                                                                                                            : ""
+                                                                                                    }`}
+                                                                                                />
+                                                                                            </button>
+                                                                                            <div className="min-w-0 flex-1">
+                                                                                                <div
+                                                                                                    className="font-semibold text-slate-900 truncate leading-tight"
+                                                                                                    title={
+                                                                                                        bomItem.itemName
+                                                                                                    }
+                                                                                                >
+                                                                                                    {
+                                                                                                        bomItem.itemName
+                                                                                                    }
                                                                                                 </div>
-
-                                                                                                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200 shadow-2xs">
-                                                                                                    {group.materials.length} Bahan
-                                                                                                </span>
+                                                                                                <div className="text-[9px] text-slate-400 mt-0.5 truncate">
+                                                                                                    Katalog:{" "}
+                                                                                                    {
+                                                                                                        bomItem.productName
+                                                                                                    }
+                                                                                                </div>
                                                                                             </div>
-
-                                                                                            {isSizeExpanded && (
-                                                                                                <div className="overflow-x-auto">
-                                                                                                    <table className="w-full text-left text-xs">
-                                                                                                        <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                                                                                                            <tr>
-                                                                                                                <th className="px-3 py-2 w-10 text-center">
-                                                                                                                    No
-                                                                                                                </th>
-                                                                                                                <th className="px-3 py-2">
-                                                                                                                    Bahan Baku
-                                                                                                                </th>
-                                                                                                                <th className="px-3 py-2">
-                                                                                                                    Kode SKU
-                                                                                                                </th>
-                                                                                                                <th className="px-3 py-2 text-center">
-                                                                                                                    Target Qty
-                                                                                                                </th>
-                                                                                                                <th className="px-3 py-2 text-right">
-                                                                                                                    Kebutuhan / Unit
-                                                                                                                </th>
-                                                                                                                <th className="px-3 py-2 text-right">
-                                                                                                                    Total Kebutuhan
-                                                                                                                </th>
-                                                                                                                <th className="px-3 py-2 text-right">
-                                                                                                                    Stok Gudang
-                                                                                                                </th>
-                                                                                                            </tr>
-                                                                                                        </thead>
-                                                                                                        <tbody className="divide-y divide-slate-100 bg-white font-medium">
-                                                                                                            {group.materials.map((mat, mIdx) => {
-                                                                                                                const isDeficit =
-                                                                                                                    mat.itemStock < mat.usageQty;
-                                                                                                                return (
-                                                                                                                    <tr
-                                                                                                                        key={mat.id || mIdx}
-                                                                                                                        className="hover:bg-slate-50/80 transition-colors"
-                                                                                                                    >
-                                                                                                                        <td className="px-3 py-1.5 text-center font-mono text-slate-400 text-[11px]">
-                                                                                                                            {mIdx + 1}
-                                                                                                                        </td>
-                                                                                                                        <td className="px-3 py-1.5 font-bold text-slate-800">
-                                                                                                                            {mat.name}
-                                                                                                                        </td>
-                                                                                                                        <td className="px-3 py-1.5 font-mono text-slate-500 text-[10px]">
-                                                                                                                            {mat.code}
-                                                                                                                        </td>
-                                                                                                                        <td className="px-3 py-1.5 text-center font-mono text-slate-700">
-                                                                                                                            {group.sizeQty}{" "}
-                                                                                                                            {bomItem.unit}
-                                                                                                                        </td>
-                                                                                                                        <td className="px-3 py-1.5 text-right font-mono text-slate-600">
-                                                                                                                            {mat.requiredPerUnit}{" "}
-                                                                                                                            {mat.unit}
-                                                                                                                        </td>
-                                                                                                                        <td className="px-3 py-1.5 text-right font-mono font-bold text-teal-800">
-                                                                                                                            {mat.usageQty.toLocaleString(
-                                                                                                                                "id-ID",
-                                                                                                                                {
-                                                                                                                                    maximumFractionDigits: 2,
-                                                                                                                                },
-                                                                                                                            )}{" "}
-                                                                                                                            {mat.unit}
-                                                                                                                        </td>
-                                                                                                                        <td className="px-3 py-1.5 text-right font-mono">
-                                                                                                                            <span
-                                                                                                                                className={
-                                                                                                                                    isDeficit
-                                                                                                                                        ? "text-rose-600 font-bold"
-                                                                                                                                        : "text-slate-600"
-                                                                                                                                }
-                                                                                                                            >
-                                                                                                                                {mat.itemStock.toLocaleString(
-                                                                                                                                    "id-ID",
-                                                                                                                                )}{" "}
-                                                                                                                                {mat.unit}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-1.5 text-center whitespace-nowrap align-middle">
+                                                                                        <span className="font-bold text-slate-800 font-mono">
+                                                                                            {
+                                                                                                bomItem.qty
+                                                                                            }
+                                                                                        </span>{" "}
+                                                                                        <span className="text-[10px] text-slate-500">
+                                                                                            {
+                                                                                                bomItem.unit
+                                                                                            }
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-1.5 text-center whitespace-nowrap align-middle">
+                                                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                                                                            {
+                                                                                                bomItem
+                                                                                                    .sizeGroups
+                                                                                                    .length
+                                                                                            }{" "}
+                                                                                            Ukuran
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-2 text-center whitespace-nowrap align-middle">
+                                                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                                                                                            {
+                                                                                                bomItem
+                                                                                                    .materials
+                                                                                                    .length
+                                                                                            }{" "}
+                                                                                            Bahan Terhubung
+                                                                                        </span>
+                                                                                    </td>
+                                                                                </tr>
+                                                                                {isExpanded && (
+                                                                                    <tr className="bg-slate-50/40">
+                                                                                        <td
+                                                                                            colSpan={4}
+                                                                                            className="p-0 border-t border-slate-200/80"
+                                                                                        >
+                                                                                            {bomItem.sizeGroups.length === 0 ? (
+                                                                                                <div className="py-2.5 px-4 text-center text-xs text-slate-400 bg-white">
+                                                                                                    Item ini belum memiliki pemetaan resep bahan baku per ukuran.
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div className="divide-y divide-slate-200">
+                                                                                                    {bomItem.sizeGroups.map((group, gIdx) => {
+                                                                                                        const sizeKey = `${bomItem.itemId}_${group.size}`;
+                                                                                                        const isSizeExpanded = !!expandedBOMSizes[sizeKey];
+                                                                                                        return (
+                                                                                                            <div key={gIdx} className="bg-white">
+                                                                                                                <div
+                                                                                                                    onClick={() => toggleBOMSize(sizeKey)}
+                                                                                                                    className="py-2 px-3 bg-slate-100/75 border-b border-slate-200/80 flex items-center justify-between cursor-pointer hover:bg-slate-200/60 transition-colors select-none"
+                                                                                                                >
+                                                                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                                                                        <div className="p-0.5 text-slate-500 shrink-0">
+                                                                                                                            <ChevronDown
+                                                                                                                                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                                                                                                                    isSizeExpanded
+                                                                                                                                        ? "rotate-180 text-teal-600"
+                                                                                                                                        : "text-slate-400"
+                                                                                                                                }`}
+                                                                                                                            />
+                                                                                                                        </div>
+                                                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                                                            {group.category && (
+                                                                                                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200 uppercase font-sans">
+                                                                                                                                    {group.category}
+                                                                                                                                </span>
+                                                                                                                            )}
+                                                                                                                            <span className="text-xs font-bold text-slate-900">
+                                                                                                                                {group.size === "Universal"
+                                                                                                                                    ? "Semua Ukuran (Bahan Umum)"
+                                                                                                                                    : `Ukuran ${group.size}`}
                                                                                                                             </span>
-                                                                                                                        </td>
-                                                                                                                    </tr>
-                                                                                                                );
-                                                                                                            })}
-                                                                                                        </tbody>
-                                                                                                    </table>
+                                                                                                                            <span className="text-[11px] text-slate-500 font-mono">
+                                                                                                                                &bull; Target:{" "}
+                                                                                                                                <strong className="text-slate-700">
+                                                                                                                                    {group.sizeQty} {bomItem.unit}
+                                                                                                                                </strong>
+                                                                                                                            </span>
+                                                                                                                        </div>
+                                                                                                                    </div>
+
+                                                                                                                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200 shadow-2xs shrink-0">
+                                                                                                                        {group.materials.length} Bahan
+                                                                                                                    </span>
+                                                                                                                </div>
+
+                                                                                                                {isSizeExpanded && (
+                                                                                                                    <table className="w-full text-left border-collapse table-fixed text-[10px] bg-white">
+                                                                                                                        <thead>
+                                                                                                                            <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
+                                                                                                                                <th className="py-1.5 pl-4 pr-2 w-[6%] text-center">No</th>
+                                                                                                                                <th className="py-1.5 px-2 w-[28%]">Bahan Baku</th>
+                                                                                                                                <th className="py-1.5 px-2 w-[16%]">Kode SKU</th>
+                                                                                                                                <th className="py-1.5 px-2 text-center w-[12%]">Target Qty</th>
+                                                                                                                                <th className="py-1.5 px-2 text-right w-[12%]">Kebutuhan / Unit</th>
+                                                                                                                                <th className="py-1.5 px-2 text-right w-[13%]">Total Kebutuhan</th>
+                                                                                                                                <th className="py-1.5 pr-4 pl-2 text-right w-[13%]">Stok Gudang</th>
+                                                                                                                            </tr>
+                                                                                                                        </thead>
+                                                                                                                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                                                                                            {group.materials.map((mat, mIdx) => {
+                                                                                                                                const isDeficit = mat.itemStock < mat.usageQty;
+                                                                                                                                return (
+                                                                                                                                    <tr key={mat.id || mIdx} className="hover:bg-slate-50/70 transition-colors">
+                                                                                                                                        <td className="py-1.5 pl-4 pr-2 text-center font-mono text-slate-400 text-[10px] align-middle">
+                                                                                                                                            {mIdx + 1}
+                                                                                                                                        </td>
+                                                                                                                                        <td className="py-1.5 px-2 font-bold text-slate-800 truncate align-middle" title={mat.name}>
+                                                                                                                                            {mat.name}
+                                                                                                                                        </td>
+                                                                                                                                        <td className="py-1.5 px-2 font-mono text-slate-500 text-[10px] truncate align-middle">
+                                                                                                                                            {mat.code}
+                                                                                                                                        </td>
+                                                                                                                                        <td className="py-1.5 px-2 text-center font-mono text-slate-700 align-middle">
+                                                                                                                                            {group.sizeQty} {bomItem.unit}
+                                                                                                                                        </td>
+                                                                                                                                        <td className="py-1.5 px-2 text-right font-mono text-slate-600 align-middle">
+                                                                                                                                            {mat.requiredPerUnit} {mat.unit}
+                                                                                                                                        </td>
+                                                                                                                                        <td className="py-1.5 px-2 text-right font-mono font-bold text-teal-800 align-middle">
+                                                                                                                                            {mat.usageQty.toLocaleString("id-ID", { maximumFractionDigits: 2 })}{" "}
+                                                                                                                                            {mat.unit}
+                                                                                                                                        </td>
+                                                                                                                                        <td className="py-1.5 pr-4 pl-2 text-right font-mono align-middle">
+                                                                                                                                            <span className={isDeficit ? "text-rose-600 font-bold" : "text-slate-600"}>
+                                                                                                                                                {mat.itemStock.toLocaleString("id-ID")}{" "}
+                                                                                                                                                {mat.unit}
+                                                                                                                                            </span>
+                                                                                                                                        </td>
+                                                                                                                                    </tr>
+                                                                                                                                );
+                                                                                                                            })}
+                                                                                                                        </tbody>
+                                                                                                                    </table>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                        );
+                                                                                                    })}
                                                                                                 </div>
                                                                                             )}
-                                                                                        </div>
-                                                                                    );
-                                                                                })
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        },
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                )}
+                                                                            </React.Fragment>
+                                                                        );
+                                                                    }
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    {bomPerItem.length > 0 && (
+                                                        <div className="border-t border-slate-200/80 bg-white [&_button]:w-7 [&_button]:h-7 [&_button]:text-[11px] [&>div]:px-3 [&>div]:py-2 text-[11px]">
+                                                            <Pagination
+                                                                totalItems={bomPerItem.length}
+                                                                itemsPerPage={bomPerPage}
+                                                                currentPage={bomCurrentPage}
+                                                                onPageChange={setBomCurrentPage}
+                                                                onItemsPerPageChange={(val) => {
+                                                                    setBomPerPage(val);
+                                                                    setBomCurrentPage(1);
+                                                                }}
+                                                                pageSizeOptions={[5, 10, 20, 50]}
+                                                            />
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -2016,207 +2158,329 @@ export default function Show({
 </div>
                                 </div>
 
-                                {/* DAFTAR PENUGASAN SPK */}
                                 {totalAssignments === 0 ? (
                                     <div className="p-8 text-center text-slate-500 text-xs bg-slate-50/50 rounded-lg border border-slate-200">
                                         Belum ada surat perintah kerja (SPK)
                                         yang ditugaskan untuk invoice ini.
                                     </div>
                                 ) : (
-                                    <div className="space-y-3">
-                                        {items.map((item) =>
-                                            (
-                                                item.production_assignments ||
-                                                []
-                                            ).map((assignment) => {
-                                                const isExpanded =
-                                                    !!expandedSPK[
-                                                        assignment.id
-                                                    ];
-                                                return (
-                                                    <div
-                                                        key={assignment.id}
-                                                        className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden"
-                                                    >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {assignmentsByEmployee.map((emp) => {
+                                            const isEmpExpanded = !!expandedEmployees[emp.employeeId];
+                                            const empPage = spkEmpPages[emp.employeeId] || 1;
+                                            const empPageSize = spkEmpPageSizes[emp.employeeId] || 5;
+                                            const totalEmpItems = emp.assignments.length;
+                                            const totalEmpPages = Math.ceil(totalEmpItems / empPageSize) || 1;
+                                            const currentEmpPage = Math.min(empPage, totalEmpPages);
+                                            const startIdx = (currentEmpPage - 1) * empPageSize;
+                                            const paginatedAssignments = emp.assignments.slice(
+                                                startIdx,
+                                                startIdx + empPageSize
+                                            );
+                                            return (
+                                                <div
+                                                    key={emp.employeeId}
+                                                    className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col justify-between"
+                                                >
+                                                    <div>
                                                         <div
-                                                            onClick={() =>
-                                                                toggleSPKAccordion(
-                                                                    assignment.id,
-                                                                )
-                                                            }
-                                                            className="p-3 bg-slate-50/80 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                                                            onClick={() => toggleEmployeeAccordion(emp.employeeId)}
+                                                            className={`p-3.5 bg-slate-50/80 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100/80 transition-colors select-none ${
+                                                                isEmpExpanded ? "border-b border-slate-200/80" : ""
+                                                            }`}
                                                         >
                                                             <div className="flex items-center gap-2.5 min-w-0">
+                                                                <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center border border-teal-200 shadow-2xs shrink-0">
+                                                                    {emp.employeeName
+                                                                        .charAt(0)
+                                                                        .toUpperCase()}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <h5 className="font-bold text-xs text-slate-900 truncate">
+                                                                            {emp.employeeName}
+                                                                        </h5>
+                                                                        <span
+                                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold border ${emp.statusStyle}`}
+                                                                        >
+                                                                            {emp.employeeStatus}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="text-[11px] text-slate-500 truncate block">
+                                                                        {emp.assignments.length} Item Pesanan &bull; Target: {emp.totalTargetQty} Pcs
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-3 shrink-0">
+                                                                <div className="text-right">
+                                                                    <div className="text-[10px] text-slate-400 font-medium">
+                                                                        Total Upah
+                                                                    </div>
+                                                                    <div className="font-mono font-bold text-xs text-teal-800 bg-teal-50/80 px-2 py-0.5 rounded border border-teal-200/60">
+                                                                        {formatCurrency(emp.totalWage)}
+                                                                    </div>
+                                                                </div>
                                                                 <div className="p-1 rounded bg-white border border-slate-200 shadow-2xs text-slate-500 shrink-0">
                                                                     <ChevronDown
                                                                         className={`w-4 h-4 transition-transform duration-200 ${
-                                                                            isExpanded
+                                                                            isEmpExpanded
                                                                                 ? "rotate-180 text-teal-600"
                                                                                 : "text-slate-400"
                                                                         }`}
                                                                     />
                                                                 </div>
-                                                                <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center border border-teal-200/80 shadow-2xs shrink-0">
-                                                                    {(
-                                                                        assignment
-                                                                            .assignee
-                                                                            ?.name ||
-                                                                        "K"
-                                                                    )
-                                                                        .charAt(
-                                                                            0,
-                                                                        )
-                                                                        .toUpperCase()}
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                                        <span className="font-bold text-xs text-slate-900">
-                                                                            {assignment
-                                                                                .assignee
-                                                                                ?.name ||
-                                                                                "Karyawan"}
-                                                                        </span>
-                                                                        <span
-                                                                            className={`px-2 py-0.2 rounded text-[10px] font-bold ${
-                                                                                assignment.status ===
-                                                                                    "SELESAI" ||
-                                                                                assignment.status ===
-                                                                                    "completed"
-                                                                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                                                    : assignment.status ===
-                                                                                            "IN_PROGRESS" ||
-                                                                                        assignment.status ===
-                                                                                            "in_progress"
-                                                                                      ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                                                                                      : "bg-slate-100 text-slate-600 border border-slate-200"
-                                                                            }`}
-                                                                        >
-                                                                            {assignment.status ||
-                                                                                "PENDING"}
-                                                                        </span>
-                                                                    </div>
-                                                                    <span className="text-[11px] text-slate-500 truncate block">
-                                                                        {
-                                                                            item.item_name
-                                                                        }{" "}
-                                                                        &bull;
-                                                                        Target:{" "}
-                                                                        {
-                                                                            assignment.qty
-                                                                        }{" "}
-                                                                        {
-                                                                            item.unit
-                                                                        }{" "}
-                                                                        &bull;
-                                                                        Batas:{" "}
-                                                                        {assignment.target_date
-                                                                            ? formatDate(
-                                                                                  assignment.target_date,
-                                                                              )
-                                                                            : "-"}
-                                                                    </span>
-                                                                </div>
                                                             </div>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={(
-                                                                    e,
-                                                                ) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteSPK(
-                                                                        assignment.id,
-                                                                    );
-                                                                }}
-                                                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md border border-rose-200 transition-colors cursor-pointer self-end sm:self-auto shrink-0"
-                                                                title="Hapus Penugasan SPK"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
                                                         </div>
 
-                                                        {isExpanded && (
-                                                            <div className="p-3 bg-white">
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                                                    {(
-                                                                        assignment.steps ||
-                                                                        []
-                                                                    ).map(
-                                                                        (
-                                                                            step,
-                                                                        ) => {
-                                                                            const stepQty =
-                                                                                step.qty ||
-                                                                                assignment.qty ||
-                                                                                item.qty;
-                                                                            const stepWage =
-                                                                                Number(
-                                                                                    step.wage,
-                                                                                ) ||
-                                                                                0;
-                                                                            return (
-                                                                                <div
-                                                                                    key={
-                                                                                        step.id
-                                                                                    }
-                                                                                    className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50 flex flex-col justify-between"
-                                                                                >
-                                                                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                                                                        <span className="font-semibold text-xs text-slate-800 truncate">
-                                                                                            {
-                                                                                                step.step_name
-                                                                                            }
-                                                                                        </span>
-                                                                                        <span
-                                                                                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                                                                                                step.status ===
-                                                                                                    "SELESAI" ||
-                                                                                                step.status ===
-                                                                                                    "completed"
-                                                                                                    ? "bg-emerald-100 text-emerald-800"
-                                                                                                    : step.status ===
-                                                                                                            "IN_PROGRESS" ||
-                                                                                                        step.status ===
-                                                                                                            "in_progress"
-                                                                                                      ? "bg-indigo-100 text-indigo-800"
-                                                                                                      : "bg-slate-200 text-slate-600"
-                                                                                            }`}
-                                                                                        >
-                                                                                            {step.status ||
-                                                                                                "PENDING"}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200/80">
-                                                                                        <span>
-                                                                                            {
-                                                                                                stepQty
-                                                                                            }{" "}
-                                                                                            {
-                                                                                                item.unit
-                                                                                            }{" "}
-                                                                                            &times;{" "}
-                                                                                            {formatCurrency(
-                                                                                                stepWage,
-                                                                                            )}
-                                                                                        </span>
-                                                                                        <span className="font-mono font-bold text-teal-800">
-                                                                                            {formatCurrency(
-                                                                                                stepQty *
-                                                                                                    stepWage,
-                                                                                            )}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        },
-                                                                    )}
+                                                        {isEmpExpanded && (
+                                                            <>
+                                                                {emp.totalSteps > 0 && (
+                                                                    <div className="px-3.5 pt-2.5 pb-1 bg-white">
+                                                                        <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1 font-medium">
+                                                                            <span>Kemajuan Tahapan Kerja</span>
+                                                                            <span className="font-mono font-semibold text-slate-700">
+                                                                                {emp.completedSteps} / {emp.totalSteps} Selesai ({Math.round((emp.completedSteps / emp.totalSteps) * 100)}%)
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                                                            <div
+                                                                                className="bg-teal-600 h-1.5 rounded-full transition-all duration-300"
+                                                                                style={{
+                                                                                    width: `${Math.round((emp.completedSteps / emp.totalSteps) * 100)}%`,
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="overflow-hidden">
+                                                                    <table className="w-full text-left border-collapse table-fixed text-[11px]">
+                                                                        <thead>
+                                                                            <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                                                <th className="py-2 px-2.5 w-[38%]">Item Pesanan</th>
+                                                                                <th className="py-2 px-1.5 text-center w-[18%]">Target</th>
+                                                                                <th className="py-2 px-1.5 text-center w-[20%]">Batas Waktu</th>
+                                                                                <th className="py-2 px-1 text-center w-[16%]">Status</th>
+                                                                                <th className="py-2 px-1 text-center w-[8%]">Aksi</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                                            {paginatedAssignments.map((assignment) => {
+                                                                                const isExpanded =
+                                                                                    !!expandedSPK[assignment.id];
+                                                                                const asStatus =
+                                                                                    formatIndonesianStatus(assignment.status);
+                                                                                const hasSteps =
+                                                                                    (assignment.steps || []).length > 0;
+                                                                                return (
+                                                                                    <React.Fragment key={assignment.id}>
+                                                                                        <tr className="hover:bg-slate-50/70 transition-colors">
+                                                                                            <td
+                                                                                                onClick={() =>
+                                                                                                    hasSteps &&
+                                                                                                    toggleSPKAccordion(assignment.id)
+                                                                                                }
+                                                                                                className={`py-2 px-2.5 align-middle ${
+                                                                                                    hasSteps
+                                                                                                        ? "cursor-pointer select-none"
+                                                                                                        : ""
+                                                                                                }`}
+                                                                                            >
+                                                                                                <div className="flex items-start gap-1.5 min-w-0">
+                                                                                                    {hasSteps && (
+                                                                                                        <button
+                                                                                                            type="button"
+                                                                                                            onClick={(e) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                toggleSPKAccordion(
+                                                                                                                    assignment.id
+                                                                                                                );
+                                                                                                            }}
+                                                                                                            className="p-0.5 mt-0.5 rounded text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer shrink-0"
+                                                                                                            title={
+                                                                                                                isExpanded
+                                                                                                                    ? "Sembunyikan tahapan kerja"
+                                                                                                                    : "Lihat tahapan kerja"
+                                                                                                            }
+                                                                                                        >
+                                                                                                            <ChevronDown
+                                                                                                                className={`w-3 h-3 transition-transform duration-200 ${
+                                                                                                                    isExpanded
+                                                                                                                        ? "rotate-180 text-teal-600"
+                                                                                                                        : ""
+                                                                                                                }`}
+                                                                                                            />
+                                                                                                        </button>
+                                                                                                    )}
+                                                                                                    <div className="min-w-0 flex-1">
+                                                                                                        <div
+                                                                                                            className="font-semibold text-slate-900 truncate leading-tight"
+                                                                                                            title={assignment.item_name}
+                                                                                                        >
+                                                                                                            {assignment.item_name}
+                                                                                                        </div>
+                                                                                                        {hasSteps && (
+                                                                                                            <div className="text-[9px] text-slate-400 mt-0.5">
+                                                                                                                {assignment.steps.length} tahapan kerja
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="py-2 px-1.5 text-center whitespace-nowrap align-middle">
+                                                                                                <span className="font-bold text-slate-800 font-mono">
+                                                                                                    {assignment.qty}
+                                                                                                </span>{" "}
+                                                                                                <span className="text-[10px] text-slate-500">
+                                                                                                    {assignment.item_unit}
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td className="py-2 px-1.5 text-center whitespace-nowrap font-mono text-[10px] text-slate-600 align-middle">
+                                                                                                {assignment.target_date
+                                                                                                    ? formatDate(
+                                                                                                          assignment.target_date
+                                                                                                      )
+                                                                                                    : "-"}
+                                                                                            </td>
+                                                                                            <td className="py-2 px-1 text-center whitespace-nowrap align-middle">
+                                                                                                <span
+                                                                                                    className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold border ${asStatus.badgeClass}`}
+                                                                                                >
+                                                                                                    {asStatus.label}
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td className="py-2 px-1 text-center whitespace-nowrap align-middle">
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() =>
+                                                                                                        handleDeleteSPK(
+                                                                                                            assignment.id
+                                                                                                        )
+                                                                                                    }
+                                                                                                    className="p-1 text-rose-600 hover:bg-rose-50 rounded border border-rose-200 transition-colors cursor-pointer inline-flex items-center justify-center"
+                                                                                                    title="Hapus Penugasan SPK"
+                                                                                                >
+                                                                                                    <Trash2 className="w-3 h-3" />
+                                                                                                </button>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                        {isExpanded && hasSteps && (
+                                                                                            <tr className="bg-slate-50/40">
+                                                                                                <td
+                                                                                                    colSpan={5}
+                                                                                                    className="p-0 border-t border-slate-200/80"
+                                                                                                >
+                                                                                                    <table className="w-full text-left border-collapse table-fixed text-[10px] bg-white">
+                                                                                                        <thead>
+                                                                                                            <tr className="border-b border-slate-200 bg-slate-100/75 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
+                                                                                                                <th className="py-1.5 pl-8 pr-2 w-[38%]">Tahapan Kerja</th>
+                                                                                                                <th className="py-1.5 px-1.5 text-center w-[16%]">Qty</th>
+                                                                                                                <th className="py-1.5 px-1.5 text-right w-[15%]">Tarif</th>
+                                                                                                                <th className="py-1.5 px-1.5 text-right w-[15%]">Upah</th>
+                                                                                                                <th className="py-1.5 px-1 text-center w-[16%]">Status</th>
+                                                                                                            </tr>
+                                                                                                        </thead>
+                                                                                                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                                                                            {assignment.steps.map(
+                                                                                                                (step) => {
+                                                                                                                    const stepQty =
+                                                                                                                        step.qty ||
+                                                                                                                        assignment.qty ||
+                                                                                                                        1;
+                                                                                                                    const stepWage =
+                                                                                                                        Number(
+                                                                                                                            step.wage
+                                                                                                                        ) || 0;
+                                                                                                                    const stepStatus =
+                                                                                                                        formatIndonesianStatus(
+                                                                                                                            step.status
+                                                                                                                        );
+                                                                                                                    return (
+                                                                                                                        <tr
+                                                                                                                            key={
+                                                                                                                                step.id
+                                                                                                                            }
+                                                                                                                            className="hover:bg-slate-50/70"
+                                                                                                                        >
+                                                                                                                            <td
+                                                                                                                                className="py-1.5 pl-8 pr-2 font-medium text-slate-800 truncate align-middle"
+                                                                                                                                title={
+                                                                                                                                    step.step_name
+                                                                                                                                }
+                                                                                                                            >
+                                                                                                                                {step.step_name}
+                                                                                                                            </td>
+                                                                                                                            <td className="py-1.5 px-1.5 text-center whitespace-nowrap font-mono text-slate-600 align-middle">
+                                                                                                                                {stepQty}{" "}
+                                                                                                                                {assignment.item_unit}
+                                                                                                                            </td>
+                                                                                                                            <td className="py-1.5 px-1.5 text-right whitespace-nowrap font-mono text-slate-500 align-middle">
+                                                                                                                                {formatCurrency(
+                                                                                                                                    stepWage
+                                                                                                                                )}
+                                                                                                                            </td>
+                                                                                                                            <td className="py-1.5 px-1.5 text-right whitespace-nowrap font-mono font-bold text-teal-800 align-middle">
+                                                                                                                                {formatCurrency(
+                                                                                                                                    stepQty *
+                                                                                                                                        stepWage
+                                                                                                                                )}
+                                                                                                                            </td>
+                                                                                                                            <td className="py-1.5 px-1 text-center whitespace-nowrap align-middle">
+                                                                                                                                <span
+                                                                                                                                    className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold border ${stepStatus.badgeClass}`}
+                                                                                                                                >
+                                                                                                                                    {stepStatus.label}
+                                                                                                                                </span>
+                                                                                                                            </td>
+                                                                                                                        </tr>
+                                                                                                                    );
+                                                                                                                }
+                                                                                                            )}
+                                                                                                        </tbody>
+                                                                                                    </table>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        )}
+                                                                                    </React.Fragment>
+                                                                                );
+                                                                            })}
+                                                                        </tbody>
+                                                                    </table>
                                                                 </div>
-                                                            </div>
+                                                            </>
                                                         )}
                                                     </div>
-                                                );
-                                            }),
-                                        )}
+
+                                                    {isEmpExpanded && totalEmpItems > 0 && (
+                                                        <div className="border-t border-slate-200/80 bg-white [&_button]:w-7 [&_button]:h-7 [&_button]:text-[11px] [&>div]:px-3 [&>div]:py-2 text-[11px]">
+                                                            <Pagination
+                                                                totalItems={totalEmpItems}
+                                                                itemsPerPage={empPageSize}
+                                                                currentPage={currentEmpPage}
+                                                                onPageChange={(page) =>
+                                                                    setSpkEmpPages((prev) => ({
+                                                                        ...prev,
+                                                                        [emp.employeeId]: page,
+                                                                    }))
+                                                                }
+                                                                onItemsPerPageChange={(size) => {
+                                                                    setSpkEmpPageSizes((prev) => ({
+                                                                        ...prev,
+                                                                        [emp.employeeId]: size,
+                                                                    }));
+                                                                    setSpkEmpPages((prev) => ({
+                                                                        ...prev,
+                                                                        [emp.employeeId]: 1,
+                                                                    }));
+                                                                }}
+                                                                pageSizeOptions={[5, 10, 20]}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
