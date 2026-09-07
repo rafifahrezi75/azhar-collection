@@ -1085,11 +1085,15 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
                                                         className="w-full h-8 px-2.5 text-xs border border-slate-300 rounded-lg bg-white font-medium text-slate-800 shadow-2xs focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                                                     >
                                                         <option value="">-- Pilih Item --</option>
-                                                        {items.map((it, iIdx) => (
-                                                            <option key={iIdx} value={iIdx}>
-                                                                {it.item_name || `Item #${iIdx + 1}`} ({it.qty} {it.unit})
-                                                            </option>
-                                                        ))}
+                                                        {items.map((it, iIdx) => {
+                                                            const prod = products.find((p) => String(p.id) === String(it.product_id));
+                                                            if (!prod || prod.production_wage_mode !== 'steps' || !prod.production_steps?.length) return null;
+                                                            return (
+                                                                <option key={iIdx} value={iIdx}>
+                                                                    {it.item_name || `Item #${iIdx + 1}`} ({it.qty} {it.unit})
+                                                                </option>
+                                                            );
+                                                        })}
                                                     </select>
                                                 </div>
 

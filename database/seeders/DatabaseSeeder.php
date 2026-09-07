@@ -13,19 +13,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             AccessSeeder::class,
-            TailorSeeder::class,
-            SchoolSeeder::class,
-            RawMaterialSeeder::class,
-            CustomerSeeder::class,
-            ProductionStepSeeder::class,
             SizeSeeder::class,
-            ProductSeeder::class,
-            MenuUpdateSeeder::class,
-            TransactionSeeder::class,
-            PurchaseSeeder::class,
-            ProductionAssignmentSeeder::class,
-            ProductionProgressSeeder::class,
-            LargePrintDataSeeder::class,
         ]);
 
         Schema::enableForeignKeyConstraints();

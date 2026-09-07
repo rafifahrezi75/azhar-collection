@@ -166,12 +166,17 @@ export default function Show({
     }, []);
 
     const spkItemOptions = useMemo(() => {
-        return (invoice?.items || []).map((i) => ({
-            value: String(i.id),
-            label: i.item_name,
-            sublabel: `${i.qty} ${i.unit}`,
-            searchKey: `${i.item_name} ${i.qty} ${i.unit}`,
-        }));
+        return (invoice?.items || [])
+            .filter((i) => {
+                const prod = i.product;
+                return prod && prod.production_wage_mode === 'steps' && prod.production_steps?.length > 0;
+            })
+            .map((i) => ({
+                value: String(i.id),
+                label: i.item_name,
+                sublabel: `${i.qty} ${i.unit}`,
+                searchKey: `${i.item_name} ${i.qty} ${i.unit}`,
+            }));
     }, [invoice?.items]);
 
     const spkUserOptions = useMemo(() => {
