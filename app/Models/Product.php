@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
@@ -12,6 +13,7 @@ class Product extends Model
 
     protected $fillable = [
         'code',
+        'customer_id',
         'name',
         'category',
         'default_unit',
@@ -32,6 +34,11 @@ class Product extends Model
         'primary_image_url',
         'price_range',
     ];
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
 
     public function images(): HasMany
     {
