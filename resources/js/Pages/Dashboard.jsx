@@ -40,11 +40,11 @@ export default function Dashboard({ initialSummary, canViewAnalytics }) {
     }, []);
 
     const restrictedBanner = !showAnalytics && (
-        <div className="flex items-start gap-3 bg-amber-50/80 border border-amber-200/90 rounded-md p-3.5 shadow-2xs">
+        <div className="flex items-start gap-3 bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 shadow-soft-2xs">
             <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
                 <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                    Akses Terbatas — Mode Operasional
+                    Akses Terbatas: Mode Operasional
                 </p>
                 <p className="text-xs text-amber-800 leading-relaxed font-medium">
                     Metrik keuangan (omzet, kas masuk, piutang, dan margin laba) hanya dapat diakses oleh Administrator dan Staff Keuangan.
@@ -57,7 +57,7 @@ export default function Dashboard({ initialSummary, canViewAnalytics }) {
         <DashboardLayout>
             <Head title="Dashboard - Azhar Collection" />
 
-            <div className="space-y-4 max-w-[1600px] mx-auto">
+            <div className="w-full space-y-4">
                 <PageHeaderBar
                     title="Dashboard Operasional & Bisnis"
                     breadcrumbs={[{ label: "Dashboard" }]}

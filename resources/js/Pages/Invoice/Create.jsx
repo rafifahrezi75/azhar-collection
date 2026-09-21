@@ -6,6 +6,7 @@ import CustomerModal from "@/Components/CustomerModal";
 import SizeBreakdownModal from "@/Components/SizeBreakdownModal";
 import SearchableSelect from "@/Components/SearchableSelect";
 import { Toast } from "@/utils/sweetalert";
+import { todayLocal, formatRupiah } from "@/utils/format";
 import {
     Receipt,
     Plus,
@@ -55,7 +56,7 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
     const [invoiceNumber, setInvoiceNumber] = useState("");
     const [customerId, setCustomerId] = useState("");
     const [customerName, setCustomerName] = useState("");
-    const [orderDate, setOrderDate] = useState(() => new Date().toISOString().split("T")[0]);
+    const [orderDate, setOrderDate] = useState(() => todayLocal());
     const [completionDate, setCompletionDate] = useState("");
     const [paymentStatus, setPaymentStatus] = useState("DP");
     const [productionStatus, setProductionStatus] = useState("PROSES");
@@ -94,7 +95,7 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
             setPaymentStatus("DP");
             setProductionStatus("PROSES");
             setCutStock(true);
-            setOrderDate(new Date().toISOString().split("T")[0]);
+            setOrderDate(todayLocal());
         }
     };
 
@@ -518,12 +519,7 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
     };
 
     const formatCurrency = (val) => {
-        return new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(val || 0);
+        return formatRupiah(val || 0);
     };
 
     const selectedCustomerData = customers.find((c) => String(c.id) === String(customerId));
@@ -561,12 +557,8 @@ export default function Create({ initialType = "REGULAR", users: initialUsers = 
         <DashboardLayout>
             <Head title={orderType === "HISTORICAL" ? "Input Pesanan Lama - Azhar Collection" : "Buat Pesanan Baru - Azhar Collection"} />
 
-            <form onSubmit={handleSubmit} className="space-y-4 max-w-7xl mx-auto pb-16">
-                
-                {/* 1 CARD UTUH MENGISI HALAMAN */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    
-                    {/* TOP HEADER AREA */}
+            <form onSubmit={handleSubmit} className="w-full space-y-4 pb-16">
+                <div className="bg-white rounded-xl border border-slate-200/90 shadow-soft-2xs overflow-hidden">
                     <div className="p-4 sm:p-5 border-b border-slate-100">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="flex items-center gap-2.5 min-w-0">

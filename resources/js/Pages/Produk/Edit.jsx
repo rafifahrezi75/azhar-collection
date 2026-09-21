@@ -1198,7 +1198,7 @@ export default function Edit({ product }) {
                             Edit Data Produk
                         </h3>
                         <p className="text-[11px] text-slate-500">
-                            {product.code} — {product.name}
+                            {product.code} - {product.name}
                         </p>
                     </div>
                 </div>
@@ -2457,7 +2457,7 @@ export default function Edit({ product }) {
                                                 <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-3rem)] bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-40">
                                                     <div className="flex items-center justify-between gap-3 pb-2.5 mb-3 border-b border-slate-100">
                                                         <span className="text-xs font-bold text-slate-900">
-                                                            Tambah Bahan — Semua
+                                                            Tambah Bahan - Semua
                                                             Ukuran
                                                         </span>
                                                         <button
@@ -3209,7 +3209,7 @@ export default function Edit({ product }) {
                                                                             <span className="text-xs font-bold text-slate-900">
                                                                                 Tambah
                                                                                 Bahan
-                                                                                —
+                                                                                -
                                                                                 Ukuran{" "}
                                                                                 {
                                                                                     showMaterialDialog.sizeName
@@ -4630,7 +4630,7 @@ export default function Edit({ product }) {
                                                         className={`w-3.5 h-3.5 text-slate-400 transition-transform ${openRingkasanCards.has("ALL") ? "rotate-180" : ""}`}
                                                     />
                                                     <span className="text-xs font-bold text-slate-700">
-                                                        Semua Ukuran —{" "}
+                                                        Semua Ukuran -{" "}
                                                         {
                                                             universalMaterials.length
                                                         }{" "}

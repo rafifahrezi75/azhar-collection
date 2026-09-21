@@ -18,7 +18,7 @@
     body {
         font-family: 'Poppins', system-ui, -apple-system, sans-serif;
         background-color: #f8fafc;
-        color: #1e293b;
+        color: #0f172a;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
@@ -48,7 +48,6 @@
         font-variant-numeric: tabular-nums;
     }
 
-    /* Soft UI focus ring utility */
     :focus-visible {
         outline: 2px solid #800080;
         outline-offset: 2px;
@@ -57,33 +56,29 @@
 
 @layer components {
     .soft-card {
-        @apply bg-white rounded-md border border-slate-200 shadow-2xs;
+        @apply bg-white rounded-xl border border-slate-200/90 shadow-soft-2xs;
     }
-    /* Soft elevated card */
     .soft-card-elevated {
-        @apply bg-white rounded-md border border-slate-200/80 shadow-soft-sm;
+        @apply bg-white rounded-xl border border-slate-200/80 shadow-soft-xs;
     }
-    /* Soft button base */
     .soft-btn {
-        @apply rounded-md shadow-2xs transition-all duration-200;
+        @apply rounded-lg shadow-soft-2xs transition-all duration-200;
     }
     .soft-btn:hover {
-        @apply shadow-soft-sm;
+        @apply shadow-soft-xs;
     }
     .soft-btn:active {
         @apply shadow-soft-2xs;
         transform: translateY(0.5px);
     }
-    /* Soft input base */
     .soft-input {
-        @apply rounded-md border border-slate-300 bg-white shadow-2xs transition-all duration-200;
+        @apply rounded-lg border border-slate-200 bg-white shadow-soft-2xs transition-all duration-200 text-slate-800 placeholder-slate-400;
     }
     .soft-input:focus {
         @apply border-teal-500 ring-2 ring-teal-500/20 shadow-soft-xs;
     }
 }
 
-/* Custom Scrollbar — soft style */
 .custom-scrollbar::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -92,14 +87,13 @@
     background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.2);
+    background: rgba(148, 163, 184, 0.25);
     border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.35);
+    background: rgba(148, 163, 184, 0.4);
 }
 
-/* Smooth transitions globally */
 * {
     transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

@@ -33,6 +33,18 @@ const PageHeaderBar = memo(function PageHeaderBar({
     return (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 overflow-visible">
             <div>
+                {breadcrumbs.length > 1 && (
+                    <nav className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 mb-0.5">
+                        {breadcrumbs.map((b, idx) => (
+                            <React.Fragment key={idx}>
+                                {idx > 0 && <span className="text-slate-300">/</span>}
+                                <span className={idx === breadcrumbs.length - 1 ? "text-slate-600 font-semibold" : "text-slate-400"}>
+                                    {b.label}
+                                </span>
+                            </React.Fragment>
+                        ))}
+                    </nav>
+                )}
                 {displayTitle && (
                     <h1 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
                         {displayTitle}
@@ -40,7 +52,7 @@ const PageHeaderBar = memo(function PageHeaderBar({
                 )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-center overflow-visible">
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-center overflow-visible">
                 {beforeSearch}
 
                 {onSearchChange && (
@@ -54,7 +66,7 @@ const PageHeaderBar = memo(function PageHeaderBar({
                                 onSearchChange(e.target.value)
                             }
                             placeholder={searchPlaceholder}
-                            className="w-44 sm:w-56 pl-8 pr-7 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 placeholder:text-slate-400 shadow-soft-2xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 focus:shadow-soft-xs"
+                            className="w-44 sm:w-56 pl-8 pr-7 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 shadow-soft-2xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 focus:shadow-soft-xs"
                         />
 
                         {searchValue && (
@@ -77,14 +89,14 @@ const PageHeaderBar = memo(function PageHeaderBar({
                         <button
                             type="button"
                             onClick={onFilterClick}
-                            title="Filter"
+                            title="Filter Data"
                             className={`relative p-2 rounded-lg border transition-all duration-200 cursor-pointer shadow-soft-2xs ${
                                 isFilterActive
-                                    ? "bg-teal-50 border-teal-400 text-teal-700 font-bold shadow-soft-xs"
+                                    ? "bg-teal-50 border-teal-300 text-teal-700 font-bold shadow-soft-xs"
                                     : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
                             }`}
                         >
-                            <Filter className="w-4 h-4" />
+                            <Filter className="w-3.5 h-3.5" />
 
                             {isFilterActive && (
                                 <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-teal-600 ring-2 ring-white" />
@@ -99,11 +111,11 @@ const PageHeaderBar = memo(function PageHeaderBar({
                     <button
                         type="button"
                         onClick={onRefresh}
-                        title="Segarkan"
+                        title="Segarkan Data"
                         className="p-2 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-600 rounded-lg transition-all duration-200 cursor-pointer shadow-soft-2xs"
                     >
                         <RefreshCw
-                            className={`w-4 h-4 ${
+                            className={`w-3.5 h-3.5 ${
                                 refreshing
                                     ? "animate-spin"
                                     : ""
@@ -119,9 +131,10 @@ const PageHeaderBar = memo(function PageHeaderBar({
                         type="button"
                         onClick={onAdd}
                         title={addTitle}
-                        className="p-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-all duration-200 shadow-soft-xs hover:shadow-soft-sm cursor-pointer flex items-center justify-center shrink-0 active:shadow-soft-2xs active:translate-y-px"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg transition-all duration-200 shadow-soft-xs hover:shadow-soft-sm cursor-pointer shrink-0 active:shadow-soft-2xs active:translate-y-px"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-3.5 h-3.5 shrink-0" />
+                        <span className="hidden sm:inline">{addTitle}</span>
                     </button>
                 )}
             </div>

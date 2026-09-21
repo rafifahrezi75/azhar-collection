@@ -10,6 +10,7 @@ import {
     Plus
 } from "lucide-react";
 import Pagination from "@/Components/Pagination";
+import { formatRupiah } from "@/utils/format";
 
 const ItemTable = memo(function ItemTable({
     items = [],
@@ -29,21 +30,12 @@ const ItemTable = memo(function ItemTable({
 }) {
     const [previewImage, setPreviewImage] = useState(null);
 
-    const formatCurrency = (val) => {
-        return new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(val || 0);
-    };
-
     return (
-        <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-soft-2xs overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
-                        <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
+                        <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-bold text-[11px] uppercase tracking-wider">
                             <th className="px-3.5 py-2.5">No</th>
                             <th className="px-3.5 py-2.5">Foto</th>
                             <th className="px-3.5 py-2.5">Kode & Nama Bahan</th>
@@ -58,7 +50,7 @@ const ItemTable = memo(function ItemTable({
                     <tbody className="divide-y divide-slate-100">
                         {loading ? (
                             <tr>
-                                <td colSpan="8" className="px-3.5 py-8 text-center text-slate-400">
+                                <td colSpan="9" className="px-3.5 py-10 text-center text-slate-400">
                                     <div className="inline-flex items-center gap-2">
                                         <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
                                         <span>Memuat data bahan baku...</span>
@@ -67,11 +59,11 @@ const ItemTable = memo(function ItemTable({
                             </tr>
                         ) : items.length === 0 ? (
                             <tr>
-                                <td colSpan="8" className="px-3.5 py-10 text-center text-slate-400">
-                                    <Package className="w-9 h-9 mx-auto text-slate-300 mb-1.5" />
-                                    <p className="font-semibold text-slate-600">Belum ada data barang / bahan baku</p>
-                                    <p className="text-xs text-slate-400 mt-0.5">
-                                        Klik tombol '+' di pojok kanan atas untuk menambah data baru.
+                                <td colSpan="9" className="px-3.5 py-12 text-center text-slate-400 space-y-2">
+                                    <Package className="w-10 h-10 mx-auto text-slate-300 mb-1" />
+                                    <p className="font-semibold text-slate-700">Belum ada data barang atau bahan baku</p>
+                                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                                        Katalog bahan baku belum memiliki item. Tambahkan bahan baku baru untuk mengelola stok konveksi.
                                     </p>
                                 </td>
                             </tr>
@@ -89,7 +81,6 @@ const ItemTable = memo(function ItemTable({
                                             {rowNumber}
                                         </td>
 
-                                        {/* Photo */}
                                         <td className="px-3.5 py-2.5">
                                             {item.image_url ? (
                                                 <button
@@ -111,7 +102,6 @@ const ItemTable = memo(function ItemTable({
                                             )}
                                         </td>
 
-                                        {/* Code & Name */}
                                         <td className="px-3.5 py-2.5">
                                             <div className="flex items-center gap-2 mb-0.5">
                                                 <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
@@ -128,7 +118,6 @@ const ItemTable = memo(function ItemTable({
                                             </button>
                                         </td>
 
-                                        {/* Category */}
                                         <td className="px-3.5 py-2.5 whitespace-nowrap">
                                             {item.category ? (
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200">
@@ -139,116 +128,101 @@ const ItemTable = memo(function ItemTable({
                                             )}
                                         </td>
 
-                                        {/* Unit Info (Clean & Informative) */}
                                         <td className="px-3.5 py-2.5 whitespace-nowrap">
-                                            <div className="flex flex-col text-xs">
-                                                <span className="font-semibold text-slate-800">
-                                                    {item.unit?.name || baseUnitSymbol} <span className="text-slate-400 font-mono">({baseUnitSymbol})</span>
+                                            <div className="font-semibold text-slate-800">
+                                                {baseUnitSymbol}
+                                            </div>
+                                            {conversions.length > 0 && (
+                                                <div className="text-[10px] text-slate-500 font-mono">
+                                                    +{conversions.length} konversi
+                                                </div>
+                                            )}
+                                        </td>
+
+                                        <td className="px-3.5 py-2.5 whitespace-nowrap font-mono font-semibold text-slate-900">
+                                            {formatRupiah(item.price || item.base_price || 0)}
+                                        </td>
+
+                                        <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-bold font-mono text-slate-900">
+                                                    {Number(item.stock).toLocaleString("id-ID")}
                                                 </span>
-                                                {conversions.length > 0 && (
-                                                    <span className="text-[10px] text-slate-500 font-medium">
-                                                        +{conversions.length} Satuan Kemasan
-                                                    </span>
-                                                )}
+                                                <span className="text-[11px] text-slate-500">
+                                                    {baseUnitSymbol}
+                                                </span>
+                                            </div>
+                                            <div className="text-[10px] font-mono text-slate-400">
+                                                Min: {Number(item.min_stock || 0).toLocaleString("id-ID")} {baseUnitSymbol}
                                             </div>
                                         </td>
 
-                                        {/* Harga Dasar */}
-                                        <td className="px-3.5 py-2.5 whitespace-nowrap">
-                                            <div className="text-xs font-mono font-bold text-teal-700">
-                                                {formatCurrency(item.price || 0)}
-                                            </div>
-                                        </td>
-
-                                        {/* Stock Condition Status (Clean Badge) */}
                                         <td className="px-3.5 py-2.5 whitespace-nowrap">
                                             {isOutOfStock ? (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                                    Stok Habis
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                                    Habis
                                                 </span>
                                             ) : isLowStock ? (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                                     Menipis
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                                    Tersedia
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    Aman
                                                 </span>
                                             )}
                                         </td>
 
-                                        {/* Catalog Status */}
-                                        <td className="px-3.5 py-2.5 whitespace-nowrap">
-                                            {item.is_active ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                                                    Aktif
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-400 border border-slate-200">
-                                                    Nonaktif
-                                                </span>
-                                            )}
-                                        </td>
-
-                                        {/* Action Buttons */}
                                         <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
-                                            <div className="inline-flex items-center gap-1">
-                                                {/* View Detail */}
+                                            <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     type="button"
                                                     onClick={() => onViewDetail(item)}
-                                                    title="Detail"
-                                                    className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
+                                                    title="Lihat Detail"
+                                                    className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 rounded-lg transition-colors border border-slate-200 cursor-pointer shadow-soft-2xs"
                                                 >
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </button>
 
-                                                {/* Take Stock (Ambil Stok) */}
                                                 {canUpdate && (
                                                     <button
                                                         type="button"
                                                         onClick={() => onTakeStock(item)}
-                                                        title="Stok (Keluar)"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md transition-colors border border-amber-200/80 cursor-pointer shadow-2xs"
+                                                        title="Ambil Stok (Keluar)"
+                                                        className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg transition-colors border border-amber-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <ArrowUpRight className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
 
-                                                {/* Add Stock */}
                                                 {canUpdate && (
                                                     <button
                                                         type="button"
                                                         onClick={() => onAddStock(item)}
-                                                        title="Stok (Masuk)"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors border border-emerald-200/80 cursor-pointer shadow-2xs"
+                                                        title="Tambah Stok (Masuk)"
+                                                        className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-colors border border-emerald-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Plus className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
 
-                                                {/* Edit */}
                                                 {canUpdate && (
                                                     <button
                                                         type="button"
                                                         onClick={() => onEdit(item)}
-                                                        title="Edit"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md transition-colors border border-indigo-200/80 cursor-pointer shadow-2xs"
+                                                        title="Edit Bahan"
+                                                        className="p-1.5 bg-white hover:bg-slate-50 text-teal-600 hover:text-teal-700 rounded-lg transition-colors border border-slate-200 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
 
-                                                {/* Delete */}
                                                 {canDelete && (
                                                     <button
                                                         type="button"
                                                         onClick={() => onDelete(item.id)}
-                                                        title="Hapus"
-                                                        className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                        title="Hapus Bahan"
+                                                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-rose-200/80 cursor-pointer shadow-soft-2xs"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -263,7 +237,6 @@ const ItemTable = memo(function ItemTable({
                 </table>
             </div>
 
-            {/* Pagination */}
             {totalItems > 0 && onPageChange && (
                 <Pagination
                     currentPage={currentPage}
@@ -274,7 +247,6 @@ const ItemTable = memo(function ItemTable({
                 />
             )}
 
-            {/* Lightbox Preview */}
             {previewImage && (
                 <div
                     onClick={() => setPreviewImage(null)}

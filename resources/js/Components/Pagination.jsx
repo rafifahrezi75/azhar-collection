@@ -43,16 +43,15 @@ const Pagination = memo(function Pagination({
         return pages;
     };
 
-    const btnBase = "w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer shadow-soft-2xs";
+    const btnBase = "min-w-[34px] h-[34px] inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer shadow-soft-2xs";
 
     return (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white border-t border-slate-100 text-xs text-slate-600 select-none">
-            {/* Left: Info & Per Page selector */}
             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start flex-wrap">
                 <span className="font-medium text-slate-500">
-                    Menampilkan <strong className="font-bold text-slate-700">{startItem}</strong> -{" "}
-                    <strong className="font-bold text-slate-700">{endItem}</strong> dari{" "}
-                    <strong className="font-bold text-slate-700">{totalItems}</strong> data
+                    Menampilkan <strong className="font-semibold text-slate-800 font-mono">{startItem}</strong> -{" "}
+                    <strong className="font-semibold text-slate-800 font-mono">{endItem}</strong> dari{" "}
+                    <strong className="font-semibold text-slate-800 font-mono">{totalItems}</strong> data
                 </span>
 
                 {onItemsPerPageChange && (
@@ -76,7 +75,6 @@ const Pagination = memo(function Pagination({
                 )}
             </div>
 
-            {/* Right: Page Navigation Buttons */}
             <div className="flex items-center gap-1">
                 <button type="button" onClick={() => onPageChange(1)} disabled={currentPage === 1} title="Halaman Pertama" className={btnBase}>
                     <ChevronsLeft className="w-3.5 h-3.5" />
@@ -93,7 +91,7 @@ const Pagination = memo(function Pagination({
                             key={`page-${page}`}
                             type="button"
                             onClick={() => onPageChange(page)}
-                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
+                            className={`min-w-[34px] h-[34px] px-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                                 currentPage === page
                                     ? "bg-teal-600 text-white shadow-soft-xs"
                                     : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-soft-2xs"

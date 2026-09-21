@@ -5,18 +5,12 @@ import {
     Boxes,
     ShieldCheck,
     Users,
-    ChevronDown,
     ChevronRight,
     CircleDot,
-    Activity,
     X,
     Scale,
     Package,
     GraduationCap,
-    School,
-    Building2,
-    Settings,
-    FolderKanban,
     Receipt,
     FileText,
     History,
@@ -26,6 +20,8 @@ import {
     Ruler,
     ShoppingBag,
     Wallet,
+    Settings,
+    FolderKanban,
 } from "lucide-react";
 
 const Sidebar = memo(function Sidebar({
@@ -33,14 +29,12 @@ const Sidebar = memo(function Sidebar({
     isCollapsed = false,
     isMobileOpen = false,
     onCloseMobile,
-    onToggleCollapse
 }) {
     const { url, props } = usePage();
     const effectiveMenus = useMemo(() => {
         return menus.length > 0 ? menus : (props.auth?.menus || []);
     }, [menus, props.auth?.menus]);
 
-    // Helper for boundary-safe active route matching
     const isRouteActive = useCallback((currentUrl, targetPath) => {
         if (!targetPath) return false;
         const cleanCurrent = (currentUrl || "").split("?")[0].split("#")[0].replace(/\/+$/, "");
@@ -56,10 +50,8 @@ const Sidebar = memo(function Sidebar({
         return cleanCurrent.startsWith(cleanTarget + "/");
     }, []);
 
-    // Accordion open/close state for parent menus
     const [openMenus, setOpenMenus] = useState({});
 
-    // Auto-open parent menus if child route is active (if not yet manually toggled)
     useEffect(() => {
         setOpenMenus((prev) => {
             const next = { ...prev };
@@ -111,7 +103,6 @@ const Sidebar = memo(function Sidebar({
 
     return (
         <>
-            {/* Mobile Backdrop Overlay */}
             {isMobileOpen && (
                 <div
                     onClick={onCloseMobile}
@@ -119,31 +110,28 @@ const Sidebar = memo(function Sidebar({
                 />
             )}
 
-            {/* Sidebar Main Container */}
             <aside
                 className={`fixed lg:static inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col h-screen h-[100dvh] overflow-hidden shrink-0 border-r border-slate-800/80 shadow-soft-xl select-none transition-all duration-300 ease-in-out ${
                     isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0"
                 } ${isCollapsed ? "lg:w-20" : "lg:w-64"}`}
             >
-                {/* Header / Brand */}
                 <div className="h-16 flex items-center justify-between px-4 sm:px-5 border-b border-slate-800 bg-slate-900/90 shrink-0">
                     <Link href="/dashboard" className="flex items-center gap-3 group overflow-hidden">
-                        <div className="w-9 h-9 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold shadow-soft-sm shadow-teal-600/30 group-hover:scale-105 transition-transform shrink-0">
-                            <Activity className="w-5 h-5 text-white" />
+                        <div className="w-9 h-9 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold font-mono tracking-wider text-xs shadow-soft-xs shadow-teal-600/30 group-hover:scale-105 transition-transform shrink-0">
+                            AC
                         </div>
                         {!isCollapsed && (
                             <div className="truncate flex flex-col">
-                                <span className="font-extrabold text-sm sm:text-base tracking-tight text-white leading-tight truncate">
+                                <span className="font-bold text-sm tracking-tight text-white leading-tight truncate">
                                     Azhar Collection
                                 </span>
-                                <span className="text-[9px] font-semibold tracking-widest text-slate-400 uppercase">
-                                    Management Portal
+                                <span className="text-[10px] font-medium tracking-wide text-slate-400">
+                                    Manajemen Konveksi
                                 </span>
                             </div>
                         )}
                     </Link>
 
-                    {/* Mobile Close Button */}
                     <button
                         type="button"
                         onClick={onCloseMobile}
@@ -154,12 +142,11 @@ const Sidebar = memo(function Sidebar({
                     </button>
                 </div>
 
-                {/* Navigation Section */}
                 <div className="flex-1 min-h-0 px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
                     <div>
                         {!isCollapsed ? (
                             <div className="flex items-center justify-between px-3 mb-2">
-                                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                     Navigasi Utama
                                 </span>
                             </div>
@@ -174,7 +161,7 @@ const Sidebar = memo(function Sidebar({
                                 Tidak ada menu.
                             </div>
                         ) : (
-                            <nav className="space-y-1.5">
+                            <nav className="space-y-1">
                                 {effectiveMenus.map((menu) => {
                                     const hasChildren = menu.children && menu.children.length > 0;
                                     const isDirectActive = isRouteActive(url, menu.path);
@@ -182,17 +169,16 @@ const Sidebar = memo(function Sidebar({
                                     const isOpen = openMenus[menu.id] !== undefined ? openMenus[menu.id] : Boolean(hasActiveChild);
 
                                     return (
-                                        <div key={menu.id} className="space-y-1">
-                                            {/* Direct Single Link (no children) */}
+                                        <div key={menu.id} className="space-y-0.5">
                                             {!hasChildren && menu.path ? (
                                                 <Link
                                                     href={menu.path}
                                                     title={isCollapsed ? menu.title : undefined}
-                                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 group ${
+                                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 group ${
                                                         isCollapsed ? "justify-center px-0" : "justify-between"
                                                     } ${
                                                         isDirectActive
-                                                            ? "bg-slate-800 text-teal-400 font-semibold border border-slate-700/60 shadow-xs"
+                                                            ? "bg-slate-800 text-teal-300 font-semibold border border-slate-700/60 shadow-soft-2xs"
                                                             : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
                                                     }`}
                                                 >
@@ -209,13 +195,12 @@ const Sidebar = memo(function Sidebar({
                                                     )}
                                                 </Link>
                                             ) : hasChildren ? (
-                                                /* Parent Menu with Collapsible Submenu */
                                                 <div>
                                                     <button
                                                         type="button"
                                                         onClick={() => toggleMenu(menu.id, hasActiveChild)}
                                                         title={isCollapsed ? menu.title : undefined}
-                                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 group cursor-pointer ${
+                                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 group cursor-pointer ${
                                                             isCollapsed ? "justify-center px-0" : "justify-between"
                                                         } ${
                                                             hasActiveChild
@@ -240,9 +225,8 @@ const Sidebar = memo(function Sidebar({
                                                         )}
                                                     </button>
 
-                                                    {/* Submenu Items (Anakan) */}
                                                     {!isCollapsed && isOpen && (
-                                                        <div className="ml-4 pl-3 border-l-2 border-slate-800 space-y-1 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                        <div className="ml-4 pl-3 border-l-2 border-slate-800 space-y-0.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
                                                             {menu.children.map((child) => {
                                                                 const isChildActive = isRouteActive(url, child.path);
                                                                 return (
@@ -271,7 +255,6 @@ const Sidebar = memo(function Sidebar({
                                                     )}
                                                 </div>
                                             ) : (
-                                                /* Section Header (if path is null and no children) */
                                                 !isCollapsed && (
                                                     <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-3">
                                                         {menu.title}
@@ -286,25 +269,18 @@ const Sidebar = memo(function Sidebar({
                     </div>
                 </div>
 
-                {/* Sidebar Footer Badge */}
                 <div className="p-3 bg-slate-900 border-t border-slate-800 shrink-0">
                     {!isCollapsed ? (
                         <div className="p-2 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
                             <div className="flex items-center gap-2">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                <span className="font-mono text-[11px] text-slate-300 font-medium">System Online</span>
+                                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                                <span className="font-mono text-[11px] text-slate-300 font-medium">Sistem Aktif</span>
                             </div>
                             <span className="font-mono text-[10px] text-slate-500">v1.2.0</span>
                         </div>
                     ) : (
                         <div className="flex justify-center py-1">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
+                            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
                         </div>
                     )}
                 </div>

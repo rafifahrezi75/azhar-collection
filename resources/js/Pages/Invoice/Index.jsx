@@ -7,6 +7,7 @@ import Pagination from "@/Components/Pagination";
 import InvoiceFilterModal from "@/Components/InvoiceFilterModal";
 import { hasPermission } from "@/utils/permissions";
 import { Toast, confirmDialog } from "@/utils/sweetalert";
+import { formatRupiah, formatDate } from "@/utils/format";
 import {
     Receipt,
     History,
@@ -33,7 +34,6 @@ export default function Index() {
     });
     const [loading, setLoading] = useState(true);
 
-    // Filters
     const [searchTerm, setSearchTerm] = useState("");
     const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
     const [typeFilter, setTypeFilter] = useState("all");
@@ -41,11 +41,8 @@ export default function Index() {
     const [endDate, setEndDate] = useState("");
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-    // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-
-    // Modals
 
     const canCreate = useMemo(() => hasPermission(permissions, "invoice.create"), [permissions]);
     const canDelete = useMemo(() => hasPermission(permissions, "invoice.delete"), [permissions]);
@@ -90,10 +87,11 @@ export default function Index() {
     };
 
     const handleDelete = async (invoice) => {
-        const confirmed = await confirmDialog(
-            `Hapus Invoice #${invoice.invoice_number}?`,
-            `Invoice pesanan atas nama '${invoice.customer_name}' akan dihapus dari sistem.`
-        );
+        const confirmed = await confirmDialog({
+            title: `Hapus Invoice #${invoice.invoice_number}?`,
+            text: `Invoice pesanan atas nama '${invoice.customer_name}' akan dihapus dari sistem.`,
+            confirmButtonText: "Ya, Hapus Invoice",
+        });
 
         if (confirmed) {
             try {
@@ -127,27 +125,6 @@ export default function Index() {
         loadData();
     }, [closeFilter, loadData]);
 
-    const formatCurrency = (val) => {
-        return new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(val || 0);
-    };
-
-    const formatDate = (dateStr) => {
-        if (!dateStr) return "-";
-        try {
-            return new Intl.DateTimeFormat("id-ID", {
-                dateStyle: "medium",
-            }).format(new Date(dateStr));
-        } catch {
-            return dateStr;
-        }
-    };
-
-    // Client-side search filter
     const filteredInvoices = useMemo(() => {
         return invoices.filter((inv) => {
             const term = searchTerm.toLowerCase();
@@ -159,9 +136,7 @@ export default function Index() {
         });
     }, [invoices, searchTerm]);
 
-    // Pagination calculations
     const totalFiltered = filteredInvoices.length;
-    const totalPages = Math.max(1, Math.ceil(totalFiltered / itemsPerPage));
     const paginatedInvoices = useMemo(() => {
         const start = (currentPage - 1) * itemsPerPage;
         return filteredInvoices.slice(start, start + itemsPerPage);
@@ -172,7 +147,6 @@ export default function Index() {
             <Head title="Daftar Invoice & Transaksi - Azhar Collection" />
 
             <div className="space-y-4">
-                {/* Unified PageHeaderBar */}
                 <PageHeaderBar
                     breadcrumbs={[
                         { label: "Transaksi" },
@@ -219,58 +193,53 @@ export default function Index() {
                         closeFilter();
                         router.visit("/dashboard/invoice/create");
                     }}
-                    addTitle="Tambah (Baru / Lama)"
+                    addTitle="Tambah Transaksi"
                     canCreate={canCreate}
                 />
-                        {/* Summary Stat Cards */}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Total Invoice */}
-                    <div className="bg-white p-3.5 rounded-md border border-slate-200 shadow-2xs flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-soft-2xs flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 border border-teal-100/60">
                             <Receipt className="w-5 h-5" />
                         </div>
                         <div>
                             <div className="text-[11px] font-medium text-slate-500">Total Invoice</div>
-                            <div className="text-base font-bold text-slate-800">{summary.total_invoices} Nota</div>
+                            <div className="text-base font-bold text-slate-800 font-mono">{summary.total_invoices} Nota</div>
                         </div>
                     </div>
 
-                    {/* Total Omset */}
-                    <div className="bg-white p-3.5 rounded-md border border-slate-200 shadow-2xs flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-soft-2xs flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100/60">
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
                             <div className="text-[11px] font-medium text-slate-500">Total Nilai Transaksi</div>
-                            <div className="text-base font-bold text-emerald-700">{formatCurrency(summary.total_omset)}</div>
+                            <div className="text-base font-bold text-emerald-700 font-mono">{formatRupiah(summary.total_omset)}</div>
                         </div>
                     </div>
 
-                    {/* Total Terbayar */}
-                    <div className="bg-white p-3.5 rounded-md border border-slate-200 shadow-2xs flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-soft-2xs flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100/60">
                             <CheckCircle2 className="w-5 h-5" />
                         </div>
                         <div>
                             <div className="text-[11px] font-medium text-slate-500">Kas Masuk (Terbayar)</div>
-                            <div className="text-base font-bold text-sky-700">{formatCurrency(summary.total_paid)}</div>
+                            <div className="text-base font-bold text-sky-700 font-mono">{formatRupiah(summary.total_paid)}</div>
                         </div>
                     </div>
 
-                    {/* Sisa Piutang */}
-                    <div className="bg-white p-3.5 rounded-md border border-slate-200 shadow-2xs flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-soft-2xs flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100/60">
                             <AlertCircle className="w-5 h-5" />
                         </div>
                         <div>
                             <div className="text-[11px] font-medium text-slate-500">Sisa Piutang Tagihan</div>
-                            <div className="text-base font-bold text-rose-700">{formatCurrency(summary.total_unpaid)}</div>
+                            <div className="text-base font-bold text-rose-700 font-mono">{formatRupiah(summary.total_unpaid)}</div>
                         </div>
                     </div>
                 </div>
 
-                {/* Invoices Table */}
-                <div className="bg-white rounded-md border border-slate-200 shadow-2xs overflow-hidden">
+                <div className="bg-white rounded-xl border border-slate-200/90 shadow-soft-2xs overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                             <thead>
@@ -289,32 +258,52 @@ export default function Index() {
                             <tbody className="divide-y divide-slate-100">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="9" className="py-8 text-center text-slate-400">
+                                        <td colSpan="9" className="py-10 text-center text-slate-400">
                                             <div className="flex items-center justify-center gap-2">
                                                 <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
-                                                <span>Memuat daftar invoice...</span>
+                                                <span>Memuat daftar invoice transaksi...</span>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : paginatedInvoices.length === 0 ? (
                                     <tr>
-                                        <td colSpan="9" className="py-8 text-center text-slate-400 space-y-2">
-                                            <Receipt className="w-8 h-8 mx-auto text-slate-300 mb-1" />
-                                            <p className="font-medium text-slate-600">Belum ada data invoice ditemukan</p>
-                                            <p className="text-[11px] text-slate-400">
-                                                Klik tombol di bawah untuk membuat invoice transaksi baru atau menginput data nota lama.
-                                            </p>
-                                            {canCreate && (
-                                                <div className="pt-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => router.visit("/dashboard/invoice/create")}
-                                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                        <span>Buat Transaksi / Invoice Baru</span>
-                                                    </button>
-                                                </div>
+                                        <td colSpan="9" className="py-10 text-center text-slate-400 space-y-2">
+                                            <Receipt className="w-9 h-9 mx-auto text-slate-300 mb-1" />
+                                            {searchTerm ? (
+                                                <>
+                                                    <p className="font-semibold text-slate-700">Tidak ada invoice yang cocok</p>
+                                                    <p className="text-xs text-slate-500">
+                                                        Tidak ditemukan hasil pencarian untuk "{searchTerm}".
+                                                    </p>
+                                                    <div className="pt-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSearchTerm("")}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                                                        >
+                                                            Bersihkan Pencarian
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="font-semibold text-slate-700">Belum ada data invoice terdaftar</p>
+                                                    <p className="text-xs text-slate-500">
+                                                        Mulai buat pesanan faktur transaksi baru atau masukkan arsip nota lama.
+                                                    </p>
+                                                    {canCreate && (
+                                                        <div className="pt-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => router.visit("/dashboard/invoice/create")}
+                                                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-soft-xs"
+                                                            >
+                                                                <Plus className="w-3.5 h-3.5" />
+                                                                <span>Buat Invoice Baru</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </td>
                                     </tr>
@@ -327,12 +316,10 @@ export default function Index() {
 
                                         return (
                                             <tr key={inv.id} className="hover:bg-slate-50/70 transition-colors">
-                                                {/* No */}
-                                                <td className="py-2.5 px-3.5 text-center text-slate-400 font-medium">
+                                                <td className="py-2.5 px-3.5 text-center text-slate-400 font-mono text-xs">
                                                     {rowNumber}
                                                 </td>
 
-                                                {/* No Invoice & Tanggal */}
                                                 <td className="py-2.5 px-3.5">
                                                     <div className="font-bold text-slate-900 font-mono">
                                                         #{inv.invoice_number}
@@ -342,7 +329,6 @@ export default function Index() {
                                                     </div>
                                                 </td>
 
-                                                {/* Pelanggan */}
                                                 <td className="py-2.5 px-3.5">
                                                     <div className="font-bold text-slate-900">
                                                         {inv.customer_name}
@@ -354,35 +340,31 @@ export default function Index() {
                                                     )}
                                                 </td>
 
-                                                {/* Item & Qty */}
                                                 <td className="py-2.5 px-3.5 text-center">
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-800">
-                                                        {totalQty} Qty ({itemsCount} Item)
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-800 font-mono">
+                                                        {totalQty} Pcs ({itemsCount} Item)
                                                     </span>
                                                 </td>
 
-                                                {/* Total Tagihan */}
                                                 <td className="py-2.5 px-3.5 text-right font-bold text-slate-900 font-mono">
-                                                    {formatCurrency(inv.total_amount)}
+                                                    {formatRupiah(inv.total_amount)}
                                                 </td>
 
-                                                {/* Terbayar / Sisa */}
                                                 <td className="py-2.5 px-3.5 text-right font-mono">
                                                     <div className="text-emerald-700 font-semibold">
-                                                        {formatCurrency(inv.paid_amount)}
+                                                        {formatRupiah(inv.paid_amount)}
                                                     </div>
                                                     {remaining > 0 ? (
                                                         <div className="text-[10px] text-rose-600 font-semibold">
-                                                            Sisa: {formatCurrency(remaining)}
+                                                            Sisa: {formatRupiah(remaining)}
                                                         </div>
                                                     ) : (
-                                                        <div className="text-[10px] text-emerald-600">
+                                                        <div className="text-[10px] text-emerald-600 font-semibold">
                                                             Lunas
                                                         </div>
                                                     )}
                                                 </td>
 
-                                                {/* Status Bayar */}
                                                 <td className="py-2.5 px-3.5 text-center">
                                                     {(() => {
                                                         const pStatus = String(inv.payment_status || "").toUpperCase();
@@ -404,10 +386,9 @@ export default function Index() {
                                                     })()}
                                                 </td>
 
-                                                {/* Tipe */}
                                                 <td className="py-2.5 px-3.5 text-center">
                                                     <span
-                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                                                             inv.type === "HISTORICAL"
                                                                 ? "bg-amber-50 text-amber-800 border border-amber-200"
                                                                 : "bg-teal-50 text-teal-800 border border-teal-200"
@@ -415,47 +396,43 @@ export default function Index() {
                                                     >
                                                         {inv.type === "HISTORICAL" ? (
                                                             <>
-                                                                <History className="w-3 h-3 text-amber-600" />
+                                                                <History className="w-3 h-3 text-amber-600 shrink-0" />
                                                                 <span>Historis</span>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <Zap className="w-3 h-3 text-teal-600" />
+                                                                <Zap className="w-3 h-3 text-teal-600 shrink-0" />
                                                                 <span>Reguler</span>
                                                             </>
                                                         )}
                                                     </span>
                                                 </td>
 
-                                                {/* Aksi (Unified Style & Colors) */}
                                                 <td className="py-2.5 px-3.5 text-center">
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        {/* View Detail Page (Sky) */}
+                                                    <div className="flex items-center justify-center gap-1">
                                                         <Link
                                                             href={`/dashboard/invoice/${inv.id}`}
-                                                            title="Detail"
-                                                            className="w-7 h-7 inline-flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-md transition-colors border border-sky-200/80 cursor-pointer shadow-2xs"
+                                                            title="Lihat Detail"
+                                                            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 rounded-lg transition-colors border border-slate-200 cursor-pointer shadow-soft-2xs"
                                                         >
                                                             <Eye className="w-3.5 h-3.5" />
                                                         </Link>
 
-                                                        {/* Print Modal (Teal) */}
                                                         <button
                                                             type="button"
                                                             onClick={() => handleOpenPrint(inv)}
-                                                            title="Nota"
-                                                            className="w-7 h-7 inline-flex items-center justify-center bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-md transition-colors border border-teal-200/80 cursor-pointer shadow-2xs"
+                                                            title="Cetak Nota"
+                                                            className="p-1.5 bg-white hover:bg-slate-50 text-teal-600 hover:text-teal-700 rounded-lg transition-colors border border-slate-200 cursor-pointer shadow-soft-2xs"
                                                         >
                                                             <Printer className="w-3.5 h-3.5" />
                                                         </button>
 
-                                                        {/* Delete (Rose) */}
                                                         {canDelete && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleDelete(inv)}
-                                                                title="Hapus"
-                                                                className="w-7 h-7 inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md transition-colors border border-rose-200/80 cursor-pointer shadow-2xs"
+                                                                title="Hapus Invoice"
+                                                                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-rose-200/80 cursor-pointer shadow-soft-2xs"
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                             </button>
@@ -470,11 +447,9 @@ export default function Index() {
                         </table>
                     </div>
 
-                    {/* Pagination */}
                     {totalFiltered > 0 && (
                         <Pagination
                             currentPage={currentPage}
-                            totalPages={totalPages}
                             totalItems={totalFiltered}
                             itemsPerPage={itemsPerPage}
                             onPageChange={(p) => setCurrentPage(p)}
@@ -486,7 +461,6 @@ export default function Index() {
                     )}
                 </div>
             </div>
-
         </DashboardLayout>
     );
 }
